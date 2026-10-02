@@ -1,0 +1,57 @@
+"""Command line:  python -m dp1.cli <build | run | compare | demo>"""
+import argparse
+from . import config as C
+from .network import build_network
+from .runner import run_simulation
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="dp1")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("build", help="generate the junction network + detectors")
+
+    r = sub.add_parser("run", help="run one simulation")
+    r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()))
+    r.add_argument("--policy", default="adaptive", choices=["fixed", "adaptive"])
+    r.add_argument("--seed", type=int, default=1)
+    r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")
+
+    c = sub.add_parser("compare", help="compare policies over scenarios and seeds")
+    c.add_argument("--seeds", type=int, default=len(C.SIM.seeds))
+    c.add_argument("--scenarios", nargs="*", default=None)
+    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "adaptive"])
+    c.add_argument("--jobs", type=int, default=1)
+
+    sub.add_parser("demo", help="quick fixed-vs-adaptive run on the imbalanced scenario")
+    a = ap.parse_args()
+
+    if a.cmd == "build":
+        print("built:", build_network())
+    elif a.cmd == "run":
+        m = run_simulation(a.scenario, a.policy, a.seed, gui=a.gui)
+        for k, v in m.items():
+            print(f"{k:>22}: {v:.2f}" if isinstance(v, float) else f"{k:>22}: {v}")
+    elif a.cmd == "demo":
+        build_network()
+        for pol in ("fixed", "adaptive"):
+            m = run_simulation("imbalanced_ns", pol, 1)
+            print(f"{pol:>9}: wait {m['avg_wait_s']:.1f}s | queue {m['avg_queue_m']:.1f}m | "
+                  f"done {m['completion_rate']:.0%} | cycles {m['cycles']}")
+    elif a.cmd == "compare":
+        from . import compare as cmp
+        build_network()
+        seeds = tuple(range(1, a.seeds + 1))
+        policies = tuple(a.policies) if a.policies else ("fixed", "adaptive")
+        df = cmp.run_matrix(a.scenarios, policies=policies, seeds=seeds, jobs=a.jobs)
+        cmp.aggregate(df)
+        print("\n", cmp.improvement_table(df).to_string())
+        cmp.plot_all(df)
+        try:
+            cmp.plot_queue_timeseries()
+        except FileNotFoundError:
+            pass
+        print(f"\nResults written to {C.RESULTS_DIR}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,8 @@
+# SUMO ships as a pip wheel (Windows / macOS / Linux) - no separate installer needed
+eclipse-sumo>=1.20
+traci>=1.20
+sumolib>=1.20
+numpy
+pandas
+matplotlib
+pytest
