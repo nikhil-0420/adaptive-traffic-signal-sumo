@@ -88,3 +88,15 @@ def test_all_vehicles_complete(adaptive, fixed):
 
 def test_adaptive_beats_fixed_on_imbalanced_demand(adaptive, fixed):
     assert adaptive[0]["avg_wait_s"] < fixed[0]["avg_wait_s"]
+
+
+def test_balanced_fixed_symmetry(tmp_path_factory):
+    means = {f"q_{a}": [] for a in C.APPROACHES}
+    for seed in range(1, 5):
+        out = tmp_path_factory.mktemp(f"balanced_fixed_s{seed}")
+        run_simulation("balanced", "fixed", seed=seed, out_dir=out)
+        ts = pd.read_csv(out / "timeseries.csv")
+        for a in C.APPROACHES:
+            means[f"q_{a}"].append(ts[f"q_{a}"].mean())
+    avg = [sum(v) / len(v) for v in means.values()]
+    assert max(avg) / min(avg) < 2.0

@@ -15,7 +15,7 @@ from .sumo_utils import binary
 
 
 def read_queues():
-    return {a: traci.lanearea.getJamLengthMeters(f"det_{a}") for a in C.APPROACHES}
+    return {a: max(traci.lanearea.getJamLengthMeters(f"det_{a}_{i}") for i in range(C.NET.lanes)) for a in C.APPROACHES}
 
 
 def run_simulation(scenario, policy, seed, gui=False, out_dir=None, policy_kwargs=None, attempts=4):

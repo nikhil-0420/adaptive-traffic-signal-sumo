@@ -27,8 +27,8 @@ def build_network(net=C.NET) -> Path:
     edges.write_text(
         '<edges>\n'
         + "".join(
-            f'  <edge id="{a}_in" from="{a}" to="{C.TLS_ID}" numLanes="1" speed="{net.speed_mps}"/>\n'
-            f'  <edge id="{a}_out" from="{C.TLS_ID}" to="{a}" numLanes="1" speed="{net.speed_mps}"/>\n'
+            f'  <edge id="{a}_in" from="{a}" to="{C.TLS_ID}" numLanes="{net.lanes}" speed="{net.speed_mps}"/>\n'
+            f'  <edge id="{a}_out" from="{C.TLS_ID}" to="{a}" numLanes="{net.lanes}" speed="{net.speed_mps}"/>\n'
             for a in C.APPROACHES)
         + '</edges>\n'
     )
@@ -39,9 +39,10 @@ def build_network(net=C.NET) -> Path:
     DET_FILE.write_text(
         '<additional>\n'
         + "".join(
-            f'  <laneAreaDetector id="det_{a}" lane="{a}_in_0" pos="-{net.detector_length_m}" '
+            f'  <laneAreaDetector id="det_{a}_{i}" lane="{a}_in_{i}" pos="-{net.detector_length_m}" '
             f'endPos="-0.1" period="1" file="detector_out.xml"/>\n'
-            for a in C.APPROACHES)
+            for a in C.APPROACHES
+            for i in range(net.lanes))
         + '</additional>\n'
     )
     return NET_FILE

@@ -18,6 +18,7 @@ class NetworkConfig:
     approach_length_m: float = 300.0
     speed_mps: float = 13.89          # 50 km/h
     detector_length_m: float = 150.0  # sensor zone measured back from the stop line
+    lanes: int = 2
 
 
 @dataclass(frozen=True)
@@ -58,10 +59,11 @@ ADAPTIVE = AdaptiveConfig()
 SIM = SimConfig()
 
 # Demand scenarios: vehicles/hour per approach, as piecewise segments (t_start, t_end, vph)
+DEMAND_SCALE = 1.7
 
 
 def _flat(vph, end):
-    return [(0, end, vph)]
+    return [(0, end, vph * DEMAND_SCALE)]
 
 
 def scenarios(duration=SIM.demand_duration_s):
@@ -70,7 +72,7 @@ def scenarios(duration=SIM.demand_duration_s):
         "balanced":      {a: _flat(400, d) for a in APPROACHES},
         "imbalanced_ns": {"N": _flat(700, d), "S": _flat(700, d), "E": _flat(200, d), "W": _flat(200, d)},
         "imbalanced_ew": {"N": _flat(200, d), "S": _flat(200, d), "E": _flat(700, d), "W": _flat(700, d)},
-        "surge_north":   {"N": [(0, 600, 400), (600, 1200, 1100), (1200, d, 400)],
+        "surge_north":   {"N": [(0, 600, 400 * DEMAND_SCALE), (600, 1200, 1100 * DEMAND_SCALE), (1200, d, 400 * DEMAND_SCALE)],
                           "S": _flat(400, d), "E": _flat(400, d), "W": _flat(400, d)},
     }
 
