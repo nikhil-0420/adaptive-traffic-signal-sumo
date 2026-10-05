@@ -30,8 +30,8 @@ class SignalTiming:
 
 @dataclass(frozen=True)
 class FixedTimeConfig:
-    green_ns_s: float = 30.0
-    green_ew_s: float = 30.0
+    green_ns_s: float = 105.0
+    green_ew_s: float = 95.0
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,16 @@ class SimConfig:
 
 NET = NetworkConfig()
 TIMING = SignalTiming()
-FIXED = FixedTimeConfig()
+
+# Old 30/30 plan kept for reference
+FIXED_PLACEHOLDER = FixedTimeConfig(green_ns_s=30, green_ew_s=30)
+
+# BTP Marathalli Bridge Junction (weekday 08:00-11:30): Phase 1 = 110s (NS), Phase 2 = 100s (EW)
+# Net green computed from TIMING by subtracting yellow and all-red clearance intervals
+FIXED = FixedTimeConfig(
+    green_ns_s=110 - (TIMING.yellow_s + TIMING.all_red_s),
+    green_ew_s=100 - (TIMING.yellow_s + TIMING.all_red_s),
+)
 ADAPTIVE = AdaptiveConfig()
 SIM = SimConfig()
 

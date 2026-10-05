@@ -64,8 +64,8 @@ def test_adaptive_green_within_limits(adaptive):
 
 def test_fixed_green_is_constant(fixed):
     _, _, dec = fixed
-    assert set(dec[dec.axis == "NS"].green_s.round(0)) == {30}
-    assert set(dec[dec.axis == "EW"].green_s.round(0)) == {30}
+    assert set(dec[dec.axis == "NS"].green_s.round(0)) == {105}
+    assert set(dec[dec.axis == "EW"].green_s.round(0)) == {95}
 
 
 def test_heavy_axis_gets_more_green(adaptive):
