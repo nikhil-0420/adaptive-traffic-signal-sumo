@@ -29,6 +29,11 @@ def fixed(tmp_path_factory):
     return _run("imbalanced_ns", "fixed", tmp_path_factory)
 
 
+@pytest.fixture(scope="session")
+def fixed_webster(tmp_path_factory):
+    return _run("imbalanced_ns", "fixed_webster", tmp_path_factory)
+
+
 def test_signal_states_never_green_on_both_axes():
     s = SignalStates(NET_FILE)
     ns, ew = s.green("NS"), s.green("EW")
@@ -36,24 +41,40 @@ def test_signal_states_never_green_on_both_axes():
     assert set(s.all_red()) == {"r"}
 
 
-@pytest.mark.parametrize("which", ["adaptive", "fixed"])
-def test_every_switch_goes_yellow_then_all_red(which, adaptive, fixed):
-    mapping = {"adaptive": adaptive, "fixed": fixed}
+@pytest.mark.parametrize("which", ["adaptive", "fixed", "fixed_webster"])
+def test_every_switch_goes_yellow_then_all_red(which, adaptive, fixed, fixed_webster):
+    mapping = {"adaptive": adaptive, "fixed": fixed, "fixed_webster": fixed_webster}
     _, ts, _ = mapping[which]
     seq = ts.loc[ts.phase.ne(ts.phase.shift()), "phase"].tolist()
     for prev, nxt in zip(seq, seq[1:]):
         assert (prev, nxt) in {("GREEN", "YELLOW"), ("YELLOW", "ALL_RED"), ("ALL_RED", "GREEN")}, (prev, nxt)
 
 
-@pytest.mark.parametrize("which", ["adaptive", "fixed"])
-def test_yellow_and_all_red_durations(which, adaptive, fixed):
-    mapping = {"adaptive": adaptive, "fixed": fixed}
+@pytest.mark.parametrize("which", ["adaptive", "fixed", "fixed_webster"])
+def test_yellow_and_all_red_durations(which, adaptive, fixed, fixed_webster):
+    mapping = {"adaptive": adaptive, "fixed": fixed, "fixed_webster": fixed_webster}
     _, ts, _ = mapping[which]
     run_id = ts.phase.ne(ts.phase.shift()).cumsum()
     lens = ts.groupby(run_id).agg(ph=("phase", "first"), n=("t", "size"))
     inner = lens.iloc[1:-1]  # ignore possibly truncated first/last run
     assert (inner[inner.ph == "YELLOW"].n == C.TIMING.yellow_s).all()
     assert (inner[inner.ph == "ALL_RED"].n == C.TIMING.all_red_s).all()
+
+
+def test_webster_cycle_within_bounds():
+    for scen in C.scenarios():
+        plan = C.webster_plan(scen)
+        cycle = plan.green_ns_s + plan.green_ew_s + 2 * (C.TIMING.yellow_s + C.TIMING.all_red_s)
+        assert C.WEBSTER.min_cycle_s <= round(cycle, 1) <= C.WEBSTER.max_cycle_s
+        assert plan.green_ns_s > 0
+        assert plan.green_ew_s > 0
+
+
+def test_fixed_webster_green_constant(fixed_webster):
+    _, _, dec = fixed_webster
+    plan = C.webster_plan("imbalanced_ns")
+    assert set(dec[dec.axis == "NS"].green_s.round(1)) == {round(plan.green_ns_s, 1)}
+    assert set(dec[dec.axis == "EW"].green_s.round(1)) == {round(plan.green_ew_s, 1)}
 
 
 def test_adaptive_green_within_limits(adaptive):
@@ -100,3 +121,4 @@ def test_balanced_fixed_symmetry(tmp_path_factory):
             means[f"q_{a}"].append(ts[f"q_{a}"].mean())
     avg = [sum(v) / len(v) for v in means.values()]
     assert max(avg) / min(avg) < 2.0
+

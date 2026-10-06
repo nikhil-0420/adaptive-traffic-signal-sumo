@@ -1,5 +1,5 @@
 """All tunable numbers live here. Change values here, never hard-code them elsewhere."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,6 +35,13 @@ class FixedTimeConfig:
 
 
 @dataclass(frozen=True)
+class WebsterConfig:
+    sat_flow_per_lane_vph: float = 1800.0
+    min_cycle_s: float = 40.0
+    max_cycle_s: float = 120.0
+
+
+@dataclass(frozen=True)
 class AdaptiveConfig:
     min_green_s: int = 10
     max_green_s: int = 60
@@ -54,6 +61,7 @@ class SimConfig:
 
 NET = NetworkConfig()
 TIMING = SignalTiming()
+WEBSTER = WebsterConfig()
 
 # Old 30/30 plan kept for reference
 FIXED_PLACEHOLDER = FixedTimeConfig(green_ns_s=30, green_ew_s=30)
@@ -84,6 +92,51 @@ def scenarios(duration=SIM.demand_duration_s):
         "surge_north":   {"N": [(0, 600, 400 * DEMAND_SCALE), (600, 1200, 1100 * DEMAND_SCALE), (1200, d, 400 * DEMAND_SCALE)],
                           "S": _flat(400, d), "E": _flat(400, d), "W": _flat(400, d)},
     }
+
+
+def webster_plan(scenario: str, net=NET, timing=TIMING, cfg=WEBSTER) -> FixedTimeConfig:
+    """Compute Webster's optimal fixed-time plan from average scenario demand."""
+    scens = scenarios()
+    if scenario not in scens:
+        raise KeyError(f"Unknown scenario: {scenario}")
+    prof = scens[scenario]
+    duration = SIM.demand_duration_s
+
+    # 1. Average flow (vph) per approach over demand duration
+    avg_flows = {}
+    for a in APPROACHES:
+        segments = prof[a]
+        total_veh = sum((t1 - t0) * (vph / 3600.0) for t0, t1, vph in segments)
+        avg_flows[a] = total_veh * (3600.0 / duration)
+
+    # 2. Critical flow ratio per axis: y = flow / saturation_flow
+    sat_flow = cfg.sat_flow_per_lane_vph * net.lanes
+    y_ns = max(avg_flows[a] for a in AXES["NS"]) / sat_flow
+    y_ew = max(avg_flows[a] for a in AXES["EW"]) / sat_flow
+
+    # 3. Y = y_NS + y_EW
+    Y = y_ns + y_ew
+
+    # 4. Lost time L = 2 * (yellow + all_red)
+    L = 2.0 * (timing.yellow_s + timing.all_red_s)
+
+    # 5. Cycle C = (1.5*L + 5)/(1 - Y) clamped to 40-120 s
+    if Y >= 1.0:
+        c_opt = cfg.max_cycle_s
+    else:
+        c_opt = (1.5 * L + 5.0) / (1.0 - Y)
+    cycle = max(cfg.min_cycle_s, min(cfg.max_cycle_s, c_opt))
+
+    # 6. Effective green split proportional to y: total green = C - L
+    total_green = max(0.0, cycle - L)
+    if Y > 0:
+        g_ns = total_green * (y_ns / Y)
+        g_ew = total_green * (y_ew / Y)
+    else:
+        g_ns = total_green / 2.0
+        g_ew = total_green / 2.0
+
+    return FixedTimeConfig(green_ns_s=round(g_ns, 1), green_ew_s=round(g_ew, 1))
 
 
 # Turning split for every approach

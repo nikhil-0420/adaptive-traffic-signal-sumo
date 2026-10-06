@@ -54,6 +54,8 @@ def _run_once(scenario, policy, seed, gui, out_dir, policy_kwargs):
 
     states = SignalStates(NET_FILE)
     kwargs = dict(policy_kwargs or {})
+    if policy == "fixed_webster" and "scenario" not in kwargs:
+        kwargs["scenario"] = scenario
     ctl = POLICIES[policy](states, **kwargs)
     series = []
     try:

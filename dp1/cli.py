@@ -12,14 +12,14 @@ def main():
 
     r = sub.add_parser("run", help="run one simulation")
     r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()))
-    r.add_argument("--policy", default="adaptive", choices=["fixed", "adaptive"])
+    r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive"])
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")
 
     c = sub.add_parser("compare", help="compare policies over scenarios and seeds")
     c.add_argument("--seeds", type=int, default=len(C.SIM.seeds))
     c.add_argument("--scenarios", nargs="*", default=None)
-    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "adaptive"])
+    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "fixed_webster", "adaptive"])
     c.add_argument("--jobs", type=int, default=1)
 
     sub.add_parser("demo", help="quick fixed-vs-adaptive run on the imbalanced scenario")
@@ -41,7 +41,7 @@ def main():
         from . import compare as cmp
         build_network()
         seeds = tuple(range(1, a.seeds + 1))
-        policies = tuple(a.policies) if a.policies else ("fixed", "adaptive")
+        policies = tuple(a.policies) if a.policies else ("fixed", "fixed_webster", "adaptive")
         df = cmp.run_matrix(a.scenarios, policies=policies, seeds=seeds, jobs=a.jobs)
         cmp.aggregate(df)
         print("\n", cmp.improvement_table(df).to_string())
