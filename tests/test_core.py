@@ -122,3 +122,18 @@ def test_balanced_fixed_symmetry(tmp_path_factory):
     avg = [sum(v) / len(v) for v in means.values()]
     assert max(avg) / min(avg) < 2.0
 
+def test_tune_grid_generation_and_search_space():
+    from dp1.tune import get_search_grid
+    grid = get_search_grid()
+    assert len(grid) == 180
+    assert len(C.TRAIN_SEEDS) == 5
+    assert len(C.HELD_OUT_SEEDS) == 5
+    assert set(C.TRAIN_SEEDS).isdisjoint(set(C.HELD_OUT_SEEDS))
+    defaults_match = [
+        c for c in grid
+        if c["k_s_per_m"] == C.ADAPTIVE.k_s_per_m
+        and c["max_green_s"] == C.ADAPTIVE.max_green_s
+        and c["min_green_s"] == C.ADAPTIVE.min_green_s
+        and c["gap_out_s"] == C.ADAPTIVE.gap_out_s
+    ]
+    assert len(defaults_match) == 1

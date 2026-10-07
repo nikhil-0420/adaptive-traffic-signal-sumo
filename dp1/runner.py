@@ -18,7 +18,7 @@ def read_queues():
     return {a: max(traci.lanearea.getJamLengthMeters(f"det_{a}_{i}") for i in range(C.NET.lanes)) for a in C.APPROACHES}
 
 
-def run_simulation(scenario, policy, seed, gui=False, out_dir=None, policy_kwargs=None, attempts=4):
+def run_simulation(scenario, policy, seed, gui=False, out_dir=None, policy_kwargs=None, attempts=5):
     """Run one simulation. Retries on TraCI connection failures (parallel runs can race for ports).
 
     policy_kwargs: e.g. {'cfg': AdaptiveConfig(k_s_per_m=0.2)} to override controller settings (used by tuning).
@@ -27,9 +27,13 @@ def run_simulation(scenario, policy, seed, gui=False, out_dir=None, policy_kwarg
     for _ in range(attempts):
         try:
             return _run_once(scenario, policy, seed, gui, out_dir, policy_kwargs)
-        except (traci.exceptions.FatalTraCIError, ConnectionError, OSError) as e:
+        except Exception as e:
             last = e
-            time.sleep(random.uniform(0.5, 2.0))
+            try:
+                traci.close()
+            except Exception:
+                pass
+            time.sleep(random.uniform(0.3, 1.5))
     raise RuntimeError(f"SUMO failed {attempts} times for {scenario}/{policy}/seed{seed}") from last
 
 

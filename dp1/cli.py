@@ -23,6 +23,12 @@ def main():
     c.add_argument("--jobs", type=int, default=1)
 
     sub.add_parser("demo", help="quick fixed-vs-adaptive run on the imbalanced scenario")
+
+    t = sub.add_parser("tune", help="tune adaptive parameters on train seeds and evaluate on held-out seeds")
+    t.add_argument("--jobs", type=int, default=8, help="number of parallel workers")
+    t.add_argument("--chunk-size", type=int, default=20, help="number of configs to evaluate in this run (0 for all)")
+    t.add_argument("--eval-heldout", action="store_true", help="evaluate best and default configs on held-out seeds 11-15")
+    t.add_argument("--all", action="store_true", help="evaluate all remaining configs without chunk limit")
     a = ap.parse_args()
 
     if a.cmd == "build":
@@ -51,6 +57,14 @@ def main():
         except FileNotFoundError:
             pass
         print(f"\nResults written to {C.RESULTS_DIR}")
+    elif a.cmd == "tune":
+        from . import tune
+        build_network()
+        tune.run_tune(
+            jobs=a.jobs,
+            chunk_size=0 if a.all else a.chunk_size,
+            eval_heldout_flag=a.eval_heldout,
+        )
 
 
 if __name__ == "__main__":

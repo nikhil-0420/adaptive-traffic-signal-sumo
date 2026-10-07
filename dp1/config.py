@@ -59,6 +59,16 @@ class SimConfig:
     seeds: tuple = (1, 2, 3, 4, 5)
 
 
+TUNE_SEARCH_SPACE = {
+    "k_s_per_m": (0.15, 0.2, 0.3, 0.4, 0.5),
+    "max_green_s": (30, 40, 45, 60),
+    "min_green_s": (8, 10, 12),
+    "gap_out_s": (2, 3, 5),
+}
+TRAIN_SEEDS = (1, 2, 3, 4, 5)
+HELD_OUT_SEEDS = (11, 12, 13, 14, 15)
+
+
 NET = NetworkConfig()
 TIMING = SignalTiming()
 WEBSTER = WebsterConfig()
