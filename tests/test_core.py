@@ -34,6 +34,11 @@ def fixed_webster(tmp_path_factory):
     return _run("imbalanced_ns", "fixed_webster", tmp_path_factory)
 
 
+@pytest.fixture(scope="session")
+def pressure(tmp_path_factory):
+    return _run("imbalanced_ns", "pressure", tmp_path_factory)
+
+
 def test_signal_states_never_green_on_both_axes():
     s = SignalStates(NET_FILE)
     ns, ew = s.green("NS"), s.green("EW")
@@ -41,18 +46,18 @@ def test_signal_states_never_green_on_both_axes():
     assert set(s.all_red()) == {"r"}
 
 
-@pytest.mark.parametrize("which", ["adaptive", "fixed", "fixed_webster"])
-def test_every_switch_goes_yellow_then_all_red(which, adaptive, fixed, fixed_webster):
-    mapping = {"adaptive": adaptive, "fixed": fixed, "fixed_webster": fixed_webster}
+@pytest.mark.parametrize("which", ["adaptive", "fixed", "fixed_webster", "pressure"])
+def test_every_switch_goes_yellow_then_all_red(which, adaptive, fixed, fixed_webster, pressure):
+    mapping = {"adaptive": adaptive, "fixed": fixed, "fixed_webster": fixed_webster, "pressure": pressure}
     _, ts, _ = mapping[which]
     seq = ts.loc[ts.phase.ne(ts.phase.shift()), "phase"].tolist()
     for prev, nxt in zip(seq, seq[1:]):
         assert (prev, nxt) in {("GREEN", "YELLOW"), ("YELLOW", "ALL_RED"), ("ALL_RED", "GREEN")}, (prev, nxt)
 
 
-@pytest.mark.parametrize("which", ["adaptive", "fixed", "fixed_webster"])
-def test_yellow_and_all_red_durations(which, adaptive, fixed, fixed_webster):
-    mapping = {"adaptive": adaptive, "fixed": fixed, "fixed_webster": fixed_webster}
+@pytest.mark.parametrize("which", ["adaptive", "fixed", "fixed_webster", "pressure"])
+def test_yellow_and_all_red_durations(which, adaptive, fixed, fixed_webster, pressure):
+    mapping = {"adaptive": adaptive, "fixed": fixed, "fixed_webster": fixed_webster, "pressure": pressure}
     _, ts, _ = mapping[which]
     run_id = ts.phase.ne(ts.phase.shift()).cumsum()
     lens = ts.groupby(run_id).agg(ph=("phase", "first"), n=("t", "size"))
@@ -81,6 +86,18 @@ def test_adaptive_green_within_limits(adaptive):
     _, _, dec = adaptive
     assert dec.green_s.min() >= C.ADAPTIVE.min_green_s
     assert dec.green_s.max() <= C.ADAPTIVE.max_green_s
+
+
+def test_pressure_green_within_limits(pressure):
+    _, _, dec = pressure
+    assert dec.green_s.min() >= C.PRESSURE.min_green_s
+    assert dec.green_s.max() <= C.PRESSURE.max_green_s
+
+
+def test_pressure_heavy_axis_gets_more_green(pressure):
+    _, _, dec = pressure
+    mean = dec.groupby("axis").green_s.mean()
+    assert mean["NS"] > mean["EW"] * 1.3
 
 
 def test_fixed_green_is_constant(fixed):

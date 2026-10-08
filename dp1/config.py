@@ -52,6 +52,16 @@ class AdaptiveConfig:
 
 
 @dataclass(frozen=True)
+class PressureConfig:
+    min_green_s: int = 10
+    max_green_s: int = 60
+    k_s_per_m: float = 0.30       # extra green seconds per metre of queue difference
+    gap_out_s: int = 3            # end green early if own queue is empty this long ...
+    extend_threshold_m: float = 15.0  # ... and keep extending while queue is above this
+    min_competing_queue_m: float = 1.0  # only gap-out if the other axis is actually waiting
+
+
+@dataclass(frozen=True)
 class SimConfig:
     step_s: float = 1.0
     demand_duration_s: int = 1800
@@ -83,6 +93,7 @@ FIXED = FixedTimeConfig(
     green_ew_s=100 - (TIMING.yellow_s + TIMING.all_red_s),
 )
 ADAPTIVE = AdaptiveConfig()
+PRESSURE = PressureConfig()
 SIM = SimConfig()
 
 # Demand scenarios: vehicles/hour per approach, as piecewise segments (t_start, t_end, vph)
