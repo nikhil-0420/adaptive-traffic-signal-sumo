@@ -30,6 +30,10 @@ def main():
     t.add_argument("--chunk-size", type=int, default=20, help="number of configs to evaluate in this run (0 for all)")
     t.add_argument("--eval-heldout", action="store_true", help="evaluate best and default configs on held-out seeds 11-15")
     t.add_argument("--all", action="store_true", help="evaluate all remaining configs without chunk limit")
+
+    rep = sub.add_parser("report", help="generate results/report.md from CSV data")
+    rep.add_argument("--csv", type=str, default=None, help="path to results CSV (default results/all_runs.csv)")
+    rep.add_argument("--out", type=str, default=None, help="path for output markdown report (default results/report.md)")
     a = ap.parse_args()
 
     if a.cmd == "build":
@@ -66,6 +70,10 @@ def main():
             chunk_size=0 if a.all else a.chunk_size,
             eval_heldout_flag=a.eval_heldout,
         )
+    elif a.cmd == "report":
+        from . import report
+        out = report.generate_report(csv_file=a.csv, out_file=a.out)
+        print(f"Report written to {out}")
 
 
 if __name__ == "__main__":

@@ -139,6 +139,7 @@ def test_balanced_fixed_symmetry(tmp_path_factory):
     avg = [sum(v) / len(v) for v in means.values()]
     assert max(avg) / min(avg) < 2.0
 
+
 def test_tune_grid_generation_and_search_space():
     from dp1.tune import get_search_grid
     grid = get_search_grid()
@@ -154,3 +155,31 @@ def test_tune_grid_generation_and_search_space():
         and c["gap_out_s"] == C.ADAPTIVE.gap_out_s
     ]
     assert len(defaults_match) == 1
+
+
+def test_report_generation(tmp_path):
+    from dp1.report import generate_report
+    # Create minimal fake CSV
+    csv_file = tmp_path / "all_runs.csv"
+    out_file = tmp_path / "report.md"
+    rows = []
+    for sc in ["balanced", "imbalanced_ns"]:
+        for pol in ["fixed", "adaptive", "pressure"]:
+            for sd in [11, 12]:
+                rows.append({
+                    "scenario": sc,
+                    "policy": pol,
+                    "seed": sd,
+                    "avg_wait_s": 25.0 if pol != "fixed" else 40.0,
+                    "avg_queue_m": 15.0 if pol != "fixed" else 30.0,
+                    "throughput_veh_per_h": 2600.0,
+                })
+    pd.DataFrame(rows).to_csv(csv_file, index=False)
+    rep = generate_report(csv_file=csv_file, out_file=out_file)
+    assert rep.exists()
+    text = rep.read_text(encoding="utf-8")
+    assert "Average Waiting Time per Vehicle (s)" in text
+    assert "Known Limitations (docs/SPEC.md Section 9)" in text
+    assert "Evaluated Seeds**: `[11, 12]`" in text
+    assert "Pressure vs Fixed (%)" in text
+
