@@ -15,6 +15,7 @@ def main():
     r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure"])
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")
+    r.add_argument("--decisions", action="store_true", help="print first 10 signal decisions (queue per approach -> green s)")
 
     c = sub.add_parser("compare", help="compare policies over scenarios and seeds")
     c.add_argument("--seeds", type=int, default=len(C.SIM.seeds))
@@ -34,6 +35,7 @@ def main():
     rep = sub.add_parser("report", help="generate results/report.md from CSV data")
     rep.add_argument("--csv", type=str, default=None, help="path to results CSV (default results/all_runs.csv)")
     rep.add_argument("--out", type=str, default=None, help="path for output markdown report (default results/report.md)")
+
     a = ap.parse_args()
 
     if a.cmd == "build":
@@ -42,6 +44,30 @@ def main():
         m = run_simulation(a.scenario, a.policy, a.seed, gui=a.gui)
         for k, v in m.items():
             print(f"{k:>22}: {v:.2f}" if isinstance(v, float) else f"{k:>22}: {v}")
+        if a.decisions:
+            import pandas as pd
+            dec_file = C.RESULTS_DIR / "runs" / f"{a.scenario}_{a.policy}_s{a.seed}" / "decisions.csv"
+            if dec_file.exists():
+                df_dec = pd.read_csv(dec_file).head(10)
+                print(f"\n{'='*78}\nFirst 10 Decisions: queue per approach (m) -> chosen green (s)\n{'='*78}")
+                print(f"{'Cycle':>5} | {'Time':>6} | {'Axis':>4} | {'N':>6} | {'S':>6} | {'E':>6} | {'W':>6} | {'Green':>6} | Decision")
+                print(f"{'-'*78}")
+                for _, row in df_dec.iterrows():
+                    ax = row["axis"]
+                    if ax == "NS":
+                        own_q = max(row["q_N_m"], row["q_S_m"])
+                        other_q = max(row["q_E_m"], row["q_W_m"])
+                    else:
+                        own_q = max(row["q_E_m"], row["q_W_m"])
+                        other_q = max(row["q_N_m"], row["q_S_m"])
+                    if a.policy == "pressure":
+                        diff = max(0.0, own_q - other_q)
+                        expl = f"diff {diff:.1f}m ({own_q:.1f}m - {other_q:.1f}m) -> green {row['green_s']:.1f}s"
+                    elif a.policy == "adaptive":
+                        expl = f"queue {own_q:.1f}m -> green {row['green_s']:.1f}s"
+                    else:
+                        expl = f"fixed timing -> green {row['green_s']:.1f}s"
+                    print(f"{int(row['cycle']):>5} | {row['t']:>5.0f}s | {ax:>4} | {row['q_N_m']:>5.1f}m | {row['q_S_m']:>5.1f}m | {row['q_E_m']:>5.1f}m | {row['q_W_m']:>5.1f}m | {row['green_s']:>5.1f}s | {expl}")
     elif a.cmd == "demo":
         build_network()
         for pol in ("fixed", "adaptive"):
