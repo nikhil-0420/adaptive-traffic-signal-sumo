@@ -6,3 +6,4 @@ sumo/*.sumocfg
 results/*
 !results/.gitkeep
 !sumo/.gitkeep
+*.zip

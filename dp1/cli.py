@@ -35,6 +35,7 @@ def main():
     rep = sub.add_parser("report", help="generate results/report.md from CSV data")
     rep.add_argument("--csv", type=str, default=None, help="path to results CSV (default results/all_runs.csv)")
     rep.add_argument("--out", type=str, default=None, help="path for output markdown report (default results/report.md)")
+    rep.add_argument("--pdf", action="store_true", help="compile markdown report to results/report.pdf")
 
     a = ap.parse_args()
 
@@ -98,8 +99,10 @@ def main():
         )
     elif a.cmd == "report":
         from . import report
-        out = report.generate_report(csv_file=a.csv, out_file=a.out)
+        out = report.generate_report(csv_file=a.csv, out_file=a.out, pdf=a.pdf)
         print(f"Report written to {out}")
+        if a.pdf:
+            print(f"PDF written to {out.with_suffix('.pdf')}")
 
 
 if __name__ == "__main__":
