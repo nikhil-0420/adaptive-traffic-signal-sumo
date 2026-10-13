@@ -1,0 +1,34 @@
+[
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "adaptive",
+    "reference_policy": "fixed",
+    "n_pairs": 1,
+    "missing_pairs": 0,
+    "delta_wait_mean_s": -77.3,
+    "delta_wait_ci_lower_s": -77.3,
+    "delta_wait_ci_upper_s": -77.3,
+    "delta_time_loss_mean_s": -81.56,
+    "delta_time_loss_ci_lower_s": -81.56,
+    "delta_time_loss_ci_upper_s": -81.56,
+    "delta_queue_mean_m": -11.29,
+    "delta_throughput_mean_vph": 372.0
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "pressure",
+    "reference_policy": "fixed",
+    "n_pairs": 1,
+    "missing_pairs": 0,
+    "delta_wait_mean_s": -76.54,
+    "delta_wait_ci_lower_s": -76.54,
+    "delta_wait_ci_upper_s": -76.54,
+    "delta_time_loss_mean_s": -82.74,
+    "delta_time_loss_ci_lower_s": -82.74,
+    "delta_time_loss_ci_upper_s": -82.74,
+    "delta_queue_mean_m": -8.44,
+    "delta_throughput_mean_vph": 380.0
+  }
+]

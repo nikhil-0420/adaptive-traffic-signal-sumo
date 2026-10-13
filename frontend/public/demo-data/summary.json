@@ -1,0 +1,25 @@
+{
+  "total_runs": 80,
+  "total_runs_evaluated": 80,
+  "total_experiments": 1,
+  "scenarios": [
+    "balanced",
+    "imbalanced_ns",
+    "imbalanced_ew",
+    "surge_north"
+  ],
+  "policies": [
+    "fixed",
+    "fixed_webster",
+    "adaptive",
+    "pressure",
+    "rl_dqn"
+  ],
+  "demand_levels": [
+    "low",
+    "medium",
+    "heavy"
+  ],
+  "dataset_label": "Saved simulation snapshot",
+  "generated_at": "2026-10-12T14:09:36Z"
+}

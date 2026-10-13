@@ -1,0 +1,4 @@
+cell_id,pattern,demand_level,policy,seed,status,runtime_s,route_hash,error_message
+cell_imbalanced_ns_medium_fixed_s21,imbalanced_ns,medium,fixed,21,complete,0.0,,
+cell_imbalanced_ns_medium_adaptive_s21,imbalanced_ns,medium,adaptive,21,complete,0.0,,
+cell_imbalanced_ns_medium_pressure_s21,imbalanced_ns,medium,pressure,21,complete,0.0,,

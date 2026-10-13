@@ -1,0 +1,13 @@
+pattern,demand_level,policy,approach,n_completed_mean,avg_wait_s,p95_wait_s,avg_queue_m,max_queue_m
+imbalanced_ns,medium,adaptive,N,615.0,56.59,392.3,101.49,149.9
+imbalanced_ns,medium,adaptive,S,557.0,40.79,294.4,73.07,149.0
+imbalanced_ns,medium,adaptive,E,177.0,26.75,65.2,9.19,42.51
+imbalanced_ns,medium,adaptive,W,191.0,37.88,98.0,14.69,58.07
+imbalanced_ns,medium,fixed,N,615.0,144.72,928.3,108.59,149.0
+imbalanced_ns,medium,fixed,S,557.0,157.03,1075.0,116.63,149.35
+imbalanced_ns,medium,fixed,E,177.0,33.29,102.2,8.9,57.51
+imbalanced_ns,medium,fixed,W,191.0,32.27,99.5,9.49,72.52
+imbalanced_ns,medium,pressure,N,615.0,44.23,255.2,91.69,149.0
+imbalanced_ns,medium,pressure,S,557.0,38.28,283.8,71.9,149.9
+imbalanced_ns,medium,pressure,E,177.0,54.82,146.4,20.39,57.66
+imbalanced_ns,medium,pressure,W,191.0,65.06,147.0,25.86,65.85

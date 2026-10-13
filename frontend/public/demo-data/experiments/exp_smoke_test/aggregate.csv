@@ -1,0 +1,4 @@
+pattern,demand_level,policy,n_seeds,avg_wait_s_mean,avg_wait_s_std,avg_time_loss_s_mean,avg_time_loss_s_std,avg_trip_s_mean,avg_trip_s_std,p95_wait_s_mean,p95_wait_s_std,avg_queue_m_mean,avg_queue_m_std,max_queue_m_mean,max_queue_m_std,throughput_veh_per_h_mean,throughput_veh_per_h_std,completion_rate_mean,completion_rate_std,completed_in_demand_window_mean,completed_in_demand_window_std,avg_wait_NS_s_mean,avg_wait_NS_s_std,avg_wait_EW_s_mean,avg_wait_EW_s_std,directional_wait_disparity_s_mean,directional_wait_disparity_s_std,approach_wait_gap_s_mean,approach_wait_gap_s_std
+imbalanced_ns,medium,adaptive,1,45.123,,70.474,,115.779,,311.05,,49.61,,149.9,,2798.0,,1.0,,1399.0,,49.078,,32.524,,16.55,,29.84,
+imbalanced_ns,medium,fixed,1,122.419,,152.039,,197.36,,773.1,,60.901,,149.35,,2426.0,,1.0,,1213.0,,150.573,,32.758,,117.81,,124.76,
+imbalanced_ns,medium,pressure,1,45.876,,69.299,,114.607,,242.1,,52.46,,149.9,,2806.0,,1.0,,1403.0,,41.398,,60.136,,18.74,,26.79,

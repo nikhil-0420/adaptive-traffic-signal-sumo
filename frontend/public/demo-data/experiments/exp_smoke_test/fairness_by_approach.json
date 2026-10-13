@@ -1,0 +1,134 @@
+[
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "adaptive",
+    "approach": "N",
+    "n_completed_mean": 615.0,
+    "avg_wait_s": 56.59,
+    "p95_wait_s": 392.3,
+    "avg_queue_m": 101.49,
+    "max_queue_m": 149.9
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "adaptive",
+    "approach": "S",
+    "n_completed_mean": 557.0,
+    "avg_wait_s": 40.79,
+    "p95_wait_s": 294.4,
+    "avg_queue_m": 73.07,
+    "max_queue_m": 149.0
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "adaptive",
+    "approach": "E",
+    "n_completed_mean": 177.0,
+    "avg_wait_s": 26.75,
+    "p95_wait_s": 65.2,
+    "avg_queue_m": 9.19,
+    "max_queue_m": 42.51
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "adaptive",
+    "approach": "W",
+    "n_completed_mean": 191.0,
+    "avg_wait_s": 37.88,
+    "p95_wait_s": 98.0,
+    "avg_queue_m": 14.69,
+    "max_queue_m": 58.07
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "fixed",
+    "approach": "N",
+    "n_completed_mean": 615.0,
+    "avg_wait_s": 144.72,
+    "p95_wait_s": 928.3,
+    "avg_queue_m": 108.59,
+    "max_queue_m": 149.0
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "fixed",
+    "approach": "S",
+    "n_completed_mean": 557.0,
+    "avg_wait_s": 157.03,
+    "p95_wait_s": 1075.0,
+    "avg_queue_m": 116.63,
+    "max_queue_m": 149.35
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "fixed",
+    "approach": "E",
+    "n_completed_mean": 177.0,
+    "avg_wait_s": 33.29,
+    "p95_wait_s": 102.2,
+    "avg_queue_m": 8.9,
+    "max_queue_m": 57.51
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "fixed",
+    "approach": "W",
+    "n_completed_mean": 191.0,
+    "avg_wait_s": 32.27,
+    "p95_wait_s": 99.5,
+    "avg_queue_m": 9.49,
+    "max_queue_m": 72.52
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "pressure",
+    "approach": "N",
+    "n_completed_mean": 615.0,
+    "avg_wait_s": 44.23,
+    "p95_wait_s": 255.2,
+    "avg_queue_m": 91.69,
+    "max_queue_m": 149.0
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "pressure",
+    "approach": "S",
+    "n_completed_mean": 557.0,
+    "avg_wait_s": 38.28,
+    "p95_wait_s": 283.8,
+    "avg_queue_m": 71.9,
+    "max_queue_m": 149.9
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "pressure",
+    "approach": "E",
+    "n_completed_mean": 177.0,
+    "avg_wait_s": 54.82,
+    "p95_wait_s": 146.4,
+    "avg_queue_m": 20.39,
+    "max_queue_m": 57.66
+  },
+  {
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "pressure",
+    "approach": "W",
+    "n_completed_mean": 191.0,
+    "avg_wait_s": 65.06,
+    "p95_wait_s": 147.0,
+    "avg_queue_m": 25.86,
+    "max_queue_m": 65.85
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "cell_id": "cell_imbalanced_ns_medium_fixed_s21",
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "fixed",
+    "seed": 21,
+    "status": "complete",
+    "runtime_s": 0.0,
+    "route_hash": null,
+    "error_message": null
+  },
+  {
+    "cell_id": "cell_imbalanced_ns_medium_adaptive_s21",
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "adaptive",
+    "seed": 21,
+    "status": "complete",
+    "runtime_s": 0.0,
+    "route_hash": null,
+    "error_message": null
+  },
+  {
+    "cell_id": "cell_imbalanced_ns_medium_pressure_s21",
+    "pattern": "imbalanced_ns",
+    "demand_level": "medium",
+    "policy": "pressure",
+    "seed": 21,
+    "status": "complete",
+    "runtime_s": 0.0,
+    "route_hash": null,
+    "error_message": null
+  }
+]
