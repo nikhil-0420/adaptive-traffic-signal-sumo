@@ -89,19 +89,19 @@ def test_route_generation_and_hash_pairing(tmp_path):
 
 
 def test_research_matrix_dimensions_and_presets():
-    """Verify full matrix contains exactly 600 cells and dry-run preview works."""
+    """Verify full matrix contains exactly 720 cells and dry-run preview works."""
     full_matrix = build_research_matrix("exp_full_test", preset="full")
-    assert full_matrix.total_cells == 600
+    assert full_matrix.total_cells == 720
     assert len(full_matrix.patterns) == 4
     assert len(full_matrix.levels) == 3
-    assert len(full_matrix.policies) == 5
+    assert len(full_matrix.policies) == 6
     assert len(full_matrix.seeds) == 10
 
     smoke_matrix = build_research_matrix("exp_smoke_test", preset="smoke")
     assert smoke_matrix.total_cells == 3
 
     preview = format_matrix_preview(full_matrix)
-    assert "Total Matrix Cells: 600" in preview
+    assert "Total Matrix Cells: 720" in preview
     assert "cell_balanced_low_fixed_s21" in preview
 
 

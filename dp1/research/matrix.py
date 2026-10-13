@@ -67,7 +67,7 @@ def build_research_matrix(
 
     Presets:
         'smoke': tiny 3-run deterministic sanity test (imbalanced_ns, medium, fixed/adaptive/pressure, seed 21).
-        'full': canonical 600-run research matrix (4 patterns x 3 levels x 5 policies x 10 research seeds).
+        'full': canonical 720-run research matrix (4 patterns x 3 levels x 6 policies x 10 research seeds).
         'custom': user-selected combination of factors.
     """
     if preset == "smoke":

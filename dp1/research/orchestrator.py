@@ -172,6 +172,9 @@ def run_research_experiment(
                     if row:
                         new_rows.append(row)
                         print(f"  [OK] {updated_cell.cell_id} ({updated_cell.runtime_s:.1f}s) wait={row.get('avg_wait_s', 0):.1f}s")
+                        if len(new_rows) % 20 == 0:
+                            pd.DataFrame([c.to_dict() for c in matrix.cells]).to_csv(status_file, index=False)
+                            pd.DataFrame(existing_rows + new_rows).to_csv(raw_runs_file, index=False)
                     elif err:
                         print(f"  [ERR] {updated_cell.cell_id}: {updated_cell.error_message}")
                         with open(failures_file, "a", encoding="utf-8") as ff:
