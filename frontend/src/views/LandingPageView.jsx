@@ -247,10 +247,10 @@ export function LandingPageView() {
               <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Cpu size={20} />
               </div>
-              <h3 className="text-base font-semibold text-white">5 Rigorous Control Policies</h3>
+              <h3 className="text-base font-semibold text-white">6 Rigorous Control Policies</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Benchmark fixed-time baseline (BTP Yamlur corridor), Webster's theoretical optimal cycle calculation,
-                dynamic queue-actuated extension, upstream/downstream max-pressure balancing, and deep reinforcement learning (DQN).
+                adaptive queue-actuated allocation, max-pressure balancing, bounded queue-extension, and deep reinforcement learning (DQN).
               </p>
             </div>
             <div className="pt-6 font-mono text-[11px] text-emerald-400 flex items-center gap-1.5">

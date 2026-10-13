@@ -288,7 +288,7 @@ export function LiveMonitorView() {
             <div className="p-2.5 bg-slate-900 border border-white/5 rounded font-mono text-[11px] text-slate-300 flex items-center justify-between">
               <span className="text-emerald-400 font-bold">GREEN (10s min)</span>
               <span className="text-slate-500">→</span>
-              <span className="text-amber-400 font-bold">YELLOW (4s)</span>
+              <span className="text-amber-400 font-bold">YELLOW (3s)</span>
               <span className="text-slate-500">→</span>
               <span className="text-red-400 font-bold">ALL-RED (2s)</span>
             </div>
@@ -401,6 +401,7 @@ export function LiveMonitorView() {
                     <option value="fixed_webster">Webster Optimal Fixed-Time</option>
                     <option value="adaptive">Adaptive Queue-Length</option>
                     <option value="pressure">Max-Pressure Controller</option>
+                    <option value="queue_extension">Bounded Queue-Extension</option>
                     <option value="rl_dqn">DQN Reinforcement Learning</option>
                   </select>
                 </div>

@@ -144,7 +144,7 @@ export function ResearchView() {
                   className="dp1-select w-full text-xs"
                 >
                   <option value="smoke">Smoke Preset (3 cells • Quick Verify)</option>
-                  <option value="full">Full Primary Matrix (600 cells • 4x3x5x10)</option>
+                  <option value="full">Full Primary Matrix (720 cells • 4x3x6x10)</option>
                   <option value="custom">Custom Filter Matrix</option>
                 </select>
               </div>

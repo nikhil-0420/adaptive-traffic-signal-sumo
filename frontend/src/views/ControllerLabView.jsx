@@ -8,12 +8,13 @@ export function ControllerLabView() {
   const [selectedScenario, setSelectedScenario] = useState('imbalanced_ns');
   const [selectedDemandLevel, setSelectedDemandLevel] = useState('medium');
 
-  const policiesList = ['fixed', 'fixed_webster', 'adaptive', 'pressure', 'rl_dqn'];
+  const policiesList = ['fixed', 'fixed_webster', 'adaptive', 'pressure', 'queue_extension', 'rl_dqn'];
   const policyNames = {
     fixed: 'Fixed-Time (Baseline)',
     fixed_webster: 'Webster Optimized',
     adaptive: 'Adaptive Queue',
     pressure: 'Max-Pressure',
+    queue_extension: 'Bounded Queue-Extension',
     rl_dqn: 'DQN Reinforcement Learning',
   };
 
@@ -22,6 +23,7 @@ export function ControllerLabView() {
     fixed_webster: '#F59E0B',
     adaptive: '#10B981',
     pressure: '#06B6D4',
+    queue_extension: '#059669',
     rl_dqn: '#8B5CF6',
   };
 
@@ -87,7 +89,7 @@ export function ControllerLabView() {
             <span>Controller Benchmark Lab</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Compare five signal policies under identical seeds, vehicles, and detector placements.
+            Compare all six signal policies under identical seeds, vehicles, and detector placements.
           </p>
         </div>
 
