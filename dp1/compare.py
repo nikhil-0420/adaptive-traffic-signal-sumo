@@ -15,9 +15,12 @@ def _one(args):
     return run_simulation(*args)
 
 
-def run_matrix(scenarios=None, policies=("fixed", "fixed_webster", "adaptive", "pressure"), seeds=C.SIM.seeds, jobs=1):
+def run_matrix(scenarios=None, policies=("fixed", "fixed_webster", "adaptive", "pressure"), seeds=C.SIM.seeds, jobs=1, model_path=None):
     scenarios = scenarios or list(C.scenarios().keys())
-    jobs_list = [(s, p, sd) for s in scenarios for p in policies for sd in seeds]
+    jobs_list = [
+        (s, p, sd, False, None, {"model_path": model_path} if p == "rl_dqn" and model_path else None)
+        for s in scenarios for p in policies for sd in seeds
+    ]
     if jobs > 1:
         with ProcessPoolExecutor(max_workers=jobs) as ex:
             rows = list(ex.map(_one, jobs_list))
@@ -47,6 +50,7 @@ def improvement_table(df):
     out = pd.DataFrame(index=m.index)
     has_webster = ("avg_wait_s", "fixed_webster") in m.columns
     has_pressure = ("avg_wait_s", "pressure") in m.columns
+    has_rl = ("avg_wait_s", "rl_dqn") in m.columns
     for col, better_low in (("avg_wait_s", True), ("avg_queue_m", True), ("throughput_veh_per_h", False)):
         fx = m[(col, "fixed")]
         ad = m[(col, "adaptive")]
@@ -58,19 +62,30 @@ def improvement_table(df):
         if has_pressure:
             pr = m[(col, "pressure")]
             out[f"{col}_pressure"] = pr.round(2)
+        if has_rl:
+            rl = m[(col, "rl_dqn")]
+            out[f"{col}_rl_dqn"] = rl.round(2)
         out[f"{col}_change_%"] = ((fx - ad) / fx * 100 if better_low else (ad - fx) / fx * 100).round(1)
         if has_pressure:
             out[f"{col}_pressure_vs_fixed_%"] = ((fx - pr) / fx * 100 if better_low else (pr - fx) / fx * 100).round(1)
         if has_webster:
             out[f"{col}_adv_vs_webster_%"] = ((wb - ad) / wb * 100 if better_low else (ad - wb) / wb * 100).round(1)
+        if has_rl:
+            out[f"{col}_rl_vs_fixed_%"] = ((fx - rl) / fx * 100 if better_low else (rl - fx) / fx * 100).round(1)
     out.to_csv(C.RESULTS_DIR / "improvement.csv")
     return out
 
 
 def plot_all(df):
     scen = list(df["scenario"].unique())
-    pols = [p for p in ("fixed", "fixed_webster", "adaptive", "pressure") if p in df["policy"].unique()]
-    colors = {"fixed": "#8A94A6", "fixed_webster": "#D97706", "adaptive": "#0E7C86", "pressure": "#7C3AED"}
+    pols = [p for p in ("fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn") if p in df["policy"].unique()]
+    colors = {
+        "fixed": "#8A94A6",
+        "fixed_webster": "#D97706",
+        "adaptive": "#0E7C86",
+        "pressure": "#7C3AED",
+        "rl_dqn": "#2563EB",
+    }
     for metric, title, fname in (("avg_wait_s", "Average waiting time per vehicle (s) - lower is better", "wait_time.png"),
                                  ("avg_queue_m", "Average queue length (m) - lower is better", "queue_length.png")):
         fig, ax = plt.subplots(figsize=(8.5, 4.2))
