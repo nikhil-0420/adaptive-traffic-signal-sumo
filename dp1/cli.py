@@ -12,7 +12,7 @@ def main():
 
     r = sub.add_parser("run", help="run one simulation")
     r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()))
-    r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn"])
+    r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"])
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")
     r.add_argument("--decisions", action="store_true", help="print first 10 signal decisions (queue per approach -> green s)")
@@ -28,14 +28,14 @@ def main():
     c.add_argument("--seeds", type=int, default=len(C.SIM.seeds))
     c.add_argument("--held-out", action="store_true", help="use held-out seeds (11-15)")
     c.add_argument("--scenarios", nargs="*", default=None)
-    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn"])
+    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"])
     c.add_argument("--jobs", type=int, default=1)
     c.add_argument("--model-path", type=str, default=None, help="path to trained RL model for rl_dqn policy")
 
     sub.add_parser("demo", help="quick fixed-vs-adaptive run on the imbalanced scenario")
 
     trl = sub.add_parser("train-rl", help="train a DQN policy model using Gymnasium and Stable-Baselines3")
-    trl.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()))
+    trl.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()) + ["all"])
     trl.add_argument("--seed", type=int, default=1)
     trl.add_argument("--timesteps", type=int, default=1000, help="training timesteps (default 1000 for smoke/test)")
     trl.add_argument("--out", type=str, default=None, help="output model path (.zip)")
@@ -115,6 +115,9 @@ def main():
                         expl = f"diff {diff:.1f}m ({own_q:.1f}m - {other_q:.1f}m) -> green {row['green_s']:.1f}s"
                     elif a.policy == "adaptive":
                         expl = f"queue {own_q:.1f}m -> green {row['green_s']:.1f}s"
+                    elif a.policy == "queue_extension":
+                        ext_val = row.get("actual_green_s", row["green_s"])
+                        expl = f"queue ext -> initial {row['green_s']:.1f}s, actual {ext_val:.1f}s"
                     elif a.policy == "rl_dqn":
                         expl = f"rl dqn policy -> nominal {row['green_s']:.1f}s (actual {row.get('actual_green_s', row['green_s']):.1f}s)"
                     else:
@@ -130,7 +133,7 @@ def main():
         from . import compare as cmp
         build_network()
         seeds = C.HELD_OUT_SEEDS if a.held_out else tuple(range(1, a.seeds + 1))
-        policies = tuple(a.policies) if a.policies else ("fixed", "fixed_webster", "adaptive", "pressure")
+        policies = tuple(a.policies) if a.policies else ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension")
         df = cmp.run_matrix(a.scenarios, policies=policies, seeds=seeds, jobs=a.jobs, model_path=a.model_path)
         cmp.aggregate(df)
         print("\n", cmp.improvement_table(df).to_string())

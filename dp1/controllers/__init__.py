@@ -3,6 +3,7 @@ from .fixed_time import FixedTimeController
 from .fixed_webster import FixedWebsterController
 from .adaptive_queue import AdaptiveQueueController
 from .adaptive_pressure import AdaptivePressureController
+from .queue_extension import QueueExtensionController
 from .rl_dqn import RLDQNController
 
 POLICIES = {
@@ -10,6 +11,7 @@ POLICIES = {
     "fixed_webster": FixedWebsterController,
     "adaptive": AdaptiveQueueController,
     "pressure": AdaptivePressureController,
+    "queue_extension": QueueExtensionController,
     "rl_dqn": RLDQNController,
 }
 

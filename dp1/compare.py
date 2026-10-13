@@ -15,7 +15,7 @@ def _one(args):
     return run_simulation(*args)
 
 
-def run_matrix(scenarios=None, policies=("fixed", "fixed_webster", "adaptive", "pressure"), seeds=C.SIM.seeds, jobs=1, model_path=None):
+def run_matrix(scenarios=None, policies=("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension"), seeds=C.SIM.seeds, jobs=1, model_path=None):
     scenarios = scenarios or list(C.scenarios().keys())
     jobs_list = [
         (s, p, sd, False, None, {"model_path": model_path} if p == "rl_dqn" and model_path else None)
@@ -28,7 +28,7 @@ def run_matrix(scenarios=None, policies=("fixed", "fixed_webster", "adaptive", "
         rows = []
         for j in jobs_list:
             r = run_simulation(*j)
-            print(f"  {r['scenario']:<14} {r['policy']:<9} seed={r['seed']}  wait={r['avg_wait_s']:.1f}s  "
+            print(f"  {r['scenario']:<14} {r['policy']:<15} seed={r['seed']}  wait={r['avg_wait_s']:.1f}s  "
                   f"queue={r['avg_queue_m']:.1f}m  done={r['completion_rate']:.0%}")
             rows.append(r)
     df = pd.DataFrame(rows)
@@ -50,6 +50,7 @@ def improvement_table(df):
     out = pd.DataFrame(index=m.index)
     has_webster = ("avg_wait_s", "fixed_webster") in m.columns
     has_pressure = ("avg_wait_s", "pressure") in m.columns
+    has_qext = ("avg_wait_s", "queue_extension") in m.columns
     has_rl = ("avg_wait_s", "rl_dqn") in m.columns
     for col, better_low in (("avg_wait_s", True), ("avg_queue_m", True), ("throughput_veh_per_h", False)):
         fx = m[(col, "fixed")]
@@ -62,12 +63,17 @@ def improvement_table(df):
         if has_pressure:
             pr = m[(col, "pressure")]
             out[f"{col}_pressure"] = pr.round(2)
+        if has_qext:
+            qe = m[(col, "queue_extension")]
+            out[f"{col}_queue_extension"] = qe.round(2)
         if has_rl:
             rl = m[(col, "rl_dqn")]
             out[f"{col}_rl_dqn"] = rl.round(2)
         out[f"{col}_change_%"] = ((fx - ad) / fx * 100 if better_low else (ad - fx) / fx * 100).round(1)
         if has_pressure:
             out[f"{col}_pressure_vs_fixed_%"] = ((fx - pr) / fx * 100 if better_low else (pr - fx) / fx * 100).round(1)
+        if has_qext:
+            out[f"{col}_qext_vs_fixed_%"] = ((fx - qe) / fx * 100 if better_low else (qe - fx) / fx * 100).round(1)
         if has_webster:
             out[f"{col}_adv_vs_webster_%"] = ((wb - ad) / wb * 100 if better_low else (ad - wb) / wb * 100).round(1)
         if has_rl:
@@ -78,12 +84,13 @@ def improvement_table(df):
 
 def plot_all(df):
     scen = list(df["scenario"].unique())
-    pols = [p for p in ("fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn") if p in df["policy"].unique()]
+    pols = [p for p in ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn") if p in df["policy"].unique()]
     colors = {
         "fixed": "#8A94A6",
         "fixed_webster": "#D97706",
         "adaptive": "#0E7C86",
         "pressure": "#7C3AED",
+        "queue_extension": "#059669",
         "rl_dqn": "#2563EB",
     }
     for metric, title, fname in (("avg_wait_s", "Average waiting time per vehicle (s) - lower is better", "wait_time.png"),
