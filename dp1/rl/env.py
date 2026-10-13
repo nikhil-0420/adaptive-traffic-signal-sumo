@@ -68,6 +68,8 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         cfg: C.RLConfig = C.RL,
         gui: bool = False,
         out_dir: Optional[Path] = None,
+        rotate_seeds: bool = False,
+        scenarios: Optional[tuple] = None,
     ):
         if not _GYM_AVAILABLE:
             raise ImportError(
@@ -77,10 +79,13 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
 
         super().__init__()
         self.scenario = scenario
+        self.scenarios = scenarios or (("imbalanced_ns", "imbalanced_ew", "balanced", "surge_north") if scenario == "all" else None)
         self.seed = seed
         self.cfg = cfg
         self.gui = gui
         self.out_dir = Path(out_dir) if out_dir else None
+        self.rotate_seeds = rotate_seeds
+        self._episode_count = 0
 
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(
@@ -105,7 +110,13 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         """Reset the simulation environment for a new episode."""
         if seed is not None:
             self.seed = seed
+        elif self.rotate_seeds and hasattr(self.cfg, "train_seeds") and self.cfg.train_seeds:
+            self.seed = self.cfg.train_seeds[self._episode_count % len(self.cfg.train_seeds)]
 
+        if self.scenarios:
+            self.scenario = self.scenarios[self._episode_count % len(self.scenarios)]
+
+        self._episode_count += 1
         self.close()
 
         if not NET_FILE.exists():
@@ -115,7 +126,6 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         run_out = self.out_dir or (C.RESULTS_DIR / "rl_runs" / f"{self.scenario}_s{self.seed}")
         run_out.mkdir(parents=True, exist_ok=True)
         routes, self.n_vehicles = build_routes(self.scenario, self.seed, out_dir=run_out)
-        tripinfo = run_out / "tripinfo.xml"
 
         cmd = [
             binary("sumo-gui" if self.gui else "sumo"),
@@ -128,8 +138,9 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
             "--no-step-log", "true",
             "--no-warnings", "true",
             "--waiting-time-memory", "3600",
-            "--tripinfo-output", str(tripinfo),
         ]
+        if self.out_dir is not None:
+            cmd.extend(["--tripinfo-output", str(run_out / "tripinfo.xml")])
         if self.gui:
             cmd += ["--start", "true", "--delay", "100"]
 
