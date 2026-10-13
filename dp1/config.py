@@ -62,6 +62,15 @@ class PressureConfig:
 
 
 @dataclass(frozen=True)
+class ActionConfig:
+    """Action seam configuration for external / RL controllers."""
+    min_green_s: float = 10.0
+    max_green_s: float = 60.0
+    action_hold: int = 0
+    action_switch: int = 1
+
+
+@dataclass(frozen=True)
 class SimConfig:
     step_s: float = 1.0
     demand_duration_s: int = 1800
@@ -76,7 +85,54 @@ TUNE_SEARCH_SPACE = {
     "gap_out_s": (2, 3, 5),
 }
 TRAIN_SEEDS = (1, 2, 3, 4, 5)
+RL_VALIDATION_SEEDS = (6, 7, 8, 9, 10)
 HELD_OUT_SEEDS = (11, 12, 13, 14, 15)
+RESEARCH_EVAL_SEEDS = tuple(range(21, 31))
+
+
+@dataclass(frozen=True)
+class RLConfig:
+    """Hyperparameters and configuration for RL environment and DQN controller."""
+    # Action & green bounds
+    min_green_s: float = 10.0
+    max_green_s: float = 60.0
+    action_hold: int = 0
+    action_switch: int = 1
+
+    # Observation space
+    obs_dim: int = 11
+    max_detector_m: float = 150.0  # normalization denominator for queues
+
+    # Reward weights (per-second normalized reward)
+    queue_weight: float = 1.0       # penalty weight for total normalized queue
+    switch_penalty: float = 0.05    # penalty applied on accepted switch to discourage oscillation
+    wait_weight: float = 0.0        # optional waiting-time component weight
+
+    # Training hyperparameters
+    learning_rate: float = 1e-3
+    buffer_size: int = 10_000
+    learning_starts: int = 100
+    batch_size: int = 32
+    tau: float = 1.0
+    gamma: float = 0.99
+    train_freq: int = 4
+    gradient_steps: int = 1
+    target_update_interval: int = 250
+    exploration_initial_eps: float = 1.0
+    exploration_final_eps: float = 0.05
+    exploration_fraction: float = 0.20
+    total_timesteps: int = 10_000
+
+    # Seed splits
+    train_seeds: tuple = (1, 2, 3, 4, 5)
+    validation_seeds: tuple = (6, 7, 8, 9, 10)
+    eval_seeds: tuple = (11, 12, 13, 14, 15)
+    research_seeds: tuple = tuple(range(21, 31))
+
+    # Output paths
+    models_dir: Path = RESULTS_DIR / "models"
+    logs_dir: Path = RESULTS_DIR / "rl_logs"
+    default_model_name: str = "dqn_dp1_latest"
 
 
 NET = NetworkConfig()
@@ -94,30 +150,43 @@ FIXED = FixedTimeConfig(
 )
 ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
+ACTION = ActionConfig()
+RL = RLConfig()
 SIM = SimConfig()
+
+# Demand levels and multipliers (P3)
+DEMAND_LEVELS = {
+    "low": 0.70,
+    "medium": 1.00,
+    "heavy": 1.30,
+}
+DEFAULT_DEMAND_LEVEL = "medium"
 
 # Demand scenarios: vehicles/hour per approach, as piecewise segments (t_start, t_end, vph)
 DEMAND_SCALE = 1.7
 
 
-def _flat(vph, end):
-    return [(0, end, vph * DEMAND_SCALE)]
-
-
-def scenarios(duration=SIM.demand_duration_s):
+def scenarios(duration=SIM.demand_duration_s, demand_level: str = DEFAULT_DEMAND_LEVEL):
+    if demand_level not in DEMAND_LEVELS:
+        raise ValueError(f"Unknown demand_level: {demand_level}. Allowed: {list(DEMAND_LEVELS.keys())}")
+    mult = DEMAND_LEVELS[demand_level]
     d = duration
+
+    def _scaled_flat(vph):
+        return [(0, d, vph * DEMAND_SCALE * mult)]
+
     return {
-        "balanced":      {a: _flat(400, d) for a in APPROACHES},
-        "imbalanced_ns": {"N": _flat(700, d), "S": _flat(700, d), "E": _flat(200, d), "W": _flat(200, d)},
-        "imbalanced_ew": {"N": _flat(200, d), "S": _flat(200, d), "E": _flat(700, d), "W": _flat(700, d)},
-        "surge_north":   {"N": [(0, 600, 400 * DEMAND_SCALE), (600, 1200, 1100 * DEMAND_SCALE), (1200, d, 400 * DEMAND_SCALE)],
-                          "S": _flat(400, d), "E": _flat(400, d), "W": _flat(400, d)},
+        "balanced":      {a: _scaled_flat(400) for a in APPROACHES},
+        "imbalanced_ns": {"N": _scaled_flat(700), "S": _scaled_flat(700), "E": _scaled_flat(200), "W": _scaled_flat(200)},
+        "imbalanced_ew": {"N": _scaled_flat(200), "S": _scaled_flat(200), "E": _scaled_flat(700), "W": _scaled_flat(700)},
+        "surge_north":   {"N": [(0, 600, 400 * DEMAND_SCALE * mult), (600, 1200, 1100 * DEMAND_SCALE * mult), (1200, d, 400 * DEMAND_SCALE * mult)],
+                          "S": _scaled_flat(400), "E": _scaled_flat(400), "W": _scaled_flat(400)},
     }
 
 
-def webster_plan(scenario: str, net=NET, timing=TIMING, cfg=WEBSTER) -> FixedTimeConfig:
-    """Compute Webster's optimal fixed-time plan from average scenario demand."""
-    scens = scenarios()
+def webster_plan(scenario: str, net=NET, timing=TIMING, cfg=WEBSTER, demand_level: str = DEFAULT_DEMAND_LEVEL) -> FixedTimeConfig:
+    """Compute Webster's optimal fixed-time plan from average scenario demand scaled by demand level."""
+    scens = scenarios(demand_level=demand_level)
     if scenario not in scens:
         raise KeyError(f"Unknown scenario: {scenario}")
     prof = scens[scenario]
@@ -162,3 +231,39 @@ def webster_plan(scenario: str, net=NET, timing=TIMING, cfg=WEBSTER) -> FixedTim
 
 # Turning split for every approach
 TURN_SPLIT = {"straight": 0.70, "left": 0.15, "right": 0.15}
+
+
+@dataclass(frozen=True)
+class ResearchConfig:
+    """Settings for the 600-run research-grade evaluation matrix and statistical analysis."""
+    patterns: tuple = ("balanced", "imbalanced_ns", "imbalanced_ew", "surge_north")
+    levels: tuple = ("low", "medium", "heavy")
+    policies: tuple = ("fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn")
+    seeds: tuple = tuple(range(21, 31))  # RESEARCH_EVAL_SEEDS (21..30)
+    bootstrap_resamples: int = 10_000
+    bootstrap_seed: int = 42
+    confidence_level: float = 0.95
+    research_dir: Path = RESULTS_DIR / "research"
+
+
+@dataclass(frozen=True)
+class EmergencyConfig:
+    """Configuration for deterministic emergency vehicle event and priority (P4)."""
+    detection_dist_m: float = 100.0
+    min_green_s: float = 10.0
+    max_extension_s: float = 30.0
+    depart_time_s: float = 300.0
+    approach: str = "N"
+    turn: str = "straight"
+    vehicle_id: str = "ambulance"
+    speed_m_s: float = 19.44
+    accel: float = 3.5
+    decel: float = 5.5
+    vclass: str = "emergency"
+    color: str = "1,0,0"
+    event_enabled: bool = False
+    priority_enabled: bool = False
+
+
+RESEARCH = ResearchConfig()
+EMERGENCY = EmergencyConfig()

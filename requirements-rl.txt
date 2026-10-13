@@ -1,0 +1,4 @@
+# RL optional dependencies (Phase P2 / P3)
+# Keep separate from core requirements.txt
+gymnasium>=0.29.0
+stable-baselines3>=2.0.0
