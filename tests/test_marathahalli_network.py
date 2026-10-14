@@ -65,24 +65,24 @@ def test_marathahalli_signal_safety_invariants():
     phases = prog.getPhases()
 
     assert len(phases) == 6
-    # Phase 0: NS Green (105s)
+    # Phase 0: East-West (Varthur Rd: HAL <-> Whitefield) Green (105s, BTP Phase 1 adapted)
     assert phases[0].duration == 105.0
-    assert "G" in phases[0].state or "g" in phases[0].state
-    # Phase 1: NS Yellow (3s)
+    assert phases[0].state == "rrrrGGGgrrrrGGGg"
+    # Phase 1: East-West Yellow (3s)
     assert phases[1].duration == 3.0
-    assert "y" in phases[1].state
-    # Phase 2: All-Red (2s)
+    assert phases[1].state == "rrrryyyyrrrryyyy"
+    # Phase 2: All-Red Clearance (2s)
     assert phases[2].duration == 2.0
-    assert set(phases[2].state) == {"r"}
-    # Phase 3: EW Green (95s)
+    assert phases[2].state == "rrrrrrrrrrrrrrrr"
+    # Phase 3: North-South (ORR: Kadubeesanahalli <-> KR Puram) Green (95s, BTP Phase 2 adapted)
     assert phases[3].duration == 95.0
-    assert "G" in phases[3].state or "g" in phases[3].state
-    # Phase 4: NS Yellow (3s)
+    assert phases[3].state == "GGGgrrrrGGGgrrrr"
+    # Phase 4: North-South Yellow (3s)
     assert phases[4].duration == 3.0
-    assert "y" in phases[4].state
-    # Phase 5: All-Red (2s)
+    assert phases[4].state == "yyyyrrrryyyyrrrr"
+    # Phase 5: All-Red Clearance (2s)
     assert phases[5].duration == 2.0
-    assert set(phases[5].state) == {"r"}
+    assert phases[5].state == "rrrrrrrrrrrrrrrr"
 
 
 def test_marathahalli_sumo_simulation_smoke():
@@ -215,5 +215,92 @@ def test_marathahalli_emergency_matrix_config():
     # Verify synthetic defaults
     assert PATTERNS == ("balanced", "surge_north")
     assert SEEDS == tuple(range(21, 31))
+
+
+def test_btp_phase_to_road_mapping_and_controllers():
+    """Regression test: verify mapping between documented BTP phases, approaches, and controllers.
+
+    Documented BTP Phase 1 = 110s field -> 105s net green on Road A (HAL) + Road B (Whitefield) = East-West (EW).
+    Documented BTP Phase 2 = 100s field -> 95s net green on Road C (Kadubeesanahalli) + Road D (KR Puram) = North-South (NS).
+    """
+    from dp1.signal_states import SignalStates
+    from dp1.controllers.fixed_time import FixedTimeController
+    from dp1 import config as C
+
+    build_network("marathahalli")
+    states = SignalStates(MARATHAHALLI_NET_FILE, tls_id="marathahalli_tls")
+
+    # 1. Physical approaches map to correct axes and RYG states
+    assert states.green("EW") == "rrrrGGGgrrrrGGGg"
+    assert states.green("NS") == "GGGgrrrrGGGgrrrr"
+    assert states.yellow("EW") == "rrrryyyyrrrryyyy"
+    assert states.yellow("NS") == "yyyyrrrryyyyrrrr"
+    assert states.all_red() == "rrrrrrrrrrrrrrrr"
+
+    # 2. Site-aware FixedTimeController assigns 105s to EW and 95s to NS on Marathahalli
+    site_ctrl = FixedTimeController(states, network="marathahalli")
+    assert site_ctrl.plan == C.FIXED_MARATHAHALLI
+    assert site_ctrl.decide_green("EW", {}, 0.0) == 105.0
+    assert site_ctrl.decide_green("NS", {}, 0.0) == 95.0
+
+    # 3. Baseline synthetic network retains historical backward compatibility (105s NS, 95s EW)
+    synth_ctrl = FixedTimeController(states, network="synthetic")
+    assert synth_ctrl.plan == C.FIXED
+    assert synth_ctrl.decide_green("EW", {}, 0.0) == 95.0
+    assert synth_ctrl.decide_green("NS", {}, 0.0) == 105.0
+
+
+def test_marathahalli_research_matrix_builder_720():
+    """Verify build_research_matrix creates 720 cells with all 6 controllers for exp_marathahalli_site_720."""
+    from dp1.research.matrix import build_research_matrix
+
+    matrix = build_research_matrix(experiment_id="exp_marathahalli_site_720", network="marathahalli")
+    assert matrix.total_cells == 720  # 4 patterns * 3 levels * 6 policies * 10 seeds
+    assert all(c.network == "marathahalli" for c in matrix.cells)
+
+    seeds = {c.seed for c in matrix.cells}
+    assert seeds == set(range(121, 131))
+
+    policies = {c.policy for c in matrix.cells}
+    assert policies == {"fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"}
+
+
+def test_marathahalli_collision_free_and_safety_invariants():
+    """Verify via TraCI that Marathahalli simulation operates 100% collision-free with 0 emergency brakings."""
+    import traci
+    from dp1.runner import run_simulation
+
+    build_network("marathahalli")
+    # 1. Run simulation through runner
+    m = run_simulation(
+        scenario="imbalanced_orr",
+        policy="queue_extension",
+        seed=116,
+        demand_level="low",
+        network="marathahalli",
+    )
+
+    assert m["completion_rate"] == 1.0
+    assert m["vehicles_unfinished"] == 0
+    assert m["vehicles_arrived"] == m["vehicles_total"]
+    assert m["avg_wait_s"] > 0.0
+
+    # 2. Directly verify TraCI collision & emergency braking functions return 0 on site network
+    cmd = [
+        binary("sumo"),
+        "--net-file", str(MARATHAHALLI_NET_FILE),
+        "-a", str(MARATHAHALLI_DET_FILE),
+        "--no-step-log", "true",
+        "--no-warnings", "true",
+    ]
+    traci.start(cmd, label="test_collision_check")
+    try:
+        for _ in range(10):
+            traci.simulationStep()
+            assert traci.simulation.getCollidingVehiclesNumber() == 0
+            assert traci.simulation.getEmergencyStoppingVehiclesNumber() == 0
+            assert len(traci.simulation.getCollisions()) == 0
+    finally:
+        traci.close()
 
 

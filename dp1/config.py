@@ -156,11 +156,21 @@ WEBSTER = WebsterConfig()
 # Old 30/30 plan kept for reference
 FIXED_PLACEHOLDER = FixedTimeConfig(green_ns_s=30, green_ew_s=30)
 
-# BTP Marathalli Bridge Junction (weekday 08:00-11:30): Phase 1 = 110s (NS), Phase 2 = 100s (EW)
-# Net green computed from TIMING by subtracting yellow and all-red clearance intervals
+# BTP Baseline Signal Timings (weekday 08:00-11:30):
+# Phase 1 = 110s, Phase 2 = 100s, Pedestrian = 15s (effective vehicle cycle = 210s)
+# Net green computed from TIMING by subtracting yellow (3s) and all-red (2s) clearance intervals (5s lost time per phase).
+# Synthetic network: historical mapping Phase 1 -> NS (105s), Phase 2 -> EW (95s) (preserved for baseline backward compatibility).
 FIXED = FixedTimeConfig(
-    green_ns_s=110 - (TIMING.yellow_s + TIMING.all_red_s),
-    green_ew_s=100 - (TIMING.yellow_s + TIMING.all_red_s),
+    green_ns_s=110 - (TIMING.yellow_s + TIMING.all_red_s),  # 105.0s
+    green_ew_s=100 - (TIMING.yellow_s + TIMING.all_red_s),  # 95.0s
+)
+
+# Marathahalli real-road site network:
+# Varthur Road (HAL Airport Rd <-> Whitefield) is the East-West axis (EW), corresponding to BTP Phase 1 (110s field -> 105s green).
+# Outer Ring Road (Kadubeesanahalli <-> KR Puram) is the North-South axis (NS), corresponding to BTP Phase 2 (100s field -> 95s green).
+FIXED_MARATHAHALLI = FixedTimeConfig(
+    green_ns_s=100 - (TIMING.yellow_s + TIMING.all_red_s),  # 95.0s
+    green_ew_s=110 - (TIMING.yellow_s + TIMING.all_red_s),  # 105.0s
 )
 ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()

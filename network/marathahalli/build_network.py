@@ -290,16 +290,16 @@ def generate_traffic_light_logic():
     xml = """<?xml version="1.0" encoding="UTF-8"?>
 <tlLogics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tllogic_file.xsd">
     <tlLogic id="marathahalli_tls" type="static" programID="btp_fixed" offset="0">
-        <!-- Phase 0: North-South (ORR: Kadubeesanahalli <-> KR Puram) Green (105s) -->
-        <phase duration="105" state="GGGgrrrrGGGgrrrr"/>
-        <!-- Phase 1: North-South Yellow Clearance (3s) -->
-        <phase duration="3"   state="yyyyrrrryyyyrrrr"/>
+        <!-- Phase 0: East-West (Varthur Rd: HAL <-> Whitefield) Green (105s, BTP Phase 1 adapted) -->
+        <phase duration="105" state="rrrrGGGgrrrrGGGg"/>
+        <!-- Phase 1: East-West Yellow Clearance (3s) -->
+        <phase duration="3"   state="rrrryyyyrrrryyyy"/>
         <!-- Phase 2: All-Red Clearance (2s) -->
         <phase duration="2"   state="rrrrrrrrrrrrrrrr"/>
-        <!-- Phase 3: East-West (Varthur Rd: HAL <-> Whitefield) Green (95s) -->
-        <phase duration="95"  state="rrrrGGGgrrrrGGGg"/>
-        <!-- Phase 4: East-West Yellow Clearance (3s) -->
-        <phase duration="3"   state="rrrryyyyrrrryyyy"/>
+        <!-- Phase 3: North-South (ORR: Kadubeesanahalli <-> KR Puram) Green (95s, BTP Phase 2 adapted) -->
+        <phase duration="95"  state="GGGgrrrrGGGgrrrr"/>
+        <!-- Phase 4: North-South Yellow Clearance (3s) -->
+        <phase duration="3"   state="yyyyrrrryyyyrrrr"/>
         <!-- Phase 5: All-Red Clearance (2s) -->
         <phase duration="2"   state="rrrrrrrrrrrrrrrr"/>
     </tlLogic>
