@@ -1,6 +1,7 @@
 """Run ONE simulation (scenario x policy x seed) through TraCI and write its outputs."""
 import csv
 import json
+import os
 import random
 import time
 from pathlib import Path
@@ -111,8 +112,15 @@ def _run_once(
     ]
     if gui:
         cmd += ["--start", "true", "--delay", "100"]
-
-    traci.start(cmd, label=f"{scenario}_{demand_level}_{policy}_{seed}")
+    conn_label = f"{scenario}_{demand_level}_{policy}_{seed}_{os.getpid()}_{random.randint(1000, 9999)}"
+    for attempt in range(4):
+        try:
+            traci.start(cmd, label=conn_label)
+            break
+        except Exception:
+            if attempt == 3:
+                raise
+            time.sleep(0.2 * (attempt + 1) + random.uniform(0.05, 0.2))
 
     states = SignalStates(NET_FILE)
     kwargs = dict(policy_kwargs or {})
