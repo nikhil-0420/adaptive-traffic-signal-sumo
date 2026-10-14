@@ -172,3 +172,39 @@ def test_blocked_cell_when_model_missing(tmp_path):
     assert updated_cell.status == CellStatus.BLOCKED.value
     assert "Model checkpoint not found" in updated_cell.error_message
     assert row is None
+
+
+def test_paired_best_policy_analysis():
+    """Verify paired controller comparison and bootstrap tie classification."""
+    from dp1.research.stats import compute_paired_best_policy_analysis
+
+    # 1. Mock dataset with clear winner in pattern A, tie in pattern B
+    rows = []
+    # Pattern A: candidate_1 clearly beats candidate_2 across 10 seeds (wait is ~10s vs ~20s)
+    for s in range(21, 31):
+        rows.append({"pattern": "pattern_a", "demand_level": "medium", "policy": "candidate_1", "seed": s, "avg_wait_s": 10.0 + (s % 3)})
+        rows.append({"pattern": "pattern_a", "demand_level": "medium", "policy": "candidate_2", "seed": s, "avg_wait_s": 20.0 + (s % 3)})
+
+    # Pattern B: candidate_1 and candidate_2 are virtually tied (diff is near 0)
+    for s in range(21, 31):
+        noise = (s % 2) * 0.4 - 0.2
+        rows.append({"pattern": "pattern_b", "demand_level": "medium", "policy": "candidate_1", "seed": s, "avg_wait_s": 15.0 + noise})
+        rows.append({"pattern": "pattern_b", "demand_level": "medium", "policy": "candidate_2", "seed": s, "avg_wait_s": 15.0 - noise})
+
+    df = pd.DataFrame(rows)
+    ties = compute_paired_best_policy_analysis(df, n_bootstrap=1_000, seed=42)
+
+    assert len(ties) == 2
+    row_a = ties[ties["pattern"] == "pattern_a"].iloc[0]
+    row_b = ties[ties["pattern"] == "pattern_b"].iloc[0]
+
+    # Pattern A must be a WINNER
+    assert row_a["primary_leader"] == "candidate_1"
+    assert row_a["secondary_candidate"] == "candidate_2"
+    assert row_a["status"] == "WINNER"
+    assert row_a["paired_delta_ci_upper_s"] < 0.0
+
+    # Pattern B must be a TIE (0 included in CI)
+    assert row_b["status"] == "TIE"
+    assert row_b["paired_delta_ci_lower_s"] <= 0.0 <= row_b["paired_delta_ci_upper_s"]
+

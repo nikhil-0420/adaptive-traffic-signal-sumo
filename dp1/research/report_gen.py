@@ -1,7 +1,9 @@
 """Generate scientific markdown research report directly from immutable artifacts."""
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 import pandas as pd
+
+from .stats import compute_paired_best_policy_analysis
 
 
 def generate_research_report(
@@ -12,6 +14,8 @@ def generate_research_report(
     direction_df: pd.DataFrame,
     status_df: pd.DataFrame,
     out_path: Path,
+    raw_df: Optional[pd.DataFrame] = None,
+    paired_best_df: Optional[pd.DataFrame] = None,
 ) -> Path:
     """Generate reproducible Markdown research report from verified results."""
     out_path = Path(out_path)
@@ -108,49 +112,67 @@ def generate_research_report(
             lines.append(f"| {pat} | {lvl} | `{pol}` | {n_pr} | {w_ci} | {l_ci} | {dq:+.2f} |")
         lines.append("")
 
-    # Best Policy and Statistical Indistinguishability Analysis
+    # Best Policy and Paired Statistical Indistinguishability Analysis
     lines.extend([
-        "## 5. Statistical Best Policy & Tie Analysis (Bootstrap Overlap)",
+        "## 5. Paired Statistical Best Policy & Tie Analysis (Within-Seed Bootstrapping)",
         "",
-        "To prevent misleading single-number rankings when two controllers produce virtually indistinguishable delay reductions,",
-        "candidates are compared using their 95% bootstrap confidence intervals. If the top candidate's CI overlaps with",
-        "the runner-up's CI, the outcome is classified as a **Statistical Tie**.",
+        "To eliminate inter-seed variance, candidates are compared by bootstrapping the paired difference in waiting time",
+        r"across identical simulation seeds: $\Delta_{\text{paired}}(s) = \text{Wait}_{\text{leader}}(s) - \text{Wait}_{\text{runner\_up}}(s)$.",
+        "If 0 is included within the 95% paired bootstrap confidence interval ($B=10,000$), the outcome is classified as a",
+        "**Statistical Tie** (`leader ~ runner_up`, $p > 0.05$). If $\\text{CI}_{\\text{upper}} < 0$, the primary leader is",
+        "statistically significantly superior ($p < 0.05$).",
         "",
-        "| Pattern | Demand Level | Primary Leader | Secondary Candidate | Outcome Classification | Statistical Overlap Details |",
-        "|---|---|---|---|---|---|",
+        "| Pattern | Demand Level | Primary Leader | Secondary Candidate | Outcome Classification | Paired Delta [95% CI] | Statistical Evidence |",
+        "|---|---|---|---|---|---:|---|",
     ])
 
-    if not deltas_df.empty:
+    if paired_best_df is None and raw_df is not None and not raw_df.empty:
+        n_boot = manifest.get("bootstrap_resamples", 10_000)
+        boot_sd = manifest.get("bootstrap_seed", 42)
+        paired_best_df = compute_paired_best_policy_analysis(raw_df, n_bootstrap=n_boot, seed=boot_sd)
+
+    if paired_best_df is not None and not paired_best_df.empty:
+        for _, r in paired_best_df.iterrows():
+            pat = r["pattern"]
+            lvl = r["demand_level"]
+            l_pol = r["primary_leader"]
+            l_wait = r["primary_mean_wait_s"]
+            s_pol = r["secondary_candidate"]
+            s_wait = r["secondary_mean_wait_s"]
+            d_mean = r["paired_delta_mean_s"]
+            d_lo = r["paired_delta_ci_lower_s"]
+            d_hi = r["paired_delta_ci_upper_s"]
+            classif = r["classification"]
+            details = r["details"]
+
+            if s_pol is not None:
+                sec_str = f"`{s_pol}` ({s_wait:.1f}s)"
+                delta_str = f"**{d_mean:+.2f}s** [{d_lo:+.2f}, {d_hi:+.2f}]"
+            else:
+                sec_str = "None"
+                delta_str = "N/A"
+
+            lines.append(f"| {pat} | {lvl} | `{l_pol}` ({l_wait:.1f}s) | {sec_str} | **{classif}** | {delta_str} | {details} |")
+        lines.append("")
+    elif not deltas_df.empty:
         grouped = deltas_df.groupby(["pattern", "demand_level"])
         for (pat, lvl), g in grouped:
             sorted_g = g.sort_values("delta_wait_mean_s")
             top1 = sorted_g.iloc[0]
             top2 = sorted_g.iloc[1] if len(sorted_g) > 1 else None
-
             pol1 = top1["policy"]
             d1_mean = top1["delta_wait_mean_s"]
-            d1_lo = top1["delta_wait_ci_lower_s"]
-            d1_hi = top1["delta_wait_ci_upper_s"]
-
             if top2 is not None:
                 pol2 = top2["policy"]
                 d2_mean = top2["delta_wait_mean_s"]
-                d2_lo = top2["delta_wait_ci_lower_s"]
-                d2_hi = top2["delta_wait_ci_upper_s"]
-
-                # Overlap test: max(lo1, lo2) <= min(hi1, hi2)
-                overlap = max(d1_lo, d2_lo) <= min(d1_hi, d2_hi)
-                if overlap:
-                    classification = f"**TIE** (`{pol1}` ~ `{pol2}`)"
-                    details = f"CIs overlap: [{d1_lo:.1f}, {d1_hi:.1f}] vs [{d2_lo:.1f}, {d2_hi:.1f}]"
-                else:
-                    classification = f"**WINNER** (`{pol1}`)"
-                    details = f"Distinct CI: [{d1_lo:.1f}, {d1_hi:.1f}] strictly separates from [{d2_lo:.1f}, {d2_hi:.1f}]"
+                classif = f"`{pol1}` ~ `{pol2}`"
+                sec_str = f"`{pol2}` ({d2_mean:+.1f}s)"
+                d_str = f"{d1_mean - d2_mean:+.2f}s"
             else:
-                classification = f"`{pol1}`"
-                details = "Single candidate evaluated"
-
-            lines.append(f"| {pat} | {lvl} | `{pol1}` ({d1_mean:+.1f}s) | `{pol2}` ({d2_mean:+.1f}s) | {classification} | {details} |")
+                classif = f"`{pol1}`"
+                sec_str = "None"
+                d_str = "N/A"
+            lines.append(f"| {pat} | {lvl} | `{pol1}` ({d1_mean:+.1f}s) | {sec_str} | **{classif}** | {d_str} | Paired raw run data unavailable |")
         lines.append("")
 
     # Directional Fairness
@@ -190,10 +212,11 @@ def generate_research_report(
         "- `raw_runs.csv`: Unaggregated per-run metrics for every completed cell.",
         "- `aggregate.csv`: Grouped means and standard deviations.",
         "- `paired_deltas.csv`: Paired per-seed differences with bootstrap confidence intervals.",
+        "- `paired_ties.csv`: Paired within-seed bootstrap comparisons and tie classifications.",
         "- `fairness_by_approach.csv`: Approach-level vehicle counts, delays, and detector queues.",
         "- `fairness_by_direction.csv`: NS vs EW directional disparity summaries.",
         "- `matrix_status.csv`: Cell-by-cell lifecycle tracking.",
-        "- `plots/`: Rendered figures.",
+        "- `plots/`: Rendered figures (including `paired_best_ties.png`).",
     ])
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

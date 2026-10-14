@@ -233,3 +233,98 @@ def compute_fairness_by_direction(raw_df: pd.DataFrame) -> pd.DataFrame:
             flat_cols.append(col)
     res.columns = flat_cols
     return res.round(2)
+
+
+def compute_paired_best_policy_analysis(
+    raw_df: pd.DataFrame,
+    n_bootstrap: int = 10_000,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """Perform paired statistical comparison between best candidate and runner-up per condition.
+
+    Computes the exact paired difference per identical simulation seed:
+        Delta_paired(seed) = Wait_best(seed) - Wait_runner_up(seed)
+    and bootstraps the mean paired difference to form a 95% percentile confidence interval.
+    If 0 is included in [CI_lower, CI_upper], the outcome is classified as a Statistical Tie.
+    If CI_upper < 0, the primary candidate is statistically significantly superior (p < 0.05).
+    """
+    if raw_df.empty:
+        return pd.DataFrame()
+
+    results = []
+    patterns = raw_df["pattern"].unique()
+    levels = raw_df["demand_level"].unique()
+
+    for pat in patterns:
+        for lvl in levels:
+            sub = raw_df[(raw_df["pattern"] == pat) & (raw_df["demand_level"] == lvl)]
+            if sub.empty:
+                continue
+
+            pol_means = sub.groupby("policy")["avg_wait_s"].mean().sort_values()
+            if len(pol_means) == 0:
+                continue
+
+            best_pol = pol_means.index[0]
+            best_mean = pol_means.iloc[0]
+
+            if len(pol_means) > 1:
+                runner_up_pol = pol_means.index[1]
+                runner_up_mean = pol_means.iloc[1]
+
+                best_rows = {r["seed"]: r["avg_wait_s"] for _, r in sub[sub["policy"] == best_pol].iterrows()}
+                runner_up_rows = {r["seed"]: r["avg_wait_s"] for _, r in sub[sub["policy"] == runner_up_pol].iterrows()}
+
+                paired_diffs = []
+                for sd, b_wait in best_rows.items():
+                    if sd in runner_up_rows:
+                        paired_diffs.append(b_wait - runner_up_rows[sd])
+
+                if paired_diffs:
+                    d_mean, d_lo, d_hi = bootstrap_percentile_ci(
+                        np.array(paired_diffs), n_resamples=n_bootstrap, random_seed=seed
+                    )
+                    is_tie = (d_lo <= 0.0 <= d_hi)
+                    if is_tie:
+                        classification = f"TIE (`{best_pol}` ~ `{runner_up_pol}`)"
+                        status = "TIE"
+                        details = f"Paired delta: {d_mean:+.2f}s [{d_lo:+.2f}, {d_hi:+.2f}] includes 0 (p > 0.05)"
+                    else:
+                        classification = f"WINNER (`{best_pol}`)"
+                        status = "WINNER"
+                        details = f"Paired delta: {d_mean:+.2f}s [{d_lo:+.2f}, {d_hi:+.2f}] strictly separates (p < 0.05)"
+
+                    results.append({
+                        "pattern": pat,
+                        "demand_level": lvl,
+                        "primary_leader": best_pol,
+                        "primary_mean_wait_s": round(best_mean, 2),
+                        "secondary_candidate": runner_up_pol,
+                        "secondary_mean_wait_s": round(runner_up_mean, 2),
+                        "paired_delta_mean_s": round(d_mean, 2),
+                        "paired_delta_ci_lower_s": round(d_lo, 2),
+                        "paired_delta_ci_upper_s": round(d_hi, 2),
+                        "n_paired_seeds": len(paired_diffs),
+                        "status": status,
+                        "classification": classification,
+                        "details": details,
+                    })
+            else:
+                results.append({
+                    "pattern": pat,
+                    "demand_level": lvl,
+                    "primary_leader": best_pol,
+                    "primary_mean_wait_s": round(best_mean, 2),
+                    "secondary_candidate": None,
+                    "secondary_mean_wait_s": None,
+                    "paired_delta_mean_s": 0.0,
+                    "paired_delta_ci_lower_s": 0.0,
+                    "paired_delta_ci_upper_s": 0.0,
+                    "n_paired_seeds": len(sub),
+                    "status": "SOLE_CANDIDATE",
+                    "classification": f"`{best_pol}`",
+                    "details": "Single policy evaluated",
+                })
+
+    return pd.DataFrame(results)
+

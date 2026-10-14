@@ -19,6 +19,7 @@ from .stats import (
     compute_aggregates,
     compute_fairness_by_approach,
     compute_fairness_by_direction,
+    compute_paired_best_policy_analysis,
     compute_paired_deltas,
 )
 
@@ -225,9 +226,15 @@ def run_research_experiment(
     fairness_dir_df = compute_fairness_by_direction(raw_df)
     fairness_dir_df.to_csv(exp_dir / "fairness_by_direction.csv", index=False)
 
+    # Paired tie analysis
+    paired_ties_df = compute_paired_best_policy_analysis(
+        raw_df, n_bootstrap=C.RESEARCH.bootstrap_resamples, seed=C.RESEARCH.bootstrap_seed
+    )
+    paired_ties_df.to_csv(exp_dir / "paired_ties.csv", index=False)
+
     # Generate figures
     plots_dir = exp_dir / "plots"
-    generate_research_plots(raw_df, agg_df, deltas_df, plots_dir)
+    generate_research_plots(raw_df, agg_df, deltas_df, plots_dir, paired_ties_df=paired_ties_df)
 
     # Write manifest.json
     status_counts = matrix.status_counts()
@@ -263,6 +270,8 @@ def run_research_experiment(
         direction_df=fairness_dir_df,
         status_df=status_df,
         out_path=exp_dir / "report.md",
+        raw_df=raw_df,
+        paired_best_df=paired_ties_df,
     )
 
     print(f"\n[RESEARCH] Experiment finished: status={overall_status} ({status_counts.get('complete', 0)}/{matrix.total_cells} complete)")

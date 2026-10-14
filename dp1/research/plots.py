@@ -1,5 +1,6 @@
 """Generate research evaluation plots from experiment data."""
 from pathlib import Path
+from typing import Optional
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -11,6 +12,7 @@ POLICY_COLORS = {
     "fixed_webster": "#D97706",
     "adaptive": "#0E7C86",
     "pressure": "#7C3AED",
+    "queue_extension": "#059669",
     "rl_dqn": "#2563EB",
 }
 
@@ -20,6 +22,7 @@ def generate_research_plots(
     agg_df: pd.DataFrame,
     deltas_df: pd.DataFrame,
     out_dir: Path,
+    paired_ties_df: Optional[pd.DataFrame] = None,
 ):
     """Generate comprehensive research figures and save them to out_dir."""
     out_dir = Path(out_dir)
@@ -143,3 +146,41 @@ def generate_research_plots(
         fig.tight_layout()
         fig.savefig(out_dir / "fairness_disparity.png", dpi=150, bbox_inches="tight")
         plt.close(fig)
+
+    # 5. Forest Plot of Paired Best-Policy Comparison and Statistical Ties
+    if paired_ties_df is not None and not paired_ties_df.empty:
+        comp_df = paired_ties_df[paired_ties_df["secondary_candidate"].notna()].copy()
+        if not comp_df.empty:
+            fig, ax = plt.subplots(figsize=(10, max(4.5, 0.45 * len(comp_df))))
+            comp_df["cond_label"] = (
+                comp_df["pattern"] + " (" + comp_df["demand_level"] + ")\n"
+                + comp_df["primary_leader"] + " vs " + comp_df["secondary_candidate"]
+            )
+            y_pos = np.arange(len(comp_df))
+            deltas = comp_df["paired_delta_mean_s"].values
+            ci_low = comp_df["paired_delta_ci_lower_s"].values
+            ci_high = comp_df["paired_delta_ci_upper_s"].values
+            statuses = comp_df["status"].values
+
+            colors = ["#D97706" if s == "TIE" else "#059669" for s in statuses]
+
+            for y, d, lo, hi, c in zip(y_pos, deltas, ci_low, ci_high, colors):
+                err_l = max(0.0, d - lo)
+                err_r = max(0.0, hi - d)
+                ax.errorbar(
+                    d, y, xerr=[[err_l], [err_r]],
+                    fmt="o", color=c, ecolor=c, elinewidth=2.5,
+                    capsize=4, capthick=1.5, markersize=6.5, zorder=5
+                )
+
+            ax.axvline(0.0, color="#EF4444", linestyle="--", linewidth=1.5, alpha=0.8, label="Zero Difference (Tie Line)")
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(comp_df["cond_label"].values, fontsize=8.5)
+            ax.invert_yaxis()
+            ax.set_xlabel("Paired Difference in Waiting Time: Leader - Runner-Up (s)\n(Negative values favor Primary Leader)", fontsize=9.5)
+            ax.set_title("Paired Best-Policy Comparison & Statistical Ties (95% Bootstrap CI)\nGreen: Significant Winner (p < 0.05) | Amber: Statistical Tie (p > 0.05)", fontsize=11)
+            ax.grid(axis="x", alpha=0.3)
+            ax.legend(loc="lower left", fontsize=8.5)
+            fig.tight_layout()
+            fig.savefig(out_dir / "paired_best_ties.png", dpi=150, bbox_inches="tight")
+            plt.close(fig)
