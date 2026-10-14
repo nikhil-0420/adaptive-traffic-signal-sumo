@@ -220,6 +220,14 @@ class ApiClient {
     // Fallback to snapshot experiment
     return [
       {
+        experiment_id: 'exp_marathahalli_site_720',
+        status: 'complete',
+        preset: 'full',
+        network: 'marathahalli',
+        total_cells: 720,
+        created_at: '2026-10-14T14:35:00Z',
+      },
+      {
         experiment_id: 'exp_marathahalli_site',
         status: 'complete',
         preset: 'site',

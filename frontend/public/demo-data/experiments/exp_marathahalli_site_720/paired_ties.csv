@@ -1,0 +1,13 @@
+pattern,demand_level,primary_leader,primary_mean_wait_s,secondary_candidate,secondary_mean_wait_s,paired_delta_mean_s,paired_delta_ci_lower_s,paired_delta_ci_upper_s,n_paired_seeds,status,classification,details
+balanced,low,adaptive,7.37,pressure,7.55,-0.18,-0.45,0.12,10,TIE,TIE (`adaptive` ~ `pressure`),"Paired delta: -0.18s [-0.45, +0.12] includes 0 (statistically indistinguishable at 95% CI)"
+balanced,medium,pressure,37.14,queue_extension,38.62,-1.48,-3.17,0.15,10,TIE,TIE (`pressure` ~ `queue_extension`),"Paired delta: -1.48s [-3.17, +0.15] includes 0 (statistically indistinguishable at 95% CI)"
+balanced,heavy,rl_dqn,105.45,fixed_webster,105.62,-0.17,-2.61,2.26,10,TIE,TIE (`rl_dqn` ~ `fixed_webster`),"Paired delta: -0.17s [-2.61, +2.26] includes 0 (statistically indistinguishable at 95% CI)"
+imbalanced_orr,low,queue_extension,8.99,pressure,9.18,-0.19,-0.9,0.41,10,TIE,TIE (`queue_extension` ~ `pressure`),"Paired delta: -0.19s [-0.90, +0.41] includes 0 (statistically indistinguishable at 95% CI)"
+imbalanced_orr,medium,queue_extension,41.19,pressure,41.8,-0.61,-2.71,1.49,10,TIE,TIE (`queue_extension` ~ `pressure`),"Paired delta: -0.61s [-2.71, +1.49] includes 0 (statistically indistinguishable at 95% CI)"
+imbalanced_orr,heavy,rl_dqn,103.96,adaptive,104.25,-0.28,-2.68,1.85,10,TIE,TIE (`rl_dqn` ~ `adaptive`),"Paired delta: -0.28s [-2.68, +1.85] includes 0 (statistically indistinguishable at 95% CI)"
+imbalanced_varthur,low,rl_dqn,10.82,queue_extension,11.13,-0.31,-0.82,0.18,10,TIE,TIE (`rl_dqn` ~ `queue_extension`),"Paired delta: -0.31s [-0.82, +0.18] includes 0 (statistically indistinguishable at 95% CI)"
+imbalanced_varthur,medium,pressure,64.94,adaptive,66.83,-1.89,-5.29,2.23,10,TIE,TIE (`pressure` ~ `adaptive`),"Paired delta: -1.89s [-5.29, +2.23] includes 0 (statistically indistinguishable at 95% CI)"
+imbalanced_varthur,heavy,rl_dqn,127.26,queue_extension,128.49,-1.23,-4.71,2.31,10,TIE,TIE (`rl_dqn` ~ `queue_extension`),"Paired delta: -1.23s [-4.71, +2.31] includes 0 (statistically indistinguishable at 95% CI)"
+surge_orr_north,low,pressure,8.46,fixed_webster,8.64,-0.18,-0.67,0.29,10,TIE,TIE (`pressure` ~ `fixed_webster`),"Paired delta: -0.18s [-0.67, +0.29] includes 0 (statistically indistinguishable at 95% CI)"
+surge_orr_north,medium,adaptive,37.29,fixed_webster,37.31,-0.03,-2.25,2.36,10,TIE,TIE (`adaptive` ~ `fixed_webster`),"Paired delta: -0.03s [-2.25, +2.36] includes 0 (statistically indistinguishable at 95% CI)"
+surge_orr_north,heavy,rl_dqn,95.13,queue_extension,95.24,-0.12,-3.82,4.02,10,TIE,TIE (`rl_dqn` ~ `queue_extension`),"Paired delta: -0.12s [-3.82, +4.02] includes 0 (statistically indistinguishable at 95% CI)"
