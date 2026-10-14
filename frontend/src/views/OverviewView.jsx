@@ -138,6 +138,8 @@ export function OverviewView() {
     { id: 'imbalanced_ns_fixed_s1', label: 'Fixed Baseline • Imbalanced NS' },
     { id: 'imbalanced_ns_adaptive_s1_em_pri', label: 'EVSP Priority • Ambulance' },
     { id: 'surge_north_pressure_s1', label: 'Max-Pressure • Surge North' },
+    { id: 'surge_north_queue_extension_s1', label: 'Queue-Extension • Surge North' },
+    { id: 'imbalanced_ns_rl_dqn_s1', label: 'Deep Q-Network • Imbalanced NS' },
   ];
 
   return (

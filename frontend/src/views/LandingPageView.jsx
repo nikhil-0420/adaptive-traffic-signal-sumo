@@ -127,10 +127,10 @@ export function LandingPageView() {
           <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur">
             <div className="flex items-center gap-2 text-amber-400 mb-1">
               <Cpu size={16} />
-              <span className="font-mono text-xl sm:text-2xl font-bold">5 Policies</span>
+              <span className="font-mono text-xl sm:text-2xl font-bold">6 Policies</span>
             </div>
             <div className="text-xs font-semibold text-slate-200">Production Controllers</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Fixed, Webster, Queue, Pressure, DQN</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Fixed, Webster, Adaptive, Pressure, Queue-Ext, DQN</div>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/70 border border-white/10 backdrop-blur">
