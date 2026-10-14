@@ -44,11 +44,11 @@
     "tls_id": "marathahalli_tls",
     "control_type": "2-Stage Signal with All-Red Clearance",
     "stages": [
-      { "phase": "NS_GREEN", "axis": "NS", "duration_s": 105.0, "movements": "ORR South & North surface legs", "state_string": "GGGgrrrrGGGgrrrr" },
-      { "phase": "NS_YELLOW", "axis": "NS", "duration_s": 3.0, "state_string": "yyyyrrrryyyyrrrr" },
-      { "phase": "ALL_RED_1", "axis": "ALL_RED", "duration_s": 2.0, "state_string": "rrrrrrrrrrrrrrrr" },
-      { "phase": "EW_GREEN", "axis": "EW", "duration_s": 95.0, "movements": "Varthur West & East surface legs", "state_string": "rrrrGGGgrrrrGGGg" },
+      { "phase": "EW_GREEN", "axis": "EW", "duration_s": 105.0, "movements": "Varthur West (HAL) & East (Whitefield) surface legs (BTP Phase 1)", "state_string": "rrrrGGGgrrrrGGGg" },
       { "phase": "EW_YELLOW", "axis": "EW", "duration_s": 3.0, "state_string": "rrrryyyyrrrryyyy" },
+      { "phase": "ALL_RED_1", "axis": "ALL_RED", "duration_s": 2.0, "state_string": "rrrrrrrrrrrrrrrr" },
+      { "phase": "NS_GREEN", "axis": "NS", "duration_s": 95.0, "movements": "ORR South & North surface legs (BTP Phase 2)", "state_string": "GGGgrrrrGGGgrrrr" },
+      { "phase": "NS_YELLOW", "axis": "NS", "duration_s": 3.0, "state_string": "yyyyrrrryyyyrrrr" },
       { "phase": "ALL_RED_2", "axis": "ALL_RED", "duration_s": 2.0, "state_string": "rrrrrrrrrrrrrrrr" }
     ],
     "detectors": [
@@ -62,18 +62,37 @@
       { "id": "det_orr_n_1", "approach": "N", "lane": 1, "length_m": 24.9 }
     ]
   },
+  "geometry_extents": {
+    "simulation_model_span": {
+      "width_m": 700.0,
+      "height_m": 700.0,
+      "x_range": [0.0, 700.0],
+      "y_range": [0.0, 700.0],
+      "center": [350.0, 332.0],
+      "description": "Local Cartesian domain modeled in SUMO netconvert (350m approach arms)"
+    },
+    "geographic_crop_bbox": {
+      "lat_min": 12.950,
+      "lat_max": 12.964,
+      "lon_min": 77.694,
+      "lon_max": 77.708,
+      "width_km": 1.52,
+      "height_km": 1.55,
+      "description": "OpenCity / BBMP municipal GIS crop bounding box (14 mdeg x 14 mdeg)"
+    }
+  },
   "provenance_table": [
     {
-      "attribute": "Road Alignment & Centerlines",
+      "attribute": "Road Alignment & Arterial Centerlines",
       "status": "Verified",
       "source": "OpenCity GIS + OSM",
-      "notes": "Exact physical geometries for Varthur Rd, ORR, and 4 service slip roads."
+      "notes": "Exact physical geometries for Varthur Rd, ORR, and 4 directional service slip roads."
     },
     {
-      "attribute": "Grade Separation (Flyover + Underpass)",
+      "attribute": "Grade Separation Architecture (3 Tiers)",
       "status": "Verified",
       "source": "Satellite imagery + BDA infrastructure records",
-      "notes": "4-lane flyover above, 6-lane mainline below, surface roundabout/signal between."
+      "notes": "Elevated 4-lane flyover, at-grade/underpass 6-lane mainline, surface signal crossroads."
     },
     {
       "attribute": "Signal Phase Clearance (Yellow/All-Red)",
@@ -82,21 +101,33 @@
       "notes": "Strictly 3s yellow and 2s all-red clearance preserved across all phase changes."
     },
     {
-      "attribute": "Surface Signal Phasing Structure",
+      "attribute": "BTP Signal Cycle & Split Durations",
+      "status": "Verified",
+      "source": "BTP Airport PS Marathalli Bridge plan",
+      "notes": "Phase 1 Varthur Rd (HAL-WF) = 105s net green; Phase 2 ORR (Kadu-KR Puram) = 95s net green."
+    },
+    {
+      "attribute": "Lane Counts per Approach Carriageway",
       "status": "Inferred",
-      "source": "BTP Yamlur corridor document adaptation",
-      "notes": "Adapted as 2-stage alternating surface greens without pedestrian exclusive phase."
+      "source": "OpenCity road-width GIS dataset",
+      "notes": "Inferred from 14-18m road width attributes, mapping 2 lanes per surface crossroads leg."
     },
     {
       "attribute": "Grade Separation Volume Split",
       "status": "Inferred",
       "source": "Standard traffic engineering guidelines (HCM)",
-      "notes": "70% through traffic assigned to flyover/underpass; 30% through + 100% turns at surface."
+      "notes": "70% through traffic on flyover/underpass; 30% through + 100% turns at surface junction."
     },
     {
-      "attribute": "Real-Time Traffic Sensor Telemetry",
+      "attribute": "Ramp Curvature & Connection Radii",
+      "status": "Inferred",
+      "source": "Geometric cubic spline interpolation",
+      "notes": "Inferred smooth cubic bezier splines between arterial centerlines and surface ramps."
+    },
+    {
+      "attribute": "Real-Time Traffic Demand Counts",
       "status": "Unknown (Synthetic Demand)",
-      "source": "SUMO Lane-Area Detectors (E2)",
+      "source": "Controlled SUMO vehicle generators",
       "notes": "Controlled synthetic demand matrices (balanced, imbalanced_orr, imbalanced_varthur, surge)."
     }
   ],

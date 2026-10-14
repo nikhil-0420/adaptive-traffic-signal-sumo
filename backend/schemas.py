@@ -138,6 +138,7 @@ class SiteModelResponse(BaseModel):
     provenance_table: List[Dict[str, str]]
     topology_image_url: str
     sumo_gui_image_url: str
+    geometry_extents: Optional[Dict[str, Any]] = None
 
 
 class ExperimentStatusResponse(BaseModel):

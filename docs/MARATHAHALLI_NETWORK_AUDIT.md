@@ -53,7 +53,10 @@ All geometric alignments, road hierarchies, widths, and signal programs are cros
 
 ## 4. Road, Edge & Node Inventory
 
-The network is modelled in local Cartesian space ($700\,\text{m} \times 700\,\text{m}$), centered at $(350, 350)$ on layer 0.
+### 4.0 Coordinate Systems & Extents: Simulation Span vs GIS Bounding Box
+To prevent ambiguity in spatial reporting, the project strictly distinguishes:
+1. **SUMO Microscopic Simulation Network Extent:** Local Cartesian domain $X \in [0.0, 700.0]\,\text{m}, Y \in [0.0, 700.0]\,\text{m}$ (local span $700.0\,\text{m} \times 700.0\,\text{m}$), with the surface signal junction centered at $(350.0, 332.0)$ and $350\,\text{m}$ approach arms extending to outer arterial boundaries.
+2. **OpenCity GIS Crop Bounding Box:** Geographic bounding box $\text{lat} \in [12.950, 12.964]^\circ\,\text{N}, \text{lon} \in [77.694, 77.708]^\circ\,\text{E}$ (span $1.52\,\text{km} \times 1.55\,\text{km}$), used to crop and filter municipal road centerlines and road-width polygons from statewide BBMP GIS datasets.
 
 ### 4.1 Node Classification Table
 
@@ -92,10 +95,10 @@ The network is modelled in local Cartesian space ($700\,\text{m} \times 700\,\te
 | `ramp_wf_in/out` | Whitefield Connector Ramps | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Descent/Ascent between Whitefield and surface junction | **Inferred** |
 | `ramp_orr_n_in/out`| ORR North Connector Ramps | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Descent/Ascent between KR Puram and surface junction | **Inferred** |
 | `ramp_orr_s_in/out`| ORR South Connector Ramps | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Descent/Ascent between Kadubeesanahalli and surface | **Inferred** |
-| `leg_hal_in/out` | Surface West Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from HAL to signal node | **Verified** |
-| `leg_wf_in/out` | Surface East Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from Whitefield to signal node | **Verified** |
-| `leg_orr_s_in/out`| Surface South Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from Kadubeesanahalli to signal | **Verified** |
-| `leg_orr_n_in/out`| Surface North Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from KR Puram to signal node | **Verified** |
+| `leg_hal_in/out` | Surface West Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from HAL to signal node | **Inferred** |
+| `leg_wf_in/out` | Surface East Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from Whitefield to signal node | **Inferred** |
+| `leg_orr_s_in/out`| Surface South Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from Kadubeesanahalli to signal | **Inferred** |
+| `leg_orr_n_in/out`| Surface North Crossroads Leg | At-grade ($Z=0\,\text{m}$) | 2 | $40\,\text{km/h}$ ($11.11\,\text{m/s}$) | Controlled approach from KR Puram to signal node | **Inferred** |
 
 ---
 
@@ -120,11 +123,11 @@ stateDiagram-v2
 
 | Phase Index | Axis / Movement | SUMO Signal String (16 Heads) | Duration | Legal Status |
 |---|---|---|---|---|
-| **Phase 0** | Varthur Road (HAL $\leftrightarrow$ Whitefield) Green | `GGGgrrrrGGGgrrrr` | $105.0\,\text{s}$ | Surface East-West protected through & right turns |
-| **Phase 1** | East-West Yellow Clearance | `yyyyrrrryyyyrrrr` | $3.0\,\text{s}$ | Amber stopping window |
+| **Phase 0** | Varthur Road (HAL $\leftrightarrow$ Whitefield) Green | `rrrrGGGgrrrrGGGg` | $105.0\,\text{s}$ | Surface East-West protected through & right turns (BTP Phase 1) |
+| **Phase 1** | East-West Yellow Clearance | `rrrryyyyrrrryyyy` | $3.0\,\text{s}$ | Amber stopping window |
 | **Phase 2** | Inter-Phase Clearance (All-Red) | `rrrrrrrrrrrrrrrr` | $2.0\,\text{s}$ | Conflict zone fully cleared |
-| **Phase 3** | Outer Ring Road (Kadubeesanahalli $\leftrightarrow$ KR Puram) Green | `rrrrGGGgrrrrGGGg` | $95.0\,\text{s}$ | Surface North-South protected through & right turns |
-| **Phase 4** | North-South Yellow Clearance | `rrrryyyyrrrryyyy` | $3.0\,\text{s}$ | Amber stopping window |
+| **Phase 3** | Outer Ring Road (Kadubeesanahalli $\leftrightarrow$ KR Puram) Green | `GGGgrrrrGGGgrrrr` | $95.0\,\text{s}$ | Surface North-South protected through & right turns (BTP Phase 2) |
+| **Phase 4** | North-South Yellow Clearance | `yyyyrrrryyyyrrrr` | $3.0\,\text{s}$ | Amber stopping window |
 | **Phase 5** | Inter-Phase Clearance (All-Red) | `rrrrrrrrrrrrrrrr` | $2.0\,\text{s}$ | Conflict zone fully cleared |
 
 ---

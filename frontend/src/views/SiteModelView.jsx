@@ -265,6 +265,31 @@ export function SiteModelView() {
                 <div className="text-slate-500">3 Underpass lanes + 2 Service ramp legs + 1 West Slip</div>
               </div>
             </div>
+
+            {/* Geometry Extents Distinction: Network Span vs GIS Crop */}
+            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-blue-500/20 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-blue-300">SUMO Simulation Network Span</span>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">700m × 700m</span>
+                </div>
+                <div className="text-slate-400 text-[11px] leading-relaxed">
+                  Local Cartesian coordinates: <span className="font-mono text-slate-300">X ∈ [0.0, 700.0]m, Y ∈ [0.0, 700.0]m</span>.
+                  Surface signal junction is centered at <span className="font-mono text-slate-300">(350.0, 332.0)</span> with 350m approach arms extending to arterial boundaries.
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-emerald-500/20 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-emerald-300">OpenCity GIS Crop Bounding Box</span>
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">1.52km × 1.55km</span>
+                </div>
+                <div className="text-slate-400 text-[11px] leading-relaxed">
+                  Geographic crop coordinates: <span className="font-mono text-slate-300">lat ∈ [12.950, 12.964]° N, lon ∈ [77.694, 77.708]° E</span> (0.014° × 0.014°).
+                  Source extent used to filter and extract road centerline and road-width vectors from statewide OpenCity datasets.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
