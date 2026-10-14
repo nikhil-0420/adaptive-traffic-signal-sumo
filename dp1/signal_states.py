@@ -6,17 +6,34 @@ or 'all red' strings, so changing the network does not break the controller.
 import sumolib
 from . import config as C
 
+MARATHAHALLI_APPROACH_EDGES = {
+    "N": "leg_orr_n_in",
+    "S": "leg_orr_s_in",
+    "E": "leg_wf_in",
+    "W": "leg_hal_in",
+}
+
 
 class SignalStates:
-    def __init__(self, net_file):
+    def __init__(self, net_file, tls_id=None):
         net = sumolib.net.readNet(str(net_file), withPrograms=True)
         self.links = []  # (link_index, axis, direction)
-        for a in C.APPROACHES:
-            edge = net.getEdge(f"{a}_in")
-            for out_edge, conns in edge.getOutgoing().items():
-                for c in conns:
-                    self.links.append((c.getTLLinkIndex(), C.AXIS_OF[a], c.getDirection()))
-        self.n = max(i for i, _, _ in self.links) + 1
+
+        # Detect edge naming convention
+        if net.hasEdge("N_in"):
+            edge_map = {a: f"{a}_in" for a in C.APPROACHES}
+        elif net.hasEdge(MARATHAHALLI_APPROACH_EDGES["N"]):
+            edge_map = MARATHAHALLI_APPROACH_EDGES
+        else:
+            edge_map = {a: f"{a}_in" for a in C.APPROACHES if net.hasEdge(f"{a}_in")}
+
+        for a, edge_id in edge_map.items():
+            if net.hasEdge(edge_id):
+                edge = net.getEdge(edge_id)
+                for out_edge, conns in edge.getOutgoing().items():
+                    for c in conns:
+                        self.links.append((c.getTLLinkIndex(), C.AXIS_OF[a], c.getDirection()))
+        self.n = max((i for i, _, _ in self.links), default=-1) + 1
 
     def green(self, axis):
         s = ["r"] * self.n
@@ -34,3 +51,4 @@ class SignalStates:
 
     def all_red(self):
         return "r" * self.n
+

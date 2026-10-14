@@ -37,7 +37,8 @@ RUNS_DIR.mkdir(parents=True, exist_ok=True)
 RESEARCH_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowlist definitions
-ALLOWED_SCENARIOS = list(C.scenarios())
+ALLOWED_SCENARIOS = list(C.scenarios()) + ["imbalanced_orr", "imbalanced_varthur", "surge_orr_north"]
+ALLOWED_NETWORKS = ["synthetic", "marathahalli"]
 ALLOWED_POLICIES = ["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"]
 ALLOWED_DEMAND_LEVELS = ["low", "medium", "heavy"]
 ALLOWED_PRESETS = ["full", "smoke", "custom"]
@@ -50,6 +51,9 @@ ALLOWED_RESEARCH_ARTIFACTS = {
     "aggregate.csv",
     "raw_runs.csv",
     "paired_deltas.csv",
+    "paired_ties.csv",
+    "paired_summary.csv",
+    "raw_emergency_runs.csv",
     "fairness_by_approach.csv",
     "fairness_by_direction.csv",
     "matrix_status.csv",

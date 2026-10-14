@@ -1,0 +1,1118 @@
+<?xml version='1.0' encoding='utf-8'?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>OpenCity Bengaluru Road Width - Marathahalli Bridge Study Area</name><Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">80</SimpleData>
+		<SimpleData name="OBJECTID_1">80</SimpleData>
+		<SimpleData name="OBJECTID_2">88</SimpleData>
+		<SimpleData name="RR_CD">21</SimpleData>
+		<SimpleData name="RR_TP_HIER">MA</SimpleData>
+		<SimpleData name="RR_WIDTH_P">24</SimpleData>
+		<SimpleData name="RR_TP_TYPE">C</SimpleData>
+		<SimpleData name="SHAPE_LENG">471.02399499</SimpleData>
+		<SimpleData name="RR_width_B">12</SimpleData>
+		<SimpleData name="Shape_Le_1">471.02399499</SimpleData>
+		<SimpleData name="Shape_Le_2">2313.93246166</SimpleData>
+		<SimpleData name="SHAPE.STLength()">2313.93238207179</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6820037693288,12.9616474040545 77.6821681656283,12.9616614982234 77.6828789181336,12.9617149932371 77.6833736461683,12.9617597692223 77.6836492737845,12.9617836680993 77.6837272116731,12.9617885520928 77.6849491819816,12.9618739765626 77.6853100472306,12.9619024244414 77.6857555419077,12.9619375398442 77.6861174349128,12.9619715524918 77.6863303251544,12.9619982577139 77.6871446721678,12.9620476044205 77.6885870509108,12.9621254172974 77.6901249404178,12.9622949405858 77.6904328756799,12.9623261478181 77.6906502181945,12.9623640412684 77.6906830529378,12.9623659593197 77.6908245207335,12.9623814691986 77.6909921178821,12.9624149388529 77.6913334826837,12.9624945569533 77.6917106268718,12.9625567958294 77.6917199418899,12.9625590184369 77.6917423720134,12.9625643719819 77.6917792847052,12.9625707663704 77.6928049486938,12.9627656696008 77.6928384225977,12.9627732295265 77.6928776359653,12.9627795999413 77.6933217752968,12.9628596919585 77.6937105624602,12.9629313260367 77.6938957961964,12.9629723186639 77.693901565492,12.9629733881533 77.6939377929431,12.9629798678995 77.6955962441134,12.9634435276022 77.6970174920593,12.963753278413 77.698428785389,12.9637237057639 77.6984774428656,12.9637514313917 77.6984977356971,12.9637647705466 77.6985793949327,12.9638632940145 77.6986225013459,12.96391027461 77.6986510963919,12.9639461127087 77.6986721718245,12.9639786402611 77.6986850302886,12.9639965733279 77.6987164800593,12.9640301252006 77.6987996340967,12.9641071772138 77.6988519861519,12.9641574485829 77.6988996602051,12.9642009941153 77.6989455267745,12.9642366530273 77.6989902637084,12.9642745829638 77.6990640478017,12.9643370514489 77.699100680106,12.9643705485967 77.6991157662352,12.9643816850875 77.6991621953723,12.9644162070993 77.6992319380373,12.9644775909454 77.6992679198564,12.9645043195656 77.6992859720903,12.9645233270148 77.6993563166249,12.9645869620832 77.6993888541359,12.964614854716 77.6994063195359,12.9646327417444 77.6994150363702,12.9646405557637 77.6994428864232,12.9646605925665 77.6994799942397,12.9646850492455 77.6995136867077,12.9647129298754 77.6995649617933,12.9647699892702 77.6996492666564,12.9648470289732 77.699688751001,12.9648782352937 77.699724720743,12.9649038347485 77.6997605780831,12.9649192697919 77.6998096766604,12.9649345710525 77.6998622785886,12.9649543491647 77.6999238183089,12.9649729631309 77.6999489136324,12.9649805538773 77.7000055693358,12.9650025510154 77.7000529419652,12.9650178683271 77.700104989897,12.9650399105449 77.7001484193686,12.9650631741042 77.7002011300829,12.9650931165763 77.7002468330789,12.9651140963023 77.7002781004108,12.9651307071996 77.7003127737323,12.9651427704362 77.7003365064916,12.9651549454041 77.7003735170015,12.9651703701877 77.7004204115317,12.9651947278404 77.7004481779011,12.9652098140331 77.7004638017298,12.9652146032218 77.7004788663394,12.9652234796162 77.7005014627804,12.9652367928557 77.7005293102294,12.9652568313462 77.7005728953922,12.9652947728829 77.7006293167056,12.9653483882559 77.7006584531348,12.9653808346153 77.7006706855911,12.9653942554092 77.7007260044755,12.9654524026328 77.7007388369427,12.9654680765092 77.7007528722019,12.9654882583368 77.70076513089,12.965503938167 77.7008245513469,12.9655688144075 77.7008629700296,12.9656079405187 77.7009076840152,12.9656436109448 77.7009494814587,12.9656759213098 77.7010103598767,12.9657159407336 77.7010236976767,12.9657248368199 77.7010927098415,12.9657715479181 77.7011054832676,12.965781577257 77.7011880020279,12.9658529897214 77.7012007727182,12.9658630208892 77.701310776211,12.9659205956823 77.7013235271583,12.9659283704433 77.7014313979116,12.9660017761921 77.7016296148811,12.9661250597975 77.7017406733373,12.9661762456626 77.7018236822267,12.9662482372517 77.701892818506,12.9662385100338 77.7020249782586,12.9662191958161 77.7021891310074,12.9661750012489</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">189</SimpleData>
+		<SimpleData name="OBJECTID_1">190</SimpleData>
+		<SimpleData name="OBJECTID_2">195</SimpleData>
+		<SimpleData name="RR_CD">97</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">C</SimpleData>
+		<SimpleData name="SHAPE_LENG">356.89988528</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">356.89988528</SimpleData>
+		<SimpleData name="Shape_Le_2">356.89988528</SimpleData>
+		<SimpleData name="SHAPE.STLength()">356.89990294887</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7050489855641,12.95436711114 77.7051571386948,12.9533905197184 77.7052866836837,12.9525334721187 77.7053425243011,12.9521957978735 77.7054457022154,12.9513455058695 77.7055034921705,12.9511780491309</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">1156</SimpleData>
+		<SimpleData name="OBJECTID_1">821</SimpleData>
+		<SimpleData name="OBJECTID_2">4157</SimpleData>
+		<SimpleData name="RR_CD">143577</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">413.27935798</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">413.27935798</SimpleData>
+		<SimpleData name="Shape_Le_2">413.27935798</SimpleData>
+		<SimpleData name="SHAPE.STLength()">413.279432408013</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7001157498015,12.9531385906509 77.7002176669445,12.9535567164012 77.7003106329081,12.9539325606865 77.7003482370579,12.9540670450343 77.7003705248076,12.9541467518294 77.7003835641739,12.9541933919765 77.7004284295893,12.9543627738885 77.7004329499398,12.9543798403672 77.700484813053,12.9545756481048 77.7005001560885,12.954633568158 77.7005053293786,12.9546531021798 77.7006169633533,12.9550847810905 77.7007442722067,12.9555770738912 77.7007532877035,12.9556119333859 77.7007540114123,12.9556147290215 77.7009148650914,12.9560359338448 77.7010849422372,12.9566694563986 77.7010994980203,12.9567422268134</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">1429</SimpleData>
+		<SimpleData name="OBJECTID_1">1094</SimpleData>
+		<SimpleData name="OBJECTID_2">786</SimpleData>
+		<SimpleData name="RR_CD">1277</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">15</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">1575.99935344</SimpleData>
+		<SimpleData name="RR_width_B">8</SimpleData>
+		<SimpleData name="Shape_Le_1">1575.99935344</SimpleData>
+		<SimpleData name="Shape_Le_2">1575.99935344</SimpleData>
+		<SimpleData name="SHAPE.STLength()">1575.99938394709</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7039106803124,12.9628583809832 77.7059187491776,12.9630280071093 77.7062965987924,12.9630583369955 77.7069979582864,12.9631297285556 77.7079457506072,12.963227075666 77.7084412959081,12.9632773929538 77.7084442041961,12.9632776860872 77.7086126832275,12.9632931595735 77.7086115233674,12.9633017373014 77.7086072999676,12.9633367873474 77.7086453752389,12.9633442954284 77.7093150586123,12.9634660526343 77.7098067664708,12.963567887733 77.7100933733118,12.9636134585342 77.7105213502922,12.9636891722218 77.7105375042224,12.9636923915508 77.7106061845182,12.9637086529546 77.7106788349151,12.9637191493052 77.710718114593,12.9637266165089 77.7107434165716,12.9637318570961 77.7107487763537,12.9637336395961 77.710780387906,12.9637406762724 77.7114488843565,12.9638590514419 77.7115377597794,12.9638793253419 77.7115885136897,12.9638880856896 77.7115896649216,12.9638880736932 77.7119121296784,12.9639490774439 77.7121030876833,12.963986610022 77.7121048163731,12.9639865920045 77.7122680704896,12.9640176362113 77.7123591646251,12.9640302361501 77.7124692541183,12.9640426407576 77.7125921154112,12.9640650713275 77.7128072249006,12.9641000931897 77.7129912502263,12.9641354380477 77.7130700252245,12.9641490098974 77.7131400528563,12.9641609872648 77.713148148206,12.9641642913469 77.7131868132957,12.9641729208538 77.7132503137058,12.9641891957623 77.7133149032514,12.9641998151265 77.7134861577074,12.9642251309191 77.7137336223569,12.9642711047016 77.7137670887559,12.9642781975227 77.7137757402501,12.9642796990076 77.7139903091471,12.964318111238 77.714134484302,12.9643414497203 77.7142025407505,12.9643531627847 77.7142820714843,12.9643684680275 77.7143305384158,12.9643756987894 77.7143642117217,12.9643814849237 77.7148849401226,12.964479286011 77.715383887986,12.9645700638476 77.7156503981918,12.9646203518833 77.7158280299511,12.9646501153415 77.7160729188862,12.9646959320405 77.7161770022056,12.9647130960246 77.7166367360246,12.9647975045626 77.7166730837591,12.964805029414 77.7167076828891,12.9648103132285 77.7167174919363,12.9648124682944 77.7167642222075,12.9648217763513 77.7168057195502,12.9648262275025 77.7170155641495,12.9648533944587 77.7171204496848,12.964863591129 77.7171763561113,12.9648697833729 77.7172224421407,12.9648726905822 77.7173993172929,12.9648855211107 77.7175392522186,12.9648897046978 77.7175950982738,12.9648902524235 77.7176445785102,12.9648874763404 77.7177101618711,12.9648834028624 77.717741794371,12.9648808158875 77.7178435311556,12.9648662038358 77.717856170149,12.9648638116271 77.717867685561,12.9648606696274 77.7178717780178,12.9648601661697 77.7179228784769,12.9648508635483 77.7179883672889,12.964844362777 77.7180533118677,12.9648346517379 77.7180757372617,12.9648321599991 77.7181033064036,12.9648262269513 77.7181989389442,12.96479108028</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">4374</SimpleData>
+		<SimpleData name="OBJECTID_1">4144</SimpleData>
+		<SimpleData name="OBJECTID_2">3845</SimpleData>
+		<SimpleData name="RR_CD">143584</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">39.9054387</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">39.9054387</SimpleData>
+		<SimpleData name="Shape_Le_2">39.9054387</SimpleData>
+		<SimpleData name="SHAPE.STLength()">39.9053605103523</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7010994980203,12.9567422268134 77.7011304619974,12.9569279987444 77.701158793656,12.9570979755359</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">4375</SimpleData>
+		<SimpleData name="OBJECTID_1">4145</SimpleData>
+		<SimpleData name="OBJECTID_2">3846</SimpleData>
+		<SimpleData name="RR_CD">142819</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">27.51444126</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">27.51444126</SimpleData>
+		<SimpleData name="Shape_Le_2">27.51444126</SimpleData>
+		<SimpleData name="SHAPE.STLength()">27.514382099731</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7012776323831,12.956916368563 77.701530370259,12.9568982416707</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">4378</SimpleData>
+		<SimpleData name="OBJECTID_1">4148</SimpleData>
+		<SimpleData name="OBJECTID_2">3849</SimpleData>
+		<SimpleData name="RR_CD">148558</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">148.01102698</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">148.01102698</SimpleData>
+		<SimpleData name="Shape_Le_2">148.01102698</SimpleData>
+		<SimpleData name="SHAPE.STLength()">148.011094064533</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7045469130658,12.9566636236422 77.7031866984953,12.9567521628289</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14613</SimpleData>
+		<SimpleData name="OBJECTID_1">14536</SimpleData>
+		<SimpleData name="OBJECTID_2">15284</SimpleData>
+		<SimpleData name="RR_CD">143725</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">27.34043707</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">27.34043707</SimpleData>
+		<SimpleData name="Shape_Le_2">27.34043707</SimpleData>
+		<SimpleData name="SHAPE.STLength()">27.3404964265465</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7055325963862,12.9508877087909 77.7055656173154,12.9506428716839</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14631</SimpleData>
+		<SimpleData name="OBJECTID_1">14552</SimpleData>
+		<SimpleData name="OBJECTID_2">15305</SimpleData>
+		<SimpleData name="RR_CD">143585</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">24.20404385</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">24.20404385</SimpleData>
+		<SimpleData name="Shape_Le_2">24.20404385</SimpleData>
+		<SimpleData name="SHAPE.STLength()">24.2039851638113</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7012561467351,12.9592976885463 77.7012843228894,12.9595145731566</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14632</SimpleData>
+		<SimpleData name="OBJECTID_1">14553</SimpleData>
+		<SimpleData name="OBJECTID_2">15306</SimpleData>
+		<SimpleData name="RR_CD">143586</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">42.82246741</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">42.82246741</SimpleData>
+		<SimpleData name="Shape_Le_2">42.82246741</SimpleData>
+		<SimpleData name="SHAPE.STLength()">42.822482539199</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7012843228894,12.9595145731566 77.7013341769757,12.9598982920047</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14633</SimpleData>
+		<SimpleData name="OBJECTID_1">14554</SimpleData>
+		<SimpleData name="OBJECTID_2">15307</SimpleData>
+		<SimpleData name="RR_CD">143587</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">9.79838249</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">9.79838249</SimpleData>
+		<SimpleData name="Shape_Le_2">9.79838249</SimpleData>
+		<SimpleData name="SHAPE.STLength()">9.79842829845685</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7013341769757,12.9598982920047 77.701345584085,12.9599860926802</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14634</SimpleData>
+		<SimpleData name="OBJECTID_1">14555</SimpleData>
+		<SimpleData name="OBJECTID_2">15308</SimpleData>
+		<SimpleData name="RR_CD">143588</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">15.90396394</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">15.90396394</SimpleData>
+		<SimpleData name="Shape_Le_2">15.90396394</SimpleData>
+		<SimpleData name="SHAPE.STLength()">15.9039191324026</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7016522384009,12.9619921910842 77.7016739445219,12.9621342673128</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14635</SimpleData>
+		<SimpleData name="OBJECTID_1">14556</SimpleData>
+		<SimpleData name="OBJECTID_2">15309</SimpleData>
+		<SimpleData name="RR_CD">143589</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">46.18209287</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">46.18209287</SimpleData>
+		<SimpleData name="Shape_Le_2">46.18209287</SimpleData>
+		<SimpleData name="SHAPE.STLength()">46.1821109090955</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7017189675336,12.962424618171 77.7017833729873,12.9628369775881</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14636</SimpleData>
+		<SimpleData name="OBJECTID_1">14557</SimpleData>
+		<SimpleData name="OBJECTID_2">15310</SimpleData>
+		<SimpleData name="RR_CD">143590</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">28.25983692</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">28.25983692</SimpleData>
+		<SimpleData name="Shape_Le_2">28.25983692</SimpleData>
+		<SimpleData name="SHAPE.STLength()">28.2598086140016</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7017833729873,12.9628369775881 77.7018227846232,12.9630893089253</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14672</SimpleData>
+		<SimpleData name="OBJECTID_1">14593</SimpleData>
+		<SimpleData name="OBJECTID_2">15313</SimpleData>
+		<SimpleData name="RR_CD">143593</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">11.58297711</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">11.58297711</SimpleData>
+		<SimpleData name="Shape_Le_2">11.58297711</SimpleData>
+		<SimpleData name="SHAPE.STLength()">11.5829428592219</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.693923974592,12.9561685767068 77.6940293099029,12.9561851458727</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14673</SimpleData>
+		<SimpleData name="OBJECTID_1">14594</SimpleData>
+		<SimpleData name="OBJECTID_2">15314</SimpleData>
+		<SimpleData name="RR_CD">143594</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">5.79881651</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">5.79881651</SimpleData>
+		<SimpleData name="Shape_Le_2">5.79881651</SimpleData>
+		<SimpleData name="SHAPE.STLength()">5.79885784788694</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6944900760803,12.9562576890715 77.6945428093621,12.9562659936365</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14674</SimpleData>
+		<SimpleData name="OBJECTID_1">14595</SimpleData>
+		<SimpleData name="OBJECTID_2">15315</SimpleData>
+		<SimpleData name="RR_CD">143595</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">20.28546645</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">20.28546645</SimpleData>
+		<SimpleData name="Shape_Le_2">20.28546645</SimpleData>
+		<SimpleData name="SHAPE.STLength()">20.2854968686991</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6950155300099,12.9563566583744 77.6951985564588,12.9563934631983</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14675</SimpleData>
+		<SimpleData name="OBJECTID_1">14596</SimpleData>
+		<SimpleData name="OBJECTID_2">15316</SimpleData>
+		<SimpleData name="RR_CD">143596</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">1.66020313</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">1.66020313</SimpleData>
+		<SimpleData name="Shape_Le_2">1.66020313</SimpleData>
+		<SimpleData name="SHAPE.STLength()">1.66029961452745</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.697520392972,12.9568034222639 77.6975354180762,12.9568062106608</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14676</SimpleData>
+		<SimpleData name="OBJECTID_1">14597</SimpleData>
+		<SimpleData name="OBJECTID_2">15317</SimpleData>
+		<SimpleData name="RR_CD">143597</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">30.66992843</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">30.66992843</SimpleData>
+		<SimpleData name="Shape_Le_2">30.66992843</SimpleData>
+		<SimpleData name="SHAPE.STLength()">30.6698578157774</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6975354180762,12.9568062106608 77.6978129673244,12.9568577283199</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14677</SimpleData>
+		<SimpleData name="OBJECTID_1">14598</SimpleData>
+		<SimpleData name="OBJECTID_2">15318</SimpleData>
+		<SimpleData name="RR_CD">143598</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">2.31400672</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">2.31400672</SimpleData>
+		<SimpleData name="Shape_Le_2">2.31400672</SimpleData>
+		<SimpleData name="SHAPE.STLength()">2.31392384057903</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7003088645845,12.9569895943269 77.7003300991592,12.9569878175826</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14678</SimpleData>
+		<SimpleData name="OBJECTID_1">14599</SimpleData>
+		<SimpleData name="OBJECTID_2">15319</SimpleData>
+		<SimpleData name="RR_CD">143599</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">4.60056405</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">4.60056405</SimpleData>
+		<SimpleData name="Shape_Le_2">4.60056405</SimpleData>
+		<SimpleData name="SHAPE.STLength()">4.60058916661768</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7003300991592,12.9569878175826 77.7003723179785,12.9569842829461</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14681</SimpleData>
+		<SimpleData name="OBJECTID_1">14602</SimpleData>
+		<SimpleData name="OBJECTID_2">15322</SimpleData>
+		<SimpleData name="RR_CD">143113</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">17.85263224</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">17.85263224</SimpleData>
+		<SimpleData name="Shape_Le_2">17.85263224</SimpleData>
+		<SimpleData name="SHAPE.STLength()">17.8526914497507</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7016942362226,12.956884934817 77.701530370259,12.9568982416707</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14682</SimpleData>
+		<SimpleData name="OBJECTID_1">14603</SimpleData>
+		<SimpleData name="OBJECTID_2">15323</SimpleData>
+		<SimpleData name="RR_CD">143114</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">28.47553536</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">28.47553536</SimpleData>
+		<SimpleData name="Shape_Le_2">28.47553536</SimpleData>
+		<SimpleData name="SHAPE.STLength()">28.4755356306075</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7019555552447,12.9568631068227 77.7016942362226,12.956884934817</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14683</SimpleData>
+		<SimpleData name="OBJECTID_1">14604</SimpleData>
+		<SimpleData name="OBJECTID_2">15324</SimpleData>
+		<SimpleData name="RR_CD">143115</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">29.00656046</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">29.00656046</SimpleData>
+		<SimpleData name="Shape_Le_2">29.00656046</SimpleData>
+		<SimpleData name="SHAPE.STLength()">29.0065000611932</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7027728895412,12.9567881580658 77.7025062139863,12.9568038498977</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14684</SimpleData>
+		<SimpleData name="OBJECTID_1">14605</SimpleData>
+		<SimpleData name="OBJECTID_2">15325</SimpleData>
+		<SimpleData name="RR_CD">143116</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">45.10591332</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">45.10591332</SimpleData>
+		<SimpleData name="Shape_Le_2">45.10591332</SimpleData>
+		<SimpleData name="SHAPE.STLength()">45.105897947386</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7031866984953,12.9567521628289 77.7027728895412,12.9567881580658</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14920</SimpleData>
+		<SimpleData name="OBJECTID_1">14840</SimpleData>
+		<SimpleData name="OBJECTID_2">15570</SimpleData>
+		<SimpleData name="RR_CD">142820</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">28.85224821</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">28.85224821</SimpleData>
+		<SimpleData name="Shape_Le_2">28.85224821</SimpleData>
+		<SimpleData name="SHAPE.STLength()">28.8522506785866</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7003723179785,12.9569842829461 77.7006370906703,12.9569621223063</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14921</SimpleData>
+		<SimpleData name="OBJECTID_1">14841</SimpleData>
+		<SimpleData name="OBJECTID_2">15571</SimpleData>
+		<SimpleData name="RR_CD">142821</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">37.00780984</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">37.00780984</SimpleData>
+		<SimpleData name="Shape_Le_2">37.00780984</SimpleData>
+		<SimpleData name="SHAPE.STLength()">37.0078991342389</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6999695188898,12.9570209708832 77.7003088645845,12.9569895943269</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14922</SimpleData>
+		<SimpleData name="OBJECTID_1">14842</SimpleData>
+		<SimpleData name="OBJECTID_2">15572</SimpleData>
+		<SimpleData name="RR_CD">142822</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">10.26860381</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">10.26860381</SimpleData>
+		<SimpleData name="Shape_Le_2">10.26860381</SimpleData>
+		<SimpleData name="SHAPE.STLength()">10.2686013015405</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6998751937386,12.9570277215917 77.6999695188898,12.9570209708832</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">14963</SimpleData>
+		<SimpleData name="OBJECTID_1">14451</SimpleData>
+		<SimpleData name="OBJECTID_2">15195</SimpleData>
+		<SimpleData name="RR_CD">150358</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">142.43495844</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">142.43495844</SimpleData>
+		<SimpleData name="Shape_Le_2">142.43495844</SimpleData>
+		<SimpleData name="SHAPE.STLength()">142.434948052009</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7048923484243,12.9566407690045 77.7048832477076,12.9565880132393 77.7048837368507,12.956553224187 77.7048834894769,12.9565303201958 77.7048827290665,12.9564599146073 77.7048951067824,12.9560377233358 77.7049352466763,12.9553562062702</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15735</SimpleData>
+		<SimpleData name="OBJECTID_1">15367</SimpleData>
+		<SimpleData name="OBJECTID_2">15926</SimpleData>
+		<SimpleData name="RR_CD">146591</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">39.56545134</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">39.56545134</SimpleData>
+		<SimpleData name="Shape_Le_2">39.56545134</SimpleData>
+		<SimpleData name="SHAPE.STLength()">39.5654171976132</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7006370906703,12.9569621223063 77.7008947786326,12.9569441696057 77.7010005379947,12.9569362384584</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15736</SimpleData>
+		<SimpleData name="OBJECTID_1">15368</SimpleData>
+		<SimpleData name="OBJECTID_2">15927</SimpleData>
+		<SimpleData name="RR_CD">146592</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">43.20679429</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">43.20679429</SimpleData>
+		<SimpleData name="Shape_Le_2">43.20679429</SimpleData>
+		<SimpleData name="SHAPE.STLength()">43.2067878425939</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6994784594971,12.957058074731 77.6995543478846,12.9570516932996 77.699679614291,12.9570426010282 77.6998182159659,12.95703180036 77.6998751937386,12.9570277215917</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15737</SimpleData>
+		<SimpleData name="OBJECTID_1">15369</SimpleData>
+		<SimpleData name="OBJECTID_2">15928</SimpleData>
+		<SimpleData name="RR_CD">146593</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">50.95532031</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">50.95532031</SimpleData>
+		<SimpleData name="Shape_Le_2">50.95532031</SimpleData>
+		<SimpleData name="SHAPE.STLength()">50.95531883964</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6990097873548,12.9570622726325 77.6990197787718,12.9570636045001 77.6991020816895,12.9570679185012 77.6991912380877,12.9570713574248 77.699322381031,12.9570668829284 77.6994379984293,12.9570614753703 77.6994784594971,12.957058074731</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15738</SimpleData>
+		<SimpleData name="OBJECTID_1">15370</SimpleData>
+		<SimpleData name="OBJECTID_2">15929</SimpleData>
+		<SimpleData name="RR_CD">146594</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">108.01944995</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">108.01944995</SimpleData>
+		<SimpleData name="Shape_Le_2">108.01944995</SimpleData>
+		<SimpleData name="SHAPE.STLength()">108.019405378865</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.698029275797,12.956898168162 77.6981881975723,12.956927989067 77.6983705919268,12.9569597698986 77.6985525987203,12.9569929358581 77.698815037121,12.957037023426 77.6989220847761,12.9570505780658 77.6990097873548,12.9570622726325</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15739</SimpleData>
+		<SimpleData name="OBJECTID_1">15371</SimpleData>
+		<SimpleData name="OBJECTID_2">15930</SimpleData>
+		<SimpleData name="RR_CD">146595</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">23.90856018</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">23.90856018</SimpleData>
+		<SimpleData name="Shape_Le_2">23.90856018</SimpleData>
+		<SimpleData name="SHAPE.STLength()">23.9085962813773</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6978129673244,12.9568577283199 77.6978862553386,12.9568713297055 77.698029275797,12.956898168162</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15740</SimpleData>
+		<SimpleData name="OBJECTID_1">15372</SimpleData>
+		<SimpleData name="OBJECTID_2">15931</SimpleData>
+		<SimpleData name="RR_CD">146596</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">187.45475996</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">187.45475996</SimpleData>
+		<SimpleData name="Shape_Le_2">187.45475996</SimpleData>
+		<SimpleData name="SHAPE.STLength()">187.454655881412</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6958207862807,12.9565058927604 77.6958593180436,12.9565121010231 77.6961145148742,12.9565546837881 77.6963308107923,12.9565918442437 77.6965666048277,12.956631646362 77.6974889177795,12.956797581091 77.697520392972,12.9568034222639</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15741</SimpleData>
+		<SimpleData name="OBJECTID_1">15373</SimpleData>
+		<SimpleData name="OBJECTID_2">15932</SimpleData>
+		<SimpleData name="RR_CD">146597</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">68.70313029</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">68.70313029</SimpleData>
+		<SimpleData name="Shape_Le_2">68.70313029</SimpleData>
+		<SimpleData name="SHAPE.STLength()">68.7031508057625</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6951985564588,12.9563934631983 77.6952734202511,12.956408516133 77.6954715786277,12.9564471641593 77.6956591043498,12.9564798388261 77.6958207862807,12.9565058927604</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15742</SimpleData>
+		<SimpleData name="OBJECTID_1">15374</SimpleData>
+		<SimpleData name="OBJECTID_2">15933</SimpleData>
+		<SimpleData name="RR_CD">146598</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">52.29975839</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">52.29975839</SimpleData>
+		<SimpleData name="Shape_Le_2">52.29975839</SimpleData>
+		<SimpleData name="SHAPE.STLength()">52.2997583934357</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6945428093621,12.9562659936365 77.6945467250264,12.9562666098618 77.6948033696319,12.9563139939798 77.6950155300099,12.9563566583744</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15743</SimpleData>
+		<SimpleData name="OBJECTID_1">15375</SimpleData>
+		<SimpleData name="OBJECTID_2">15934</SimpleData>
+		<SimpleData name="RR_CD">146599</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">50.66820229</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">50.66820229</SimpleData>
+		<SimpleData name="Shape_Le_2">50.66820229</SimpleData>
+		<SimpleData name="SHAPE.STLength()">50.6681819700195</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6940293099029,12.9561851458727 77.6941389936147,12.9562024008235 77.6944900760803,12.9562576890715</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15749</SimpleData>
+		<SimpleData name="OBJECTID_1">15381</SimpleData>
+		<SimpleData name="OBJECTID_2">15940</SimpleData>
+		<SimpleData name="RR_CD">146605</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">156.65772473</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">156.65772473</SimpleData>
+		<SimpleData name="Shape_Le_2">156.65772473</SimpleData>
+		<SimpleData name="SHAPE.STLength()">156.657726505529</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7018227846232,12.9630893089253 77.7018301274674,12.9631363178348 77.7019465642687,12.9639189036876 77.7020342860753,12.9644891293137</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15750</SimpleData>
+		<SimpleData name="OBJECTID_1">15382</SimpleData>
+		<SimpleData name="OBJECTID_2">15941</SimpleData>
+		<SimpleData name="RR_CD">146606</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">32.51245368</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">32.51245368</SimpleData>
+		<SimpleData name="Shape_Le_2">32.51245368</SimpleData>
+		<SimpleData name="SHAPE.STLength()">32.5124799369936</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7016739445219,12.9621342673128 77.7016886266747,12.9622303638436 77.7017189675336,12.962424618171</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15751</SimpleData>
+		<SimpleData name="OBJECTID_1">15383</SimpleData>
+		<SimpleData name="OBJECTID_2">15942</SimpleData>
+		<SimpleData name="RR_CD">146607</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">135.88275808</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">135.88275808</SimpleData>
+		<SimpleData name="Shape_Le_2">135.88275808</SimpleData>
+		<SimpleData name="SHAPE.STLength()">135.882799666536</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.701464413278,12.9607786449304 77.7016272211013,12.9618284449886 77.7016522384009,12.9619921910842</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15752</SimpleData>
+		<SimpleData name="OBJECTID_1">15384</SimpleData>
+		<SimpleData name="OBJECTID_2">15943</SimpleData>
+		<SimpleData name="RR_CD">146608</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">88.68675007</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">88.68675007</SimpleData>
+		<SimpleData name="Shape_Le_2">88.68675007</SimpleData>
+		<SimpleData name="SHAPE.STLength()">88.6866951931607</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.701345584085,12.9599860926802 77.7013459699014,12.9599890697794 77.7013557607902,12.9600716874593 77.7014034791124,12.9603857329263 77.701464413278,12.9607786449304</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15753</SimpleData>
+		<SimpleData name="OBJECTID_1">15385</SimpleData>
+		<SimpleData name="OBJECTID_2">15944</SimpleData>
+		<SimpleData name="RR_CD">146609</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">57.54239141</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">57.54239141</SimpleData>
+		<SimpleData name="Shape_Le_2">57.54239141</SimpleData>
+		<SimpleData name="SHAPE.STLength()">57.5423666130438</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7012285502967,12.9587790939464 77.7012299519324,12.9589761303593 77.7012302870424,12.9590259772597 77.7012546761878,12.9592863719995 77.7012561467351,12.9592976885463</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15754</SimpleData>
+		<SimpleData name="OBJECTID_1">15386</SimpleData>
+		<SimpleData name="OBJECTID_2">15945</SimpleData>
+		<SimpleData name="RR_CD">146610</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">186.56245649</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">186.56245649</SimpleData>
+		<SimpleData name="Shape_Le_2">186.56245649</SimpleData>
+		<SimpleData name="SHAPE.STLength()">186.562521832211</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.701158793656,12.9570979755359 77.7012172492908,12.9575631710567 77.7012319701541,12.9579454785922 77.7012396022026,12.9581377700329 77.7012269583099,12.9585547607254 77.7012285502967,12.9587790939464</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15755</SimpleData>
+		<SimpleData name="OBJECTID_1">15387</SimpleData>
+		<SimpleData name="OBJECTID_2">15946</SimpleData>
+		<SimpleData name="RR_CD">146617</SimpleData>
+		<SimpleData name="RR_TP_HIER">OR</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">1066.71464806</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">1066.71464806</SimpleData>
+		<SimpleData name="Shape_Le_2">1066.71464806</SimpleData>
+		<SimpleData name="SHAPE.STLength()">1066.7145874239</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.6976387823054,12.9438374822649 77.697856134846,12.9444600880734 77.6980557190003,12.9450393640451 77.6982067402485,12.9454713055674 77.6983316454834,12.945836780184 77.6985161748491,12.9463719516831 77.6986956851976,12.946889895269 77.6989236816858,12.9475502380964 77.6989774833853,12.9477242997386 77.6991293857621,12.9481873058409 77.6992052771831,12.9485247860909 77.6993223883868,12.9490458540227 77.6993856130726,12.949420835831 77.6995137289608,12.950169892183 77.6996703292762,12.9510613370438 77.6997519622265,12.9515143890371 77.699770653641,12.9516181167204 77.6998298089623,12.9519256254293 77.6998570789863,12.9520556605186 77.6999600931608,12.9524989456731 77.6999602146134,12.9524994466854 77.7001157498015,12.9531385906509</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15756</SimpleData>
+		<SimpleData name="OBJECTID_1">15388</SimpleData>
+		<SimpleData name="OBJECTID_2">15947</SimpleData>
+		<SimpleData name="RR_CD">146699</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">40.11311988</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">40.11311988</SimpleData>
+		<SimpleData name="Shape_Le_2">40.11311988</SimpleData>
+		<SimpleData name="SHAPE.STLength()">40.1131425971402</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7041157830324,12.9613995820813 77.7041225221099,12.9613452163518 77.7041602194995,12.9610398656992</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15789</SimpleData>
+		<SimpleData name="OBJECTID_1">15421</SimpleData>
+		<SimpleData name="OBJECTID_2">15981</SimpleData>
+		<SimpleData name="RR_CD">147803</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">246.32312263</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">246.32312263</SimpleData>
+		<SimpleData name="Shape_Le_2">246.32312263</SimpleData>
+		<SimpleData name="SHAPE.STLength()">246.323063382418</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7045152183299,12.9588260149055 77.7045184117014,12.9588064013444 77.7045368977317,12.9586726055748 77.7045540398931,12.9585516000251 77.704560404057,12.9584627830512 77.7045757032467,12.9583187618091 77.7045981524145,12.9581774405109 77.7046109504602,12.9580408844471 77.7046229962467,12.9579419603459 77.7046442293459,12.9577798942215 77.704660662322,12.9577085276877 77.7046894990814,12.9576137688965 77.7046964527171,12.9575855849152 77.7047096370033,12.9575432934317 77.7047304290101,12.957496793639 77.704779158809,12.9573802703288 77.7047879378709,12.9573536952417 77.7047918074211,12.9573166117583 77.7048131045584,12.9572216268677 77.7048704524005,12.9568916226521 77.7048856079215,12.9567126473132 77.7048923484243,12.9566407690045</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15827</SimpleData>
+		<SimpleData name="OBJECTID_1">15459</SimpleData>
+		<SimpleData name="OBJECTID_2">16026</SimpleData>
+		<SimpleData name="RR_CD">147975</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">330.33275413</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">330.33275413</SimpleData>
+		<SimpleData name="Shape_Le_2">330.33275413</SimpleData>
+		<SimpleData name="SHAPE.STLength()">330.332723780762</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.707925633989,12.9564111422676 77.7077586443496,12.9564253951087 77.7067769488839,12.9564988130973 77.7064876229348,12.9565144219016 77.7061282060315,12.9565427718294 77.7059763447513,12.9565533829507 77.7055357873967,12.9565907083665 77.7052338175874,12.9566141691391 77.7048923484243,12.9566407690045</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">15920</SimpleData>
+		<SimpleData name="OBJECTID_1">15552</SimpleData>
+		<SimpleData name="OBJECTID_2">15882</SimpleData>
+		<SimpleData name="RR_CD">146443</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">32.3008706</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">32.3008706</SimpleData>
+		<SimpleData name="Shape_Le_2">32.3008706</SimpleData>
+		<SimpleData name="SHAPE.STLength()">32.3008770813197</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7055034921705,12.9511780491309 77.7055089792215,12.9511066915535 77.7055159886825,12.9510500827157 77.705522159252,12.950984364053 77.7055325963862,12.9508877087909</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16301</SimpleData>
+		<SimpleData name="OBJECTID_1">15939</SimpleData>
+		<SimpleData name="OBJECTID_2">16137</SimpleData>
+		<SimpleData name="RR_CD">148489</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">112.04166404</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">112.04166404</SimpleData>
+		<SimpleData name="Shape_Le_2">112.04166404</SimpleData>
+		<SimpleData name="SHAPE.STLength()">112.041652579739</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7089542344247,12.9563303538482 77.7089012489858,12.9563355167945 77.7086159852507,12.9563599403809 77.707925633989,12.9564111422676</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16302</SimpleData>
+		<SimpleData name="OBJECTID_1">15940</SimpleData>
+		<SimpleData name="OBJECTID_2">16138</SimpleData>
+		<SimpleData name="RR_CD">148559</SimpleData>
+		<SimpleData name="RR_TP_HIER">PU</SimpleData>
+		<SimpleData name="RR_WIDTH_P">45</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">60.14991064</SimpleData>
+		<SimpleData name="RR_width_B">22</SimpleData>
+		<SimpleData name="Shape_Le_1">60.14991064</SimpleData>
+		<SimpleData name="Shape_Le_2">60.14991064</SimpleData>
+		<SimpleData name="SHAPE.STLength()">60.1499270848526</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7025062139863,12.9568038498977 77.7020253646198,12.9568574372995 77.7019555552447,12.9568631068227</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16303</SimpleData>
+		<SimpleData name="OBJECTID_1">15941</SimpleData>
+		<SimpleData name="OBJECTID_2">16139</SimpleData>
+		<SimpleData name="RR_CD">148656</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">533.02209262</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">533.02209262</SimpleData>
+		<SimpleData name="Shape_Le_2">533.02209262</SimpleData>
+		<SimpleData name="SHAPE.STLength()">533.022030229534</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7035192061613,12.9661751748908 77.7035341315672,12.9661021771361 77.7035576813555,12.9659605534337 77.703610426596,12.9655263315785 77.7036659303089,12.9650153548566 77.7037413260525,12.9644273865235 77.7038104330184,12.9639501436899 77.7038390438083,12.9636675464483 77.7038556697839,12.9635013816931 77.7038669833926,12.9632697765304 77.7038658349191,12.9632697884635 77.7038652574588,12.9632697944635 77.7038784153785,12.963127746686 77.7039182741797,12.9627949763526 77.7039900269972,12.9622842816609 77.7040272033912,12.9620708788518 77.7041157830324,12.9613995820813</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16304</SimpleData>
+		<SimpleData name="OBJECTID_1">15942</SimpleData>
+		<SimpleData name="OBJECTID_2">16140</SimpleData>
+		<SimpleData name="RR_CD">148657</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">30.13296556</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">30.13296556</SimpleData>
+		<SimpleData name="Shape_Le_2">30.13296556</SimpleData>
+		<SimpleData name="SHAPE.STLength()">30.1330163173783</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7041602194995,12.9610398656992 77.7041882777802,12.9608239722228 77.7041940222677,12.9607697089719</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16305</SimpleData>
+		<SimpleData name="OBJECTID_1">15943</SimpleData>
+		<SimpleData name="OBJECTID_2">16141</SimpleData>
+		<SimpleData name="RR_CD">148658</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">41.53011761</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">41.53011761</SimpleData>
+		<SimpleData name="Shape_Le_2">41.53011761</SimpleData>
+		<SimpleData name="SHAPE.STLength()">41.5301045642546</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7041940222677,12.9607697089719 77.7041976978925,12.9607369247896 77.7042393882074,12.9604395111631 77.7042409949004,12.9604281997268 77.7042423915471,12.9603976976297</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16306</SimpleData>
+		<SimpleData name="OBJECTID_1">15944</SimpleData>
+		<SimpleData name="OBJECTID_2">16142</SimpleData>
+		<SimpleData name="RR_CD">148659</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">124.03747352</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">124.03747352</SimpleData>
+		<SimpleData name="Shape_Le_2">124.03747352</SimpleData>
+		<SimpleData name="SHAPE.STLength()">124.037445207942</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7042423915471,12.9603976976297 77.7042476851763,12.9603547347112 77.7043058038032,12.959926161923 77.7043487550337,12.9596388989467 77.7044215388062,12.959395363151 77.7044415757208,12.9592965936002</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16307</SimpleData>
+		<SimpleData name="OBJECTID_1">15945</SimpleData>
+		<SimpleData name="OBJECTID_2">16143</SimpleData>
+		<SimpleData name="RR_CD">148660</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">36.28807586</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">36.28807586</SimpleData>
+		<SimpleData name="Shape_Le_2">36.28807586</SimpleData>
+		<SimpleData name="SHAPE.STLength()">36.2880567149586</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7044415757208,12.9592965936002 77.7044450095001,12.9592765538636 77.7044640133704,12.9591879705227 77.7044865260076,12.9590091156477 77.7044941213319,12.9589731407206</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16308</SimpleData>
+		<SimpleData name="OBJECTID_1">15946</SimpleData>
+		<SimpleData name="OBJECTID_2">16144</SimpleData>
+		<SimpleData name="RR_CD">148661</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">16.45201935</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">16.45201935</SimpleData>
+		<SimpleData name="Shape_Le_2">16.45201935</SimpleData>
+		<SimpleData name="SHAPE.STLength()">16.452079122718</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7044941213319,12.9589731407206 77.704499138361,12.9589449072972 77.704506571579,12.9588814736394 77.7045152183299,12.9588260149055</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16314</SimpleData>
+		<SimpleData name="OBJECTID_1">15952</SimpleData>
+		<SimpleData name="OBJECTID_2">16150</SimpleData>
+		<SimpleData name="RR_CD">149135</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">33.46394988</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">33.46394988</SimpleData>
+		<SimpleData name="Shape_Le_2">33.46394988</SimpleData>
+		<SimpleData name="SHAPE.STLength()">33.4640105291131</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7056671531224,12.9500016023375 77.7056735355259,12.9499633500151 77.7056779597778,12.9499239021073 77.705683874577,12.9498939502179 77.7056942855426,12.9498367550014 77.7057053477851,12.9497624243686 77.7057149394821,12.9497030542361</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16315</SimpleData>
+		<SimpleData name="OBJECTID_1">15953</SimpleData>
+		<SimpleData name="OBJECTID_2">16151</SimpleData>
+		<SimpleData name="RR_CD">149137</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">33.57178396</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">33.57178396</SimpleData>
+		<SimpleData name="Shape_Le_2">33.57178396</SimpleData>
+		<SimpleData name="SHAPE.STLength()">33.5717887850936</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7056206838994,12.9503013526901 77.7056236308497,12.9502712066908 77.7056355313981,12.950192197868 77.7056413293333,12.9501559435299 77.7056571138649,12.9500582498697 77.7056671531224,12.9500016023375</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16316</SimpleData>
+		<SimpleData name="OBJECTID_1">15954</SimpleData>
+		<SimpleData name="OBJECTID_2">16152</SimpleData>
+		<SimpleData name="RR_CD">149139</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">38.28266234</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">38.28266234</SimpleData>
+		<SimpleData name="Shape_Le_2">38.28266234</SimpleData>
+		<SimpleData name="SHAPE.STLength()">38.2825979403787</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7055656173154,12.9506428716839 77.7055722696081,12.950589608095 77.70559396898,12.9504548837932 77.7056030652774,12.950399617358 77.7056206838994,12.9503013526901</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16449</SimpleData>
+		<SimpleData name="OBJECTID_1">16087</SimpleData>
+		<SimpleData name="OBJECTID_2">16286</SimpleData>
+		<SimpleData name="RR_CD">150359</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">79.22643284</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">79.22643284</SimpleData>
+		<SimpleData name="Shape_Le_2">79.22643284</SimpleData>
+		<SimpleData name="SHAPE.STLength()">79.2264225939213</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7049352466763,12.9553562062702 77.7049709651821,12.9549606195521 77.7050012842264,12.9547386600909 77.705004865747,12.9547194255293 77.7050135300866,12.9546448767746</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#roadwidth">
+		<SimpleData name="OBJECTID">16450</SimpleData>
+		<SimpleData name="OBJECTID_1">16088</SimpleData>
+		<SimpleData name="OBJECTID_2">16287</SimpleData>
+		<SimpleData name="RR_CD">150360</SimpleData>
+		<SimpleData name="RR_TP_HIER">MI</SimpleData>
+		<SimpleData name="RR_WIDTH_P">12</SimpleData>
+		<SimpleData name="RR_TP_TYPE">W</SimpleData>
+		<SimpleData name="SHAPE_LENG">31.0022442</SimpleData>
+		<SimpleData name="RR_width_B">6</SimpleData>
+		<SimpleData name="Shape_Le_1">31.0022442</SimpleData>
+		<SimpleData name="Shape_Le_2">31.0022442</SimpleData>
+		<SimpleData name="SHAPE.STLength()">31.0022477805673</SimpleData>
+	</SchemaData></ExtendedData>
+      <MultiGeometry><LineString><coordinates>77.7050135300866,12.9546448767746 77.7050263000385,12.9545175759779 77.7050296522636,12.9545017576053 77.7050489855641,12.95436711114</coordinates></LineString></MultiGeometry>
+  </Placemark>
+  </Document></kml>

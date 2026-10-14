@@ -55,7 +55,7 @@ class PhaseMachineController:
         self.emergency_cfg = emergency_cfg or (C.EMERGENCY if emergency_priority else None)
         if self.emergency_priority:
             from ..emergency import EmergencyPriorityCoordinator
-            self.emergency_coordinator = EmergencyPriorityCoordinator(em_cfg=self.emergency_cfg)
+            self.emergency_coordinator = EmergencyPriorityCoordinator(em_cfg=self.emergency_cfg, tls_id=self.tls)
         else:
             self.emergency_coordinator = None
 

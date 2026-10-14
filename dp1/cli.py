@@ -8,15 +8,17 @@ from .runner import run_simulation
 def main():
     ap = argparse.ArgumentParser(prog="dp1")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("build", help="generate the junction network + detectors")
+    b = sub.add_parser("build", help="generate the junction network + detectors")
+    b.add_argument("--network", default="synthetic", choices=["synthetic", "marathahalli"], help="network topology (default: synthetic)")
 
     r = sub.add_parser("run", help="run one simulation")
-    r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()))
+    r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()) + ["imbalanced_orr", "imbalanced_varthur", "surge_orr_north"])
     r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"])
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")
     r.add_argument("--decisions", action="store_true", help="print first 10 signal decisions (queue per approach -> green s)")
     r.add_argument("--model-path", type=str, default=None, help="path to trained RL model for rl_dqn policy")
+    r.add_argument("--network", default="synthetic", choices=["synthetic", "marathahalli"], help="network topology (default: synthetic)")
     r.add_argument("--emergency-event", action="store_true", help="insert deterministic emergency vehicle")
     r.add_argument("--emergency-priority", action="store_true", help="enable traffic signal priority for emergency vehicle")
     r.add_argument("--emergency-approach", default="N", choices=["N", "S", "E", "W"], help="approach for emergency vehicle")
@@ -63,12 +65,14 @@ def main():
     ev.add_argument("--levels", nargs="*", default=None, choices=["low", "medium", "heavy"], help="demand levels filter")
     ev.add_argument("--policies", nargs="*", default=None, help="policies filter")
     ev.add_argument("--seeds", nargs="*", type=int, default=None, help="seeds filter")
+    ev.add_argument("--network", default="synthetic", choices=["synthetic", "marathahalli"], help="network topology (default: synthetic)")
     ev.add_argument("--emergency-matrix", action="store_true", help="enable emergency matrix sub-study schema")
 
     a = ap.parse_args()
 
     if a.cmd == "build":
-        print("built:", build_network())
+        from .site_network import build_network as build_net
+        print(f"built ({a.network}):", build_net(a.network))
     elif a.cmd == "run":
         em_cfg = C.EmergencyConfig(
             approach=a.emergency_approach,
@@ -88,6 +92,7 @@ def main():
             emergency_priority=a.emergency_priority,
             emergency_cfg=em_cfg,
             record_vehicles=a.record_vehicles,
+            network=a.network,
         )
         for k, v in m.items():
             print(f"{k:>26}: {v:.2f}" if isinstance(v, float) else f"{k:>26}: {v}")
@@ -165,7 +170,11 @@ def main():
             print(f"PDF written to {out.with_suffix('.pdf')}")
     elif a.cmd == "evaluate-research":
         from .research.orchestrator import run_research_experiment
-        build_network()
+        if a.network == "marathahalli":
+            from .site_network import build_network as build_site_net
+            build_site_net("marathahalli")
+        else:
+            build_network()
         patterns = tuple(a.patterns) if a.patterns else None
         levels = tuple(a.levels) if a.levels else None
         policies = tuple(a.policies) if a.policies else None
@@ -183,6 +192,7 @@ def main():
             dry_run=a.dry_run,
             model_path=a.model_path,
             emergency_matrix=a.emergency_matrix,
+            network=a.network,
         )
 
 

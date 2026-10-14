@@ -82,3 +82,19 @@ This document records the visual QA, motion audit, responsive evaluation, and Ve
 3. **Deployment Limitation Notice:**
    - The Vercel deployment hosts the static React SPA only.
    - Running live Eclipse SUMO simulations or launching new research matrices requires a separately hosted container or workstation running the DP1 FastAPI backend (`python -m dp1.api.server`). The static frontend correctly communicates this limitation and locks live execution controls when running in snapshot mode.
+
+---
+
+## 8. Phase 7B: Marathahalli Site Model UI & Switcher QA
+
+| Screen / Component | Check / Test | Result | Notes |
+|---|---|:---:|---|
+| `Navbar.jsx` | Site Model tab presence & navigation | **PASS** | `Site Model` tab (`id: 'site-model'`) with Layers icon routes to `SiteModelView`. |
+| `SiteModelView.jsx` | 4-Tab switching & responsive layout | **PASS** | Smooth 150ms transitions between Topology, Grade Separation, Phasing Machine, and Provenance Matrix. |
+| `SiteModelView.jsx` | Image rendering & fallback handling | **PASS** | Loads `/network/marathahalli/marathahalli_network_topology.png` and `sumo_gui_render.png` with error fallbacks. |
+| `SiteModelView.jsx` | Provenance truth table | **PASS** | Color-coded badges: Green for verified municipal/police inputs, Amber for unmeasured volume synthetic assumptions. |
+| `LiveMonitorView.jsx` | Network selector & scenario cascading | **PASS** | Selecting `marathahalli` dynamically swaps scenarios to `balanced`, `imbalanced_orr`, `imbalanced_varthur`, `surge_orr_north`. |
+| `ResearchView.jsx` | Site matrix launcher & artifacts | **PASS** | Supports `--network marathahalli`, loads `exp_marathahalli_site` (600 cells) and paired deltas. |
+| `test/api-client.test.js` | Vitest test suite | **PASS** | 7/7 tests passed. |
+| `npm run build` | Production Vite build | **PASS** | Output in `frontend/dist/` with zero build errors or warnings. |
+

@@ -25,6 +25,7 @@ export function LiveMonitorView() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [launchParams, setLaunchParams] = useState({
+    network: 'synthetic',
     scenario: 'imbalanced_ns',
     policy: 'adaptive',
     seed: 1,
@@ -377,16 +378,46 @@ export function LiveMonitorView() {
                 )}
 
                 <div className="space-y-1">
+                  <label className="text-slate-300 font-medium">Network Architecture</label>
+                  <select
+                    value={launchParams.network || 'synthetic'}
+                    onChange={(e) => {
+                      const net = e.target.value;
+                      setLaunchParams({
+                        ...launchParams,
+                        network: net,
+                        scenario: net === 'marathahalli' ? 'imbalanced_orr' : 'imbalanced_ns',
+                      });
+                    }}
+                    className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-white"
+                  >
+                    <option value="synthetic">Synthetic 4-Way Junction</option>
+                    <option value="marathahalli">Marathahalli Bridge Site (Real Road)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-slate-300 font-medium">Scenario</label>
                   <select
                     value={launchParams.scenario}
                     onChange={(e) => setLaunchParams({ ...launchParams, scenario: e.target.value })}
                     className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-white"
                   >
-                    <option value="balanced">Balanced 4-Way</option>
-                    <option value="imbalanced_ns">Imbalanced NS (Heavy Corridor)</option>
-                    <option value="imbalanced_ew">Imbalanced EW</option>
-                    <option value="surge_north">Surge North (Asymmetric Peak)</option>
+                    {launchParams.network === 'marathahalli' ? (
+                      <>
+                        <option value="balanced">Balanced Corridor</option>
+                        <option value="imbalanced_orr">Imbalanced ORR (Heavy Arterial)</option>
+                        <option value="imbalanced_varthur">Imbalanced Varthur Cross</option>
+                        <option value="surge_orr_north">Surge ORR North (Peak Inflow)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="balanced">Balanced 4-Way</option>
+                        <option value="imbalanced_ns">Imbalanced NS (Heavy Corridor)</option>
+                        <option value="imbalanced_ew">Imbalanced EW</option>
+                        <option value="surge_north">Surge North (Asymmetric Peak)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

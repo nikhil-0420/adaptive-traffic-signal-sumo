@@ -35,6 +35,7 @@ class RunLaunchRequest(BaseModel):
     policy: str = Field(..., description="Policy name from allowlist")
     seed: int = Field(1, description="Simulation random seed")
     demand_level: str = Field("medium", description="Demand level: low, medium, heavy")
+    network: str = Field("synthetic", description="Network topology: synthetic or marathahalli")
     emergency_event: bool = Field(False, description="Insert emergency vehicle")
     emergency_priority: bool = Field(False, description="Enable emergency signal priority")
     emergency_approach: str = Field("N", description="Approach for emergency: N, S, E, W")
@@ -56,6 +57,7 @@ class RunStatusResponse(BaseModel):
 class RunDetailResponse(BaseModel):
     run_id: str
     status: str
+    network: Optional[str] = "synthetic"
     scenario: Optional[str] = None
     policy: Optional[str] = None
     seed: Optional[int] = None
@@ -113,6 +115,7 @@ class ReplayResponse(BaseModel):
 
 class ExperimentLaunchRequest(BaseModel):
     preset: str = Field("smoke", description="Preset: full, smoke, custom")
+    network: str = Field("synthetic", description="Network topology: synthetic or marathahalli")
     patterns: Optional[List[str]] = Field(None, description="Scenario patterns")
     levels: Optional[List[str]] = Field(None, description="Demand levels (low, medium, heavy)")
     policies: Optional[List[str]] = Field(None, description="Policies to evaluate")
@@ -122,6 +125,19 @@ class ExperimentLaunchRequest(BaseModel):
     emergency_matrix: bool = Field(False, description="Emergency matrix sub-study")
     model_path: Optional[str] = Field(None, description="RL model path for rl_dqn")
     experiment_id: Optional[str] = Field(None, description="Custom experiment ID (alphanumeric)")
+
+
+class SiteModelResponse(BaseModel):
+    network_id: str
+    name: str
+    location: str
+    description: str
+    grounding_sources: List[Dict[str, str]]
+    grade_separation: Dict[str, Any]
+    surface_junction: Dict[str, Any]
+    provenance_table: List[Dict[str, str]]
+    topology_image_url: str
+    sumo_gui_image_url: str
 
 
 class ExperimentStatusResponse(BaseModel):

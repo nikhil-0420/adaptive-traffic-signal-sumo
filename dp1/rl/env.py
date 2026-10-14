@@ -70,6 +70,7 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         out_dir: Optional[Path] = None,
         rotate_seeds: bool = False,
         scenarios: Optional[tuple] = None,
+        network: str = "synthetic",
     ):
         if not _GYM_AVAILABLE:
             raise ImportError(
@@ -78,8 +79,16 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
             )
 
         super().__init__()
+        self.network = network
         self.scenario = scenario
-        self.scenarios = scenarios or (("imbalanced_ns", "imbalanced_ew", "balanced", "surge_north") if scenario == "all" else None)
+        if scenarios is None and scenario == "all":
+            if network == "marathahalli":
+                self.scenarios = ("imbalanced_orr", "imbalanced_varthur", "balanced", "surge_orr_north")
+            else:
+                self.scenarios = ("imbalanced_ns", "imbalanced_ew", "balanced", "surge_north")
+        else:
+            self.scenarios = scenarios
+
         self.seed = seed
         self.cfg = cfg
         self.gui = gui
@@ -119,19 +128,33 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         self._episode_count += 1
         self.close()
 
-        if not NET_FILE.exists():
-            build_network()
-
-        # Build routes for this episode
-        run_out = self.out_dir or (C.RESULTS_DIR / "rl_runs" / f"{self.scenario}_s{self.seed}")
-        run_out.mkdir(parents=True, exist_ok=True)
-        routes, self.n_vehicles = build_routes(self.scenario, self.seed, out_dir=run_out)
+        if self.network == "marathahalli":
+            from ..site_network import get_network_paths, build_network as build_site_net
+            from ..site_scenarios import build_site_routes
+            paths = get_network_paths("marathahalli")
+            net_file = paths["net_file"]
+            det_file = paths["det_file"]
+            if not net_file.exists():
+                build_site_net("marathahalli")
+            tls_id = "marathahalli_tls"
+            run_out = self.out_dir or (C.RESULTS_DIR / "rl_runs" / f"marathahalli_{self.scenario}_s{self.seed}")
+            run_out.mkdir(parents=True, exist_ok=True)
+            routes, self.n_vehicles = build_site_routes(self.scenario, self.seed, out_dir=run_out)
+        else:
+            if not NET_FILE.exists():
+                build_network()
+            net_file = NET_FILE
+            det_file = DET_FILE
+            tls_id = C.TLS_ID
+            run_out = self.out_dir or (C.RESULTS_DIR / "rl_runs" / f"{self.scenario}_s{self.seed}")
+            run_out.mkdir(parents=True, exist_ok=True)
+            routes, self.n_vehicles = build_routes(self.scenario, self.seed, out_dir=run_out)
 
         cmd = [
             binary("sumo-gui" if self.gui else "sumo"),
-            "-n", str(NET_FILE),
+            "-n", str(net_file),
             "-r", str(routes),
-            "-a", str(DET_FILE),
+            "-a", str(det_file),
             "--seed", str(self.seed),
             "--step-length", str(C.SIM.step_s),
             "--time-to-teleport", "-1",
@@ -149,7 +172,7 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         last_exc = None
         for attempt in range(5):
             try:
-                traci.start(cmd, label=f"rl_env_{self.scenario}_{self.seed}_{random.randint(1000, 99999)}")
+                traci.start(cmd, label=f"rl_env_{self.network}_{self.scenario}_{self.seed}_{random.randint(1000, 99999)}")
                 self._traci_running = True
                 started = True
                 break
@@ -164,15 +187,17 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         if not started:
             raise RuntimeError(f"Failed to start SUMO for RL env: {last_exc}") from last_exc
 
-        self.states = SignalStates(NET_FILE)
+        self.states = SignalStates(net_file, tls_id=tls_id)
         self.ctl = RLPhaseController(
             self.states,
+            tls_id=tls_id,
             min_green_s=self.cfg.min_green_s,
             max_green_s=self.cfg.max_green_s,
         )
 
+        from ..runner import read_queues
         self.t = 0.0
-        self.queues = _read_detector_queues()
+        self.queues = read_queues(network=self.network)
         self.ctl.start(self.t, self.queues)
         self.ctl.apply()
 
@@ -212,7 +237,8 @@ class SumoIntersectionEnv(gym.Env if _GYM_AVAILABLE else object):
         # Advance SUMO simulation by one second
         traci.simulationStep()
         self.t = float(traci.simulation.getTime())
-        self.queues = _read_detector_queues()
+        from ..runner import read_queues
+        self.queues = read_queues(network=self.network)
 
         # Check if an accepted switch from GREEN to YELLOW occurred
         switched = (prev_phase == "GREEN" and self.ctl.phase == "YELLOW")

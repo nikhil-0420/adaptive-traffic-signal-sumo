@@ -16,6 +16,18 @@ from . import config as C
 from .controllers.base import ControllerAction
 
 
+MARATHAHALLI_APPROACH_EDGES = {
+    "leg_orr_s_in": ("S", "NS", 0.0),
+    "ramp_orr_s_in": ("S", "NS", 34.0),
+    "leg_orr_n_in": ("N", "NS", 0.0),
+    "ramp_orr_n_in": ("N", "NS", 34.0),
+    "leg_wf_in": ("E", "EW", 0.0),
+    "ramp_wf_in": ("E", "EW", 34.0),
+    "leg_hal_in": ("W", "EW", 0.0),
+    "ramp_hal_in": ("W", "EW", 34.0),
+}
+
+
 def detect_approaching_emergency(
     tls_id: str = C.TLS_ID,
     em_cfg: C.EmergencyConfig = C.EMERGENCY,
@@ -25,7 +37,7 @@ def detect_approaching_emergency(
     Returns:
         Optional[Tuple[str, str, float]]:
             (approach, axis, distance_to_junction_m) if approaching within detection_dist_m
-            on an incoming edge (e.g. 'N_in').
+            on an incoming edge (e.g. 'N_in' or 'leg_orr_s_in').
             Returns None if vehicle is not loaded, has passed the stop line, is inside the junction,
             is on an outgoing edge, or is beyond detection_dist_m.
     """
@@ -39,19 +51,24 @@ def detect_approaching_emergency(
 
     try:
         road_id = traci.vehicle.getRoadID(em_cfg.vehicle_id)
-        # Only incoming edges ("N_in", "S_in", "E_in", "W_in") are approaching edges
-        if not road_id or not road_id.endswith("_in"):
+        if not road_id:
             return None
 
-        app = road_id.split("_")[0]
-        if app not in C.APPROACHES:
+        offset = 0.0
+        if road_id in MARATHAHALLI_APPROACH_EDGES:
+            app, axis, offset = MARATHAHALLI_APPROACH_EDGES[road_id]
+        elif road_id.endswith("_in"):
+            app = road_id.split("_")[0]
+            if app not in C.APPROACHES:
+                return None
+            axis = C.AXIS_OF[app]
+        else:
             return None
 
-        axis = C.AXIS_OF[app]
         lane_id = traci.vehicle.getLaneID(em_cfg.vehicle_id)
         lane_pos = traci.vehicle.getLanePosition(em_cfg.vehicle_id)
         lane_len = traci.lane.getLength(lane_id)
-        dist_m = max(0.0, lane_len - lane_pos)
+        dist_m = max(0.0, lane_len - lane_pos) + offset
 
         if dist_m <= em_cfg.detection_dist_m:
             return (app, axis, dist_m)
@@ -64,8 +81,9 @@ def detect_approaching_emergency(
 class EmergencyPriorityCoordinator:
     """Coordinates priority decisions while maintaining state machine safety invariants."""
 
-    def __init__(self, em_cfg: C.EmergencyConfig = C.EMERGENCY):
+    def __init__(self, em_cfg: C.EmergencyConfig = C.EMERGENCY, tls_id: str = C.TLS_ID):
         self.em_cfg = em_cfg
+        self.tls_id = tls_id
         self.extension_start_s: Optional[float] = None
         self.last_detected_dist: Optional[float] = None
         self.last_status: str = "idle"
@@ -97,7 +115,7 @@ class EmergencyPriorityCoordinator:
                 - action_override: ControllerAction.HOLD, ControllerAction.REQUEST_SWITCH, or None.
                 - info: Diagnostic metadata about emergency status.
         """
-        detection = detect_approaching_emergency(tls_id=C.TLS_ID, em_cfg=self.em_cfg)
+        detection = detect_approaching_emergency(tls_id=self.tls_id, em_cfg=self.em_cfg)
 
         if detection is None:
             self.extension_start_s = None

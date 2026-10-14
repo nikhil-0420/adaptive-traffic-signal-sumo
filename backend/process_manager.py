@@ -88,6 +88,7 @@ class ProcessManager:
         emergency_depart: float = 300.0,
         model_path: Optional[str] = None,
         gui: bool = False,
+        network: str = "synthetic",
     ) -> Tuple[bool, str]:
         """Launch a single simulation run via `sys.executable -m dp1.cli run ...`."""
         with self._lock:
@@ -107,6 +108,7 @@ class ProcessManager:
                 "--policy", policy,
                 "--seed", str(seed),
                 "--demand-level", demand_level,
+                "--network", network,
                 "--record-vehicles",
             ]
             if gui:
@@ -152,6 +154,7 @@ class ProcessManager:
         jobs: int = 1,
         emergency_matrix: bool = False,
         model_path: Optional[str] = None,
+        network: str = "synthetic",
     ) -> Tuple[bool, str]:
         """Launch research matrix evaluation via `sys.executable -m dp1.cli evaluate-research ...`."""
         with self._lock:
@@ -170,6 +173,7 @@ class ProcessManager:
                 "--preset", preset,
                 "--experiment-id", experiment_id,
                 "--jobs", str(jobs),
+                "--network", network,
             ]
             if limit is not None:
                 cmd.extend(["--limit", str(limit)])

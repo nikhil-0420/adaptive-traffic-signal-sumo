@@ -24,6 +24,7 @@ class MatrixCell:
     demand_level: str
     policy: str
     seed: int
+    network: str = "synthetic"
     status: str = CellStatus.PENDING.value
     runtime_s: float = 0.0
     route_hash: Optional[str] = None
@@ -43,6 +44,7 @@ class ResearchMatrix:
     seeds: Tuple[int, ...]
     cells: List[MatrixCell]
     preset: str = "full"
+    network: str = "synthetic"
 
     @property
     def total_cells(self) -> int:
@@ -55,6 +57,11 @@ class ResearchMatrix:
         return counts
 
 
+SITE_PATTERNS = ("balanced", "imbalanced_orr", "imbalanced_varthur", "surge_orr_north")
+SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn")
+SITE_RESEARCH_SEEDS = tuple(range(121, 131))  # (121..130)
+
+
 def build_research_matrix(
     experiment_id: str,
     patterns: Optional[Tuple[str, ...]] = None,
@@ -62,42 +69,62 @@ def build_research_matrix(
     policies: Optional[Tuple[str, ...]] = None,
     seeds: Optional[Tuple[int, ...]] = None,
     preset: str = "full",
+    network: str = "synthetic",
 ) -> ResearchMatrix:
     """Build the planned research evaluation matrix.
 
     Presets:
-        'smoke': tiny 3-run deterministic sanity test (imbalanced_ns, medium, fixed/adaptive/pressure, seed 21).
-        'full': canonical 720-run research matrix (4 patterns x 3 levels x 6 policies x 10 research seeds).
+        'smoke': tiny deterministic sanity test.
+        'full': canonical research matrix (720 runs for synthetic, 600 runs for marathahalli site).
         'custom': user-selected combination of factors.
     """
+    if network == "marathahalli":
+        default_pats = SITE_PATTERNS
+        default_pols = SITE_POLICIES
+        default_sds = SITE_RESEARCH_SEEDS
+        smoke_pats = ("imbalanced_orr",)
+        smoke_lvls = ("low",)
+        smoke_pols = ("fixed", "adaptive", "rl_dqn")
+        smoke_sds = (121,)
+    else:
+        default_pats = C.RESEARCH.patterns
+        default_pols = C.RESEARCH.policies
+        default_sds = C.RESEARCH.seeds
+        smoke_pats = ("imbalanced_ns",)
+        smoke_lvls = ("medium",)
+        smoke_pols = ("fixed", "adaptive", "pressure")
+        smoke_sds = (21,)
+
     if preset == "smoke":
-        pats = ("imbalanced_ns",)
-        lvls = ("medium",)
-        pols = ("fixed", "adaptive", "pressure")
-        sds = (21,)
+        pats = smoke_pats
+        lvls = smoke_lvls
+        pols = smoke_pols
+        sds = smoke_sds
     elif preset == "full":
-        pats = patterns or C.RESEARCH.patterns
+        pats = patterns or default_pats
         lvls = levels or C.RESEARCH.levels
-        pols = policies or C.RESEARCH.policies
-        sds = seeds or C.RESEARCH.seeds
+        pols = policies or default_pols
+        sds = seeds or default_sds
     else:  # custom
-        pats = patterns or C.RESEARCH.patterns
+        pats = patterns or default_pats
         lvls = levels or C.RESEARCH.levels
-        pols = policies or C.RESEARCH.policies
-        sds = seeds or C.RESEARCH.seeds
+        pols = policies or default_pols
+        sds = seeds or default_sds
 
     cells: List[MatrixCell] = []
     for pat in pats:
         for lvl in lvls:
             for pol in pols:
                 for sd in sds:
-                    c_id = f"cell_{pat}_{lvl}_{pol}_s{sd}"
+                    net_prefix = f"cell_{network}" if network != "synthetic" else "cell"
+                    c_id = f"{net_prefix}_{pat}_{lvl}_{pol}_s{sd}"
                     cells.append(MatrixCell(
                         cell_id=c_id,
                         pattern=pat,
                         demand_level=lvl,
                         policy=pol,
                         seed=sd,
+                        network=network,
                     ))
 
     return ResearchMatrix(
@@ -108,6 +135,7 @@ def build_research_matrix(
         seeds=sds,
         cells=cells,
         preset=preset,
+        network=network,
     )
 
 

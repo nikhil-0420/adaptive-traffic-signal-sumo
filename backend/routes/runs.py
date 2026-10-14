@@ -32,13 +32,14 @@ router = APIRouter(prefix="/runs", tags=["Runs"])
 
 def _derive_run_id(req: RunLaunchRequest) -> str:
     """Derive standard run ID consistent with dp1.runner."""
+    net_tag = "" if req.network == "synthetic" else f"{req.network}_"
     em_tag = ""
     if req.emergency_event:
         em_tag = "_em_pri" if req.emergency_priority else "_em"
     if req.demand_level == "medium":
         # Check if legacy pattern or standard pattern
-        return f"{req.scenario}_{req.policy}_s{req.seed}{em_tag}"
-    return f"{req.scenario}_{req.demand_level}_{req.policy}_s{req.seed}{em_tag}"
+        return f"{net_tag}{req.scenario}_{req.policy}_s{req.seed}{em_tag}"
+    return f"{net_tag}{req.scenario}_{req.demand_level}_{req.policy}_s{req.seed}{em_tag}"
 
 
 def _find_run_dir(run_id: str) -> Optional[Path]:
@@ -119,6 +120,7 @@ def launch_run(
         emergency_depart=req.emergency_depart,
         model_path=req.model_path,
         gui=req.gui,
+        network=req.network,
     )
     if not success:
         raise HTTPException(

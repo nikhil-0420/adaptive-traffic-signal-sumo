@@ -1,0 +1,35 @@
+{
+  "experiment_id": "exp_marathahalli_emergency_360",
+  "network": "marathahalli",
+  "total_cells": 360,
+  "completed_cells": 360,
+  "failed_cells": 0,
+  "patterns": [
+    "balanced",
+    "surge_orr_north"
+  ],
+  "levels": [
+    "low",
+    "medium",
+    "heavy"
+  ],
+  "policies": [
+    "fixed",
+    "pressure",
+    "rl_dqn"
+  ],
+  "seeds": [
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130
+  ],
+  "model_path": "E:\\dp1-traffic-signal\\models\\dqn_marathahalli_site_best.zip",
+  "timestamp": "2026-10-14T13:38:41Z"
+}
