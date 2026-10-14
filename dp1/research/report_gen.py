@@ -49,9 +49,9 @@ def generate_research_report(
         "## 2. Experimental Setup & Seed Separation",
         "",
         "In compliance with fair evaluation protocols, controller hyperparameters and RL models were frozen prior to running on research evaluation seeds:",
-        "- **Training Seeds:** `1..5` (used for Webster profile baseline and legacy grid search).",
-        "- **RL Validation Seeds:** `6..10` (used for checkpoint validation).",
-        "- **Legacy Held-Out Seeds:** `11..15` (used for baseline comparison).",
+        "- **Training Seeds:** `1..5` (used for Webster profile baseline, heuristic thresholds, and legacy grid search).",
+        "- **RL Validation Seeds:** `6..10` (used strictly for model checkpoint selection).",
+        "- **Legacy Held-Out Seeds:** `11..15` (used for early development verification).",
         "- **Research Test Seeds:** `21..30` (strictly held out for final reporting; never used to tune or select policies).",
         "",
         "## 3. Aggregate Performance Across Demand Levels",
@@ -108,9 +108,54 @@ def generate_research_report(
             lines.append(f"| {pat} | {lvl} | `{pol}` | {n_pr} | {w_ci} | {l_ci} | {dq:+.2f} |")
         lines.append("")
 
+    # Best Policy and Statistical Indistinguishability Analysis
+    lines.extend([
+        "## 5. Statistical Best Policy & Tie Analysis (Bootstrap Overlap)",
+        "",
+        "To prevent misleading single-number rankings when two controllers produce virtually indistinguishable delay reductions,",
+        "candidates are compared using their 95% bootstrap confidence intervals. If the top candidate's CI overlaps with",
+        "the runner-up's CI, the outcome is classified as a **Statistical Tie**.",
+        "",
+        "| Pattern | Demand Level | Primary Leader | Secondary Candidate | Outcome Classification | Statistical Overlap Details |",
+        "|---|---|---|---|---|---|",
+    ])
+
+    if not deltas_df.empty:
+        grouped = deltas_df.groupby(["pattern", "demand_level"])
+        for (pat, lvl), g in grouped:
+            sorted_g = g.sort_values("delta_wait_mean_s")
+            top1 = sorted_g.iloc[0]
+            top2 = sorted_g.iloc[1] if len(sorted_g) > 1 else None
+
+            pol1 = top1["policy"]
+            d1_mean = top1["delta_wait_mean_s"]
+            d1_lo = top1["delta_wait_ci_lower_s"]
+            d1_hi = top1["delta_wait_ci_upper_s"]
+
+            if top2 is not None:
+                pol2 = top2["policy"]
+                d2_mean = top2["delta_wait_mean_s"]
+                d2_lo = top2["delta_wait_ci_lower_s"]
+                d2_hi = top2["delta_wait_ci_upper_s"]
+
+                # Overlap test: max(lo1, lo2) <= min(hi1, hi2)
+                overlap = max(d1_lo, d2_lo) <= min(d1_hi, d2_hi)
+                if overlap:
+                    classification = f"**TIE** (`{pol1}` ~ `{pol2}`)"
+                    details = f"CIs overlap: [{d1_lo:.1f}, {d1_hi:.1f}] vs [{d2_lo:.1f}, {d2_hi:.1f}]"
+                else:
+                    classification = f"**WINNER** (`{pol1}`)"
+                    details = f"Distinct CI: [{d1_lo:.1f}, {d1_hi:.1f}] strictly separates from [{d2_lo:.1f}, {d2_hi:.1f}]"
+            else:
+                classification = f"`{pol1}`"
+                details = "Single candidate evaluated"
+
+            lines.append(f"| {pat} | {lvl} | `{pol1}` ({d1_mean:+.1f}s) | `{pol2}` ({d2_mean:+.1f}s) | {classification} | {details} |")
+        lines.append("")
+
     # Directional Fairness
     lines.extend([
-        "## 5. Directional Service Disparity & Approach Wait Gaps",
+        "## 6. Directional Service Disparity & Approach Wait Gaps",
         "",
         "Service disparity measures the imbalance in waiting times between competing directions:",
         r"$$\text{Disparity} = |\text{Wait}_{\text{NS}} - \text{Wait}_{\text{EW}}|$$",
@@ -133,13 +178,13 @@ def generate_research_report(
         lines.append("")
 
     lines.extend([
-        "## 6. Known Trade-Offs & Honest Limitations",
+        "## 7. Known Trade-Offs & Honest Limitations",
         "",
-        "1. **Imbalance vs Surge Behavior:** Adaptive and pressure policies offer substantial reductions in vehicle delay under sustained demand imbalance (`imbalanced_ns`, `imbalanced_ew`). However, during temporary surges (`surge_north`), rapid queue clearance may incur switching lost time.",
+        "1. **Imbalance vs Surge Behavior:** Adaptive and pressure policies offer substantial reductions in vehicle delay under sustained demand imbalance (`imbalanced_ns`, `imbalanced_ew`). However, during temporary surges (`surge_north`), rapid queue clearance may incur switching lost time unless bounded by queue-extension or learned phase holding.",
         "2. **Simulation Boundaries:** Experiments were executed on synthetic 300 m approach links with 150 m detector coverage. Unobserved queues beyond 150 m are not measured by sensors.",
         "3. **Fixed-Time Baseline Adaptation:** The fixed-time plan is adapted from BTP Marathahalli Bridge junction schedule with clearance intervals (3s yellow, 2s all-red), omitting the pedestrian-only phase.",
         "",
-        "## 7. Artifact Manifest",
+        "## 8. Artifact Manifest",
         "",
         "- `manifest.json`: Complete execution metadata and environment configuration.",
         "- `raw_runs.csv`: Unaggregated per-run metrics for every completed cell.",
