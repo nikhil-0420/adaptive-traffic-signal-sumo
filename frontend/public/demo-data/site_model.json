@@ -44,22 +44,22 @@
     "tls_id": "marathahalli_tls",
     "control_type": "2-Stage Signal with All-Red Clearance",
     "stages": [
-      { "phase": "NS_GREEN", "axis": "NS", "movements": "ORR South & North surface legs", "state_string": "GGGgrrrrGGGgrrrr" },
-      { "phase": "NS_YELLOW", "axis": "NS", "duration_s": 3.0, "state_string": "yyygrrrryyygrrrr" },
+      { "phase": "NS_GREEN", "axis": "NS", "duration_s": 105.0, "movements": "ORR South & North surface legs", "state_string": "GGGgrrrrGGGgrrrr" },
+      { "phase": "NS_YELLOW", "axis": "NS", "duration_s": 3.0, "state_string": "yyyyrrrryyyyrrrr" },
       { "phase": "ALL_RED_1", "axis": "ALL_RED", "duration_s": 2.0, "state_string": "rrrrrrrrrrrrrrrr" },
-      { "phase": "EW_GREEN", "axis": "EW", "movements": "Varthur West & East surface legs", "state_string": "rrrrGGGgrrrrGGGg" },
-      { "phase": "EW_YELLOW", "axis": "EW", "duration_s": 3.0, "state_string": "rrrryyygrrrryyyg" },
+      { "phase": "EW_GREEN", "axis": "EW", "duration_s": 95.0, "movements": "Varthur West & East surface legs", "state_string": "rrrrGGGgrrrrGGGg" },
+      { "phase": "EW_YELLOW", "axis": "EW", "duration_s": 3.0, "state_string": "rrrryyyyrrrryyyy" },
       { "phase": "ALL_RED_2", "axis": "ALL_RED", "duration_s": 2.0, "state_string": "rrrrrrrrrrrrrrrr" }
     ],
     "detectors": [
-      { "id": "det_hal_0", "approach": "W", "lane": 0, "length_m": 80.0 },
-      { "id": "det_hal_1", "approach": "W", "lane": 1, "length_m": 80.0 },
-      { "id": "det_wf_0", "approach": "E", "lane": 0, "length_m": 80.0 },
-      { "id": "det_wf_1", "approach": "E", "lane": 1, "length_m": 80.0 },
-      { "id": "det_orr_s_0", "approach": "S", "lane": 0, "length_m": 80.0 },
-      { "id": "det_orr_s_1", "approach": "S", "lane": 1, "length_m": 80.0 },
-      { "id": "det_orr_n_0", "approach": "N", "lane": 0, "length_m": 80.0 },
-      { "id": "det_orr_n_1", "approach": "N", "lane": 1, "length_m": 80.0 }
+      { "id": "det_hal_0", "approach": "W", "lane": 0, "length_m": 24.9 },
+      { "id": "det_hal_1", "approach": "W", "lane": 1, "length_m": 24.9 },
+      { "id": "det_wf_0", "approach": "E", "lane": 0, "length_m": 24.9 },
+      { "id": "det_wf_1", "approach": "E", "lane": 1, "length_m": 24.9 },
+      { "id": "det_orr_s_0", "approach": "S", "lane": 0, "length_m": 24.9 },
+      { "id": "det_orr_s_1", "approach": "S", "lane": 1, "length_m": 24.9 },
+      { "id": "det_orr_n_0", "approach": "N", "lane": 0, "length_m": 24.9 },
+      { "id": "det_orr_n_1", "approach": "N", "lane": 1, "length_m": 24.9 }
     ]
   },
   "provenance_table": [

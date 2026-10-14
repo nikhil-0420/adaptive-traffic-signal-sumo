@@ -65,16 +65,16 @@ def test_marathahalli_signal_safety_invariants():
     phases = prog.getPhases()
 
     assert len(phases) == 6
-    # Phase 0: EW Green (105s)
+    # Phase 0: NS Green (105s)
     assert phases[0].duration == 105.0
     assert "G" in phases[0].state or "g" in phases[0].state
-    # Phase 1: EW Yellow (3s)
+    # Phase 1: NS Yellow (3s)
     assert phases[1].duration == 3.0
     assert "y" in phases[1].state
     # Phase 2: All-Red (2s)
     assert phases[2].duration == 2.0
     assert set(phases[2].state) == {"r"}
-    # Phase 3: NS Green (95s)
+    # Phase 3: EW Green (95s)
     assert phases[3].duration == 95.0
     assert "G" in phases[3].state or "g" in phases[3].state
     # Phase 4: NS Yellow (3s)

@@ -178,7 +178,7 @@ export function SiteModelView() {
               </div>
 
               <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-                <span>Legend: Blue = Varthur Flyover • Red = ORR Underpass • Green = Surface Junction</span>
+                <span>Legend: Cyan = Varthur Flyover • Emerald = ORR Mainline • Amber = Ramps • Coral = Surface Legs • Red = Signal Node</span>
                 <a
                   href={siteData.topology_image_url}
                   target="_blank"
@@ -201,7 +201,7 @@ export function SiteModelView() {
                     </span>
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Microscopic traffic network with configured 80m queue detectors and vehicle lane assignments.
+                    Microscopic traffic network with configured 25m stop-line queue detectors and vehicle lane assignments.
                   </p>
                 </div>
               </div>
@@ -441,7 +441,7 @@ export function SiteModelView() {
           <div className="bg-[#0f172a]/70 border border-white/10 rounded-2xl p-6">
             <h3 className="text-sm font-bold text-white mb-1">Queue Length Detectors (SUMO Lane-Area E2)</h3>
             <p className="text-xs text-slate-400 mb-4">
-              Real-time queues are measured in meters along the 80-meter approach lanes upstream of the stop lines.
+              Real-time queues are measured in meters along the 25-meter approach zones upstream of the stop lines.
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">

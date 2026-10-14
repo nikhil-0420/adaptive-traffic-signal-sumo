@@ -60,6 +60,7 @@ def get_site_model():
                 {
                     "phase": "NS_GREEN",
                     "axis": "NS",
+                    "duration_s": 105.0,
                     "movements": "ORR South (Kadubeesanahalli) & ORR North (K.R. Puram) surface legs",
                     "state_string": "GGGgrrrrGGGgrrrr",
                 },
@@ -67,7 +68,7 @@ def get_site_model():
                     "phase": "NS_YELLOW",
                     "axis": "NS",
                     "duration_s": 3.0,
-                    "state_string": "yyygrrrryyygrrrr",
+                    "state_string": "yyyyrrrryyyyrrrr",
                 },
                 {
                     "phase": "ALL_RED_1",
@@ -78,6 +79,7 @@ def get_site_model():
                 {
                     "phase": "EW_GREEN",
                     "axis": "EW",
+                    "duration_s": 95.0,
                     "movements": "Varthur West (HAL) & Varthur East (Whitefield) surface legs",
                     "state_string": "rrrrGGGgrrrrGGGg",
                 },
@@ -85,7 +87,7 @@ def get_site_model():
                     "phase": "EW_YELLOW",
                     "axis": "EW",
                     "duration_s": 3.0,
-                    "state_string": "rrrryyygrrrryyyg",
+                    "state_string": "rrrryyyyrrrryyyy",
                 },
                 {
                     "phase": "ALL_RED_2",
@@ -95,14 +97,14 @@ def get_site_model():
                 },
             ],
             "detectors": [
-                {"id": "det_hal_0", "approach": "W", "lane": 0, "length_m": 80.0},
-                {"id": "det_hal_1", "approach": "W", "lane": 1, "length_m": 80.0},
-                {"id": "det_wf_0", "approach": "E", "lane": 0, "length_m": 80.0},
-                {"id": "det_wf_1", "approach": "E", "lane": 1, "length_m": 80.0},
-                {"id": "det_orr_s_0", "approach": "S", "lane": 0, "length_m": 80.0},
-                {"id": "det_orr_s_1", "approach": "S", "lane": 1, "length_m": 80.0},
-                {"id": "det_orr_n_0", "approach": "N", "lane": 0, "length_m": 80.0},
-                {"id": "det_orr_n_1", "approach": "N", "lane": 1, "length_m": 80.0},
+                {"id": "det_hal_0", "approach": "W", "lane": 0, "length_m": 24.9},
+                {"id": "det_hal_1", "approach": "W", "lane": 1, "length_m": 24.9},
+                {"id": "det_wf_0", "approach": "E", "lane": 0, "length_m": 24.9},
+                {"id": "det_wf_1", "approach": "E", "lane": 1, "length_m": 24.9},
+                {"id": "det_orr_s_0", "approach": "S", "lane": 0, "length_m": 24.9},
+                {"id": "det_orr_s_1", "approach": "S", "lane": 1, "length_m": 24.9},
+                {"id": "det_orr_n_0", "approach": "N", "lane": 0, "length_m": 24.9},
+                {"id": "det_orr_n_1", "approach": "N", "lane": 1, "length_m": 24.9},
             ],
         },
         provenance_table=[
