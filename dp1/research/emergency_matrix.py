@@ -50,15 +50,35 @@ def _execute_emergency_cell(args: Tuple[Dict[str, Any], str, Optional[str]]) -> 
     exp_dir = Path(exp_dir_str)
     cell_dir = exp_dir / "runs" / cell.cell_id
 
-    # Check for resume
+    scale = C.DEMAND_LEVELS.get(cell.demand_level, 1.0)
     tripinfo_file = cell_dir / "tripinfo.xml"
     metrics_file = cell_dir / "metrics.json"
     if tripinfo_file.exists() and metrics_file.exists():
         try:
             with open(metrics_file, "r", encoding="utf-8") as f:
-                row = json.load(f)
+                m = json.load(f)
             cell.status = "complete"
-            cell.route_hash = row.get("route_hash")
+            cell.route_hash = m.get("route_hash")
+            row = {
+                "cell_id": cell.cell_id,
+                "pattern": cell.pattern,
+                "demand_level": cell.demand_level,
+                "demand_scale": scale,
+                "policy": cell.policy,
+                "priority": cell.priority,
+                "seed": cell.seed,
+                "route_hash": m.get("route_hash"),
+                "emergency_completed": m.get("emergency_completed"),
+                "emergency_wait_s": m.get("emergency_wait_s"),
+                "emergency_time_loss_s": m.get("emergency_time_loss_s"),
+                "emergency_trip_s": m.get("emergency_trip_s"),
+                "non_emergency_avg_wait_s": round(m.get("non_emergency_avg_wait_s", 0.0), 2),
+                "non_emergency_avg_time_loss_s": round(m.get("non_emergency_avg_time_loss_s", 0.0), 2),
+                "avg_queue_m": round(m.get("avg_queue_m", 0.0), 2),
+                "throughput_veh_per_h": round(m.get("throughput_veh_per_h", 0.0), 1),
+                "completion_rate": round(m.get("completion_rate", 0.0), 4),
+                "runtime_s": cell.runtime_s,
+            }
             return cell, row, None
         except Exception:
             pass
