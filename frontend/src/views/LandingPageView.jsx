@@ -102,6 +102,14 @@ export function LandingPageView() {
             <BarChart3 size={16} className="text-emerald-400" />
             <span>Statistical Benchmarks</span>
           </button>
+
+          <button
+            onClick={() => setCurrentView('site-model')}
+            className="px-6 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-cyan-500/30 font-medium text-sm flex items-center gap-2 transition-colors hover:border-cyan-400"
+          >
+            <Layers size={16} className="text-cyan-400" />
+            <span>Marathahalli Site Model</span>
+          </button>
         </div>
 
         {/* 4 Key Metric Badges */}

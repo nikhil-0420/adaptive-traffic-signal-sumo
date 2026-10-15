@@ -6,7 +6,7 @@ import { FlaskConical, Play, Download, AlertTriangle, CheckCircle2, Clock, Shiel
 export function ResearchView() {
   const { connectionStatus } = useApp();
   const [experiments, setExperiments] = useState([]);
-  const [selectedExpId, setSelectedExpId] = useState('exp_smoke_test');
+  const [selectedExpId, setSelectedExpId] = useState('exp_marathahalli_site_720');
   const [expStatus, setExpStatus] = useState(null);
   const [results, setResults] = useState({ aggregate: [], raw_runs: [] });
   const [loading, setLoading] = useState(true);
@@ -164,7 +164,8 @@ export function ResearchView() {
                 >
                   {network === 'marathahalli' ? (
                     <>
-                      <option value="site">Site Matrix (600 cells • 4x3x5x10)</option>
+                      <option value="full">Full Site Matrix (720 cells • 4x3x6x10 with queue_extension)</option>
+                      <option value="site">Legacy Site Matrix (600 cells • 4x3x5x10)</option>
                       <option value="smoke">Smoke Preset (3 cells • Quick Verify)</option>
                       <option value="custom">Custom Filter Matrix</option>
                     </>
