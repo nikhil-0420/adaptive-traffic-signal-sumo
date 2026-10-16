@@ -11,6 +11,7 @@ from ..config import (
     ALLOWED_EMERGENCY_APPROACHES,
     ALLOWED_POLICIES,
     ALLOWED_SCENARIOS,
+    RESEARCH_DIR,
     RESULTS_DIR,
     RUNS_DIR,
     TELEMETRY_STALE_THRESHOLD_S,
@@ -43,11 +44,13 @@ def _derive_run_id(req: RunLaunchRequest) -> str:
 
 
 def _find_run_dir(run_id: str) -> Optional[Path]:
-    """Find run directory matching run_id in results/runs/ or alternative naming."""
+    """Find run directory matching run_id in results/runs/ or research matrix runs/."""
+    # 1. Direct in results/runs/
     direct = RUNS_DIR / run_id
     if direct.is_dir():
         return direct
-    # Alternative naming with explicit medium
+
+    # 2. Alternative naming with explicit medium in results/runs/
     if "_medium_" not in run_id:
         parts = run_id.split("_", 2)
         if len(parts) >= 3:
@@ -55,6 +58,26 @@ def _find_run_dir(run_id: str) -> Optional[Path]:
             alt_dir = RUNS_DIR / alt_id
             if alt_dir.is_dir():
                 return alt_dir
+    else:
+        alt_id = run_id.replace("_medium_", "_")
+        alt_dir = RUNS_DIR / alt_id
+        if alt_dir.is_dir():
+            return alt_dir
+
+    # 3. Check in research matrix directories (e.g. exp_marathahalli_site_720/runs/)
+    if RESEARCH_DIR.is_dir():
+        candidates = [run_id, f"cell_{run_id}"]
+        if run_id.startswith("cell_"):
+            candidates.append(run_id[5:])
+        for exp_dir in RESEARCH_DIR.iterdir():
+            if exp_dir.is_dir():
+                runs_sub = exp_dir / "runs"
+                if runs_sub.is_dir():
+                    for cand in candidates:
+                        cand_dir = runs_sub / cand
+                        if cand_dir.is_dir():
+                            return cand_dir
+
     return None
 
 
@@ -227,10 +250,16 @@ def get_run_status(run_id: str):
         started_at = info.started_at
         finished_at = info.finished_at
     elif not run_dir.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Run '{run_id}' not found.",
-        )
+        alt = _find_run_dir(run_id)
+        if alt:
+            run_dir = alt
+            st = "completed" if (run_dir / "timeseries.csv").exists() else "failed"
+            exit_code = 0 if st == "completed" else 1
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Run '{run_id}' not found.",
+            )
     elif (run_dir / "timeseries.csv").exists():
         st = "completed"
         exit_code = 0
@@ -426,5 +455,11 @@ def get_replay(run_id: str):
             data = json.load(f)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read replay data: {e}")
+
+    if not data.get("network"):
+        if "marathahalli" in run_dir.name or "orr" in data.get("scenario", ""):
+            data["network"] = "marathahalli"
+        else:
+            data["network"] = "synthetic"
 
     return ReplayResponse(**data)

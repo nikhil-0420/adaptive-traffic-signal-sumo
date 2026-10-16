@@ -5,7 +5,8 @@ import { Sliders, HelpCircle, ArrowRight } from 'lucide-react';
 
 export function ControllerLabView() {
   const { allRuns, setSelectedRunId, setCurrentView } = useApp();
-  const [selectedScenario, setSelectedScenario] = useState('imbalanced_ns');
+  const [selectedNetwork, setSelectedNetwork] = useState('marathahalli');
+  const [selectedScenario, setSelectedScenario] = useState('imbalanced_orr');
   const [selectedDemandLevel, setSelectedDemandLevel] = useState('medium');
 
   const policiesList = ['fixed', 'fixed_webster', 'adaptive', 'pressure', 'queue_extension', 'rl_dqn'];
@@ -32,10 +33,11 @@ export function ControllerLabView() {
     return policiesList.map((pol) => {
       // Find matching runs in allRuns
       const matches = allRuns.filter((r) => {
+        const netMatch = (r.network || 'synthetic') === selectedNetwork;
         const scMatch = r.scenario === selectedScenario;
         const polMatch = r.policy === pol;
         const levMatch = r.demand_level ? r.demand_level === selectedDemandLevel : selectedDemandLevel === 'medium';
-        return scMatch && polMatch && levMatch;
+        return netMatch && scMatch && polMatch && levMatch;
       });
 
       if (matches.length === 0) {
@@ -75,7 +77,7 @@ export function ControllerLabView() {
         sampleRunId,
       };
     });
-  }, [allRuns, selectedScenario, selectedDemandLevel]);
+  }, [allRuns, selectedNetwork, selectedScenario, selectedDemandLevel]);
 
   const fixedWait = comparisonData.find((d) => d.policy === 'fixed')?.wait || 104.4;
 
@@ -96,16 +98,43 @@ export function ControllerLabView() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
           <div>
+            <label className="block text-[11px] text-slate-400 font-mono mb-1">Road Network:</label>
+            <select
+              value={selectedNetwork}
+              onChange={(e) => {
+                const net = e.target.value;
+                setSelectedNetwork(net);
+                setSelectedScenario(net === 'marathahalli' ? 'imbalanced_orr' : 'imbalanced_ns');
+              }}
+              className="dp1-select text-xs font-semibold text-white"
+            >
+              <option value="marathahalli">Marathahalli Bridge Site (Real Road)</option>
+              <option value="synthetic">Synthetic 4-Way Junction</option>
+            </select>
+          </div>
+
+          <div>
             <label className="block text-[11px] text-slate-400 font-mono mb-1">Scenario Pattern:</label>
             <select
               value={selectedScenario}
               onChange={(e) => setSelectedScenario(e.target.value)}
               className="dp1-select text-xs"
             >
-              <option value="imbalanced_ns">Imbalanced NS (Heavy Corridor)</option>
-              <option value="balanced">Balanced 4-Way</option>
-              <option value="imbalanced_ew">Imbalanced EW</option>
-              <option value="surge_north">Surge North</option>
+              {selectedNetwork === 'marathahalli' ? (
+                <>
+                  <option value="imbalanced_orr">Imbalanced ORR (Heavy Arterial)</option>
+                  <option value="balanced">Balanced Corridor</option>
+                  <option value="imbalanced_varthur">Imbalanced Varthur Cross</option>
+                  <option value="surge_orr_north">Surge ORR North (Peak Inflow)</option>
+                </>
+              ) : (
+                <>
+                  <option value="imbalanced_ns">Imbalanced NS (Heavy Corridor)</option>
+                  <option value="balanced">Balanced 4-Way</option>
+                  <option value="imbalanced_ew">Imbalanced EW</option>
+                  <option value="surge_north">Surge North</option>
+                </>
+              )}
             </select>
           </div>
 

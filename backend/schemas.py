@@ -96,6 +96,7 @@ class TelemetryResponse(BaseModel):
 
 class ReplayResponse(BaseModel):
     run_id: str
+    network: Optional[str] = "synthetic"
     scenario: str
     policy: str
     seed: int

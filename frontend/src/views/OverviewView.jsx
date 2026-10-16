@@ -21,7 +21,9 @@ import {
 
 export function OverviewView() {
   const { allRuns, connectionStatus, setCurrentView, selectedRunId, setSelectedRunId } = useApp();
-  const [activeSimulationRun, setActiveSimulationRun] = useState(selectedRunId || 'imbalanced_ns_adaptive_s1');
+  const [activeSimulationRun, setActiveSimulationRun] = useState(
+    selectedRunId || 'marathahalli_imbalanced_orr_adaptive_s121'
+  );
 
   // Aggregate verified comparison statistics across train seeds 1..5
   const stats = useMemo(() => {
@@ -134,12 +136,12 @@ export function OverviewView() {
   }, [allRuns]);
 
   const overviewDemoRuns = [
-    { id: 'imbalanced_ns_adaptive_s1', label: 'Adaptive Queue • Imbalanced NS' },
-    { id: 'imbalanced_ns_fixed_s1', label: 'Fixed Baseline • Imbalanced NS' },
-    { id: 'imbalanced_ns_adaptive_s1_em_pri', label: 'EVSP Priority • Ambulance' },
-    { id: 'surge_north_pressure_s1', label: 'Max-Pressure • Surge North' },
-    { id: 'surge_north_queue_extension_s1', label: 'Queue-Extension • Surge North' },
-    { id: 'imbalanced_ns_rl_dqn_s1', label: 'Deep Q-Network • Imbalanced NS' },
+    { id: 'marathahalli_imbalanced_orr_adaptive_s121', label: 'Marathahalli • Adaptive Queue (s121)' },
+    { id: 'marathahalli_imbalanced_orr_fixed_webster_s121', label: 'Marathahalli • Webster Optimal (s121)' },
+    { id: 'marathahalli_imbalanced_orr_queue_extension_s121', label: 'Marathahalli • Queue Extension (s121)' },
+    { id: 'marathahalli_imbalanced_orr_fixed_s121', label: 'Marathahalli • BTP Fixed-Time (s121)' },
+    { id: 'imbalanced_ns_adaptive_s1', label: 'Synthetic 4-Way • Adaptive Queue (s1)' },
+    { id: 'imbalanced_ns_adaptive_s1_em_pri', label: 'Synthetic 4-Way • EVSP Ambulance Priority' },
   ];
 
   return (

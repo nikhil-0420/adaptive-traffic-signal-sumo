@@ -8,8 +8,8 @@ export function AppProvider({ children }) {
   const [connectionStatus, setConnectionStatus] = useState('checking'); // 'api' | 'snapshot' | 'degraded_api' | 'disconnected'
   const [connectionInfo, setConnectionInfo] = useState(null);
   const [allRuns, setAllRuns] = useState([]);
-  const [selectedRunId, setSelectedRunId] = useState('imbalanced_ns_adaptive_s1');
-  const [selectedScenario, setSelectedScenario] = useState('imbalanced_ns');
+  const [selectedRunId, setSelectedRunId] = useState('marathahalli_imbalanced_orr_adaptive_s121');
+  const [selectedScenario, setSelectedScenario] = useState('imbalanced_orr');
   const [selectedDemandLevel, setSelectedDemandLevel] = useState('medium');
   const [loading, setLoading] = useState(true);
 
@@ -23,9 +23,14 @@ export function AppProvider({ children }) {
       const runs = await api.getAllRuns();
       setAllRuns(runs);
 
-      if (runs.length > 0 && !runs.some(r => r.run_id === selectedRunId)) {
-        // Find adaptive imbalanced_ns run or first available
-        const preferred = runs.find(r => r.scenario === 'imbalanced_ns' && r.policy === 'adaptive') || runs[0];
+      if (runs.length > 0 && !runs.some((r) => r.run_id === selectedRunId)) {
+        // Find flagship Marathahalli run or first available
+        const preferred =
+          runs.find((r) => r.run_id === 'marathahalli_imbalanced_orr_medium_adaptive_s121') ||
+          runs.find((r) => r.run_id === 'marathahalli_imbalanced_orr_adaptive_s121') ||
+          runs.find((r) => r.network === 'marathahalli' && r.policy === 'adaptive') ||
+          runs.find((r) => r.scenario === 'imbalanced_ns' && r.policy === 'adaptive') ||
+          runs[0];
         const prefId = preferred.run_id || `${preferred.scenario}_${preferred.policy}_s${preferred.seed}`;
         setSelectedRunId(prefId);
       }

@@ -151,18 +151,34 @@ class ApiClient {
   }
 
   async getReplay(runId) {
-    if (this.mode === 'api') {
+    const candidates = [runId];
+    if (runId.includes('_medium_')) {
+      candidates.push(runId.replace('_medium_', '_'));
+    } else {
+      const parts = runId.split('_');
+      if (parts.length >= 3) {
+        const idx = parts.findIndex((p) => ['adaptive', 'fixed', 'pressure', 'rl'].includes(p));
+        if (idx > 0) {
+          const c = [...parts];
+          c.splice(idx, 0, 'medium');
+          candidates.push(c.join('_'));
+        }
+      }
+    }
+
+    for (const cid of candidates) {
+      if (this.mode === 'api') {
+        try {
+          const url = this.baseUrl ? `${this.baseUrl}/api/runs/${cid}/replay` : `/api/runs/${cid}/replay`;
+          const res = await this._fetchWithTimeout(url, {}, 5000);
+          if (res.ok) return await res.json();
+        } catch (e) {}
+      }
       try {
-        const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/replay` : `/api/runs/${runId}/replay`;
-        const res = await this._fetchWithTimeout(url, {}, 5000);
+        const res = await this._fetchWithTimeout(`/demo-data/runs/${cid}/replay.json`, {}, 5000);
         if (res.ok) return await res.json();
       } catch (e) {}
     }
-    // Fallback to snapshot demo-data
-    try {
-      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/replay.json`, {}, 5000);
-      if (res.ok) return await res.json();
-    } catch (e) {}
     return null;
   }
 
@@ -188,6 +204,44 @@ class ApiClient {
       emergency_approaching: false,
       emergency_dist_m: null,
     };
+  }
+
+  async getReplay(runId) {
+    if (!runId) return null;
+    // 1. If in API mode, query the live backend endpoint
+    if (this.mode === 'api') {
+      try {
+        const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/replay` : `/api/runs/${runId}/replay`;
+        const res = await this._fetchWithTimeout(url, {}, 5000);
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.warn(`API getReplay failed for ${runId}, falling back to static snapshot:`, e);
+      }
+    }
+
+    // 2. Static snapshot / demo-data fallback
+    try {
+      const snapRes = await this._fetchWithTimeout(`/demo-data/runs/${runId}/replay.json`, {}, 4000);
+      if (snapRes.ok) {
+        return await snapRes.json();
+      }
+      // Check alternative naming (e.g. without or with _medium_)
+      const altRunId = runId.includes('_medium_')
+        ? runId.replace('_medium_', '_')
+        : runId.replace('_adaptive_', '_medium_adaptive_')
+               .replace('_fixed_', '_medium_fixed_')
+               .replace('_queue_extension_', '_medium_queue_extension_');
+      const snapResAlt = await this._fetchWithTimeout(`/demo-data/runs/${altRunId}/replay.json`, {}, 4000);
+      if (snapResAlt.ok) {
+        return await snapResAlt.json();
+      }
+    } catch (e) {
+      console.warn(`Static getReplay failed for ${runId}:`, e);
+    }
+
+    return null;
   }
 
   async launchRun(params) {

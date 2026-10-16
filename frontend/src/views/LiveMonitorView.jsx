@@ -25,10 +25,10 @@ export function LiveMonitorView() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [launchParams, setLaunchParams] = useState({
-    network: 'synthetic',
-    scenario: 'imbalanced_ns',
+    network: 'marathahalli',
+    scenario: 'imbalanced_orr',
     policy: 'adaptive',
-    seed: 1,
+    seed: 121,
     emergency_priority: false,
     emergency_approach: 'N',
   });
@@ -96,6 +96,11 @@ export function LiveMonitorView() {
     (isLiveApi && telemetry?.updated_at && nowSec - telemetry.updated_at > 5.0);
 
   const selectedRunData = allRuns.find((r) => r.run_id === selectedRunId);
+  const isMarathahalli =
+    selectedRunData?.network === 'marathahalli' ||
+    telemetry?.network === 'marathahalli' ||
+    Boolean(selectedRunId && selectedRunId.startsWith('marathahalli_'));
+  const maxDetectorLen = isMarathahalli ? 25 : 150;
 
   return (
     <div className="space-y-6">
@@ -117,19 +122,32 @@ export function LiveMonitorView() {
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Run Selector */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-md px-3 py-1.5">
-            <span className="text-xs text-slate-400">Target Run:</span>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-mono text-slate-400">Target Run:</label>
             <select
               value={selectedRunId}
               onChange={(e) => setSelectedRunId(e.target.value)}
               aria-label="Select target run"
-              className="bg-transparent text-xs text-white font-mono font-medium focus:outline-none"
+              className="dp1-select text-xs font-mono max-w-[340px]"
             >
-              {allRuns.map((r) => (
-                <option key={r.run_id} value={r.run_id} className="bg-slate-900 text-white">
-                  {r.scenario} • {r.policy} • s{r.seed}
-                </option>
-              ))}
+              <optgroup label="Marathahalli Bridge Site (Real Road - 720 Runs)">
+                {allRuns
+                  .filter((r) => r.network === 'marathahalli')
+                  .map((r) => (
+                    <option key={r.run_id} value={r.run_id} className="bg-slate-900 text-white">
+                      [Marathahalli] {r.scenario} • {r.policy} • s{r.seed} ({r.demand_level || 'med'})
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="Synthetic 4-Way Junction (80 Runs)">
+                {allRuns
+                  .filter((r) => r.network !== 'marathahalli')
+                  .map((r) => (
+                    <option key={r.run_id} value={r.run_id} className="bg-slate-900 text-white">
+                      [Synthetic] {r.scenario} • {r.policy} • s{r.seed}
+                    </option>
+                  ))}
+              </optgroup>
             </select>
           </div>
 
@@ -224,11 +242,12 @@ export function LiveMonitorView() {
         <div className="lg:col-span-7">
           <IsometricIntersection
             runId={selectedRunId}
+            network={isMarathahalli ? 'marathahalli' : 'synthetic'}
             liveTelemetry={telemetry}
             isLiveMode={isLiveApi && telemetry?.status === 'running'}
             availableRuns={allRuns.map((r) => ({
               id: r.run_id,
-              label: `${r.scenario} • ${r.policy} (s${r.seed})`,
+              label: `${r.network === 'marathahalli' ? '[Marathahalli] ' : ''}${r.scenario} • ${r.policy} (s${r.seed})`,
             }))}
             onRunChange={(newId) => setSelectedRunId(newId)}
             className="w-full"
@@ -243,17 +262,27 @@ export function LiveMonitorView() {
               <span className="text-xs font-semibold text-white uppercase tracking-wider">
                 Lane-Area Detectors (E2)
               </span>
-              <span className="text-[11px] font-mono text-slate-400">150m Length</span>
+              <span className="text-[11px] font-mono text-slate-400">
+                {isMarathahalli ? '25m Stop-Line Span' : '150m Length'}
+              </span>
             </div>
 
             <div className="space-y-3">
-              {[
-                { id: 'det_N', label: 'North Approach (det_N)', val: telemetry?.queues_m?.N || 0, axis: 'NS' },
-                { id: 'det_S', label: 'South Approach (det_S)', val: telemetry?.queues_m?.S || 0, axis: 'NS' },
-                { id: 'det_E', label: 'East Approach (det_E)', val: telemetry?.queues_m?.E || 0, axis: 'EW' },
-                { id: 'det_W', label: 'West Approach (det_W)', val: telemetry?.queues_m?.W || 0, axis: 'EW' },
-              ].map((arm) => {
-                const pct = Math.min(100, Math.max(0, (arm.val / 150) * 100));
+              {(isMarathahalli
+                ? [
+                    { id: 'det_orr_s', label: 'North Approach (det_orr_s / Kadubeesanahalli)', val: telemetry?.queues_m?.N || 0, axis: 'NS' },
+                    { id: 'det_orr_n', label: 'South Approach (det_orr_n / KR Puram)', val: telemetry?.queues_m?.S || 0, axis: 'NS' },
+                    { id: 'det_wf', label: 'East Approach (det_wf / Whitefield)', val: telemetry?.queues_m?.E || 0, axis: 'EW' },
+                    { id: 'det_hal', label: 'West Approach (det_hal / HAL Airport Rd)', val: telemetry?.queues_m?.W || 0, axis: 'EW' },
+                  ]
+                : [
+                    { id: 'det_N', label: 'North Approach (det_N)', val: telemetry?.queues_m?.N || 0, axis: 'NS' },
+                    { id: 'det_S', label: 'South Approach (det_S)', val: telemetry?.queues_m?.S || 0, axis: 'NS' },
+                    { id: 'det_E', label: 'East Approach (det_E)', val: telemetry?.queues_m?.E || 0, axis: 'EW' },
+                    { id: 'det_W', label: 'West Approach (det_W)', val: telemetry?.queues_m?.W || 0, axis: 'EW' },
+                  ]
+              ).map((arm) => {
+                const pct = Math.min(100, Math.max(0, (arm.val / maxDetectorLen) * 100));
                 const isArmGreen = telemetry?.axis === arm.axis && telemetry?.phase === 'GREEN';
                 return (
                   <div key={arm.id} className="space-y-1">
