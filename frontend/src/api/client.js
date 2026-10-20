@@ -147,6 +147,10 @@ class ApiClient {
         if (res.ok) return await res.json();
       } catch (e) {}
     }
+    try {
+      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`);
+      if (res.ok) return await res.json();
+    } catch (e) {}
     return { run_id: runId, total_decisions: 0, decisions: [] };
   }
 
@@ -273,6 +277,14 @@ class ApiClient {
     }
     // Fallback to snapshot experiment
     return [
+      {
+        experiment_id: 'exp_marathahalli_hybrid_840',
+        status: 'complete',
+        preset: 'hybrid',
+        network: 'marathahalli',
+        total_cells: 840,
+        created_at: '2026-10-20T16:00:00Z',
+      },
       {
         experiment_id: 'exp_marathahalli_site_720',
         status: 'complete',

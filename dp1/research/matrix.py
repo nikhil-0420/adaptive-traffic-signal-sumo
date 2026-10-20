@@ -60,6 +60,7 @@ class ResearchMatrix:
 SITE_PATTERNS = ("balanced", "imbalanced_orr", "imbalanced_varthur", "surge_orr_north")
 SITE_POLICIES_LEGACY = ("fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn")
 SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
+HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "hybrid_queue_adaptive", "rl_dqn")
 SITE_RESEARCH_SEEDS = tuple(range(121, 131))  # (121..130)
 
 
@@ -76,12 +77,17 @@ def build_research_matrix(
 
     Presets:
         'smoke': tiny deterministic sanity test.
-        'full': canonical research matrix (720 runs for synthetic, 720 runs for marathahalli site; 600 for legacy exp_marathahalli_site).
+        'full': canonical research matrix (720 runs for synthetic, 720 runs for marathahalli site; 600 for legacy exp_marathahalli_site; 840 for hybrid).
         'custom': user-selected combination of factors.
     """
     if network == "marathahalli":
         default_pats = SITE_PATTERNS
-        default_pols = SITE_POLICIES_LEGACY if experiment_id == "exp_marathahalli_site" else SITE_POLICIES
+        if experiment_id == "exp_marathahalli_site":
+            default_pols = SITE_POLICIES_LEGACY
+        elif "hybrid" in (experiment_id or ""):
+            default_pols = HYBRID_SITE_POLICIES
+        else:
+            default_pols = SITE_POLICIES
         default_sds = SITE_RESEARCH_SEEDS
         smoke_pats = ("imbalanced_orr",)
         smoke_lvls = ("low",)

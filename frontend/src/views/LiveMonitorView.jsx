@@ -16,6 +16,12 @@ import {
   Sliders,
   ChevronRight,
   ExternalLink,
+  Activity,
+  TrendingUp,
+  Gauge,
+  Info,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 
 export function LiveMonitorView() {
@@ -23,11 +29,12 @@ export function LiveMonitorView() {
 
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [decisionsHistory, setDecisionsHistory] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [launchParams, setLaunchParams] = useState({
     network: 'marathahalli',
     scenario: 'imbalanced_orr',
-    policy: 'adaptive',
+    policy: 'hybrid_queue_adaptive',
     seed: 121,
     emergency_priority: false,
     emergency_approach: 'N',
@@ -45,6 +52,13 @@ export function LiveMonitorView() {
       setPollError(null);
       const data = await api.getTelemetry(selectedRunId);
       setTelemetry(data);
+      if (data?.adaptive_decision && data.adaptive_decision.t !== undefined) {
+        setDecisionsHistory((prev) => {
+          const latest = data.adaptive_decision;
+          if (prev.some((d) => d.t === latest.t && d.action === latest.action)) return prev;
+          return [latest, ...prev].slice(0, 30);
+        });
+      }
     } catch (err) {
       console.warn('Telemetry poll error:', err.message);
       setPollError(err.message);
@@ -52,6 +66,23 @@ export function LiveMonitorView() {
       setLoading(false);
     }
   };
+
+  // Fetch decision history on run change
+  useEffect(() => {
+    let active = true;
+    api.getDecisions(selectedRunId)
+      .then((res) => {
+        if (active && res?.decisions?.length > 0) {
+          setDecisionsHistory([...res.decisions].reverse().slice(0, 30));
+        } else if (active) {
+          setDecisionsHistory([]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [selectedRunId]);
 
   // Setup polling
   useEffect(() => {
@@ -256,51 +287,194 @@ export function LiveMonitorView() {
 
         {/* Right Column: Detector Telemetry & Signal State Info */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Approach Queues Detail Table */}
-          <div className="dp1-card p-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">
-                Lane-Area Detectors (E2)
+          {/* Approach Queues Detail Table (4 Approach Cards) */}
+          <div className="dp1-card p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Gauge size={14} className="text-blue-400" />
+                <span>Approach Queue Telemetry</span>
               </span>
               <span className="text-[11px] font-mono text-slate-400">
-                {isMarathahalli ? '25m Stop-Line Span' : '150m Length'}
+                {isMarathahalli ? '24.9m E2 Detectors' : '150m Length'}
               </span>
             </div>
 
             <div className="space-y-3">
               {(isMarathahalli
                 ? [
-                    { id: 'det_orr_s', label: 'North Approach (det_orr_s / Kadubeesanahalli)', val: telemetry?.queues_m?.N || 0, axis: 'NS' },
-                    { id: 'det_orr_n', label: 'South Approach (det_orr_n / KR Puram)', val: telemetry?.queues_m?.S || 0, axis: 'NS' },
-                    { id: 'det_wf', label: 'East Approach (det_wf / Whitefield)', val: telemetry?.queues_m?.E || 0, axis: 'EW' },
-                    { id: 'det_hal', label: 'West Approach (det_hal / HAL Airport Rd)', val: telemetry?.queues_m?.W || 0, axis: 'EW' },
+                    {
+                      id: 'N',
+                      det: 'det_orr_n',
+                      label: 'North: ORR (KR Puram)',
+                      edge: 'leg_orr_n_in',
+                      axis: 'NS',
+                      q: telemetry?.approach_queues?.N?.longitudinal_queue_m ?? telemetry?.queues_m?.N ?? 0,
+                      vehs: telemetry?.approach_queues?.N?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.N?.is_saturated ?? ((telemetry?.queues_m?.N ?? 0) >= 24.4),
+                      gt_q: telemetry?.approach_queues?.N?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.N?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.N?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.N?.lanes,
+                    },
+                    {
+                      id: 'S',
+                      det: 'det_orr_s',
+                      label: 'South: ORR (Kadubeesanahalli)',
+                      edge: 'leg_orr_s_in',
+                      axis: 'NS',
+                      q: telemetry?.approach_queues?.S?.longitudinal_queue_m ?? telemetry?.queues_m?.S ?? 0,
+                      vehs: telemetry?.approach_queues?.S?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.S?.is_saturated ?? ((telemetry?.queues_m?.S ?? 0) >= 24.4),
+                      gt_q: telemetry?.approach_queues?.S?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.S?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.S?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.S?.lanes,
+                    },
+                    {
+                      id: 'E',
+                      det: 'det_wf',
+                      label: 'East: Varthur Rd (Whitefield)',
+                      edge: 'leg_wf_in',
+                      axis: 'EW',
+                      q: telemetry?.approach_queues?.E?.longitudinal_queue_m ?? telemetry?.queues_m?.E ?? 0,
+                      vehs: telemetry?.approach_queues?.E?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.E?.is_saturated ?? ((telemetry?.queues_m?.E ?? 0) >= 24.4),
+                      gt_q: telemetry?.approach_queues?.E?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.E?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.E?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.E?.lanes,
+                    },
+                    {
+                      id: 'W',
+                      det: 'det_hal',
+                      label: 'West: Varthur Rd (HAL Airport)',
+                      edge: 'leg_hal_in',
+                      axis: 'EW',
+                      q: telemetry?.approach_queues?.W?.longitudinal_queue_m ?? telemetry?.queues_m?.W ?? 0,
+                      vehs: telemetry?.approach_queues?.W?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.W?.is_saturated ?? ((telemetry?.queues_m?.W ?? 0) >= 24.4),
+                      gt_q: telemetry?.approach_queues?.W?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.W?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.W?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.W?.lanes,
+                    },
                   ]
                 : [
-                    { id: 'det_N', label: 'North Approach (det_N)', val: telemetry?.queues_m?.N || 0, axis: 'NS' },
-                    { id: 'det_S', label: 'South Approach (det_S)', val: telemetry?.queues_m?.S || 0, axis: 'NS' },
-                    { id: 'det_E', label: 'East Approach (det_E)', val: telemetry?.queues_m?.E || 0, axis: 'EW' },
-                    { id: 'det_W', label: 'West Approach (det_W)', val: telemetry?.queues_m?.W || 0, axis: 'EW' },
+                    {
+                      id: 'N',
+                      det: 'det_N',
+                      label: 'North Approach',
+                      edge: 'edge_N_in',
+                      axis: 'NS',
+                      q: telemetry?.approach_queues?.N?.longitudinal_queue_m ?? telemetry?.queues_m?.N ?? 0,
+                      vehs: telemetry?.approach_queues?.N?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.N?.is_saturated ?? false,
+                      gt_q: telemetry?.approach_queues?.N?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.N?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.N?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.N?.lanes,
+                    },
+                    {
+                      id: 'S',
+                      det: 'det_S',
+                      label: 'South Approach',
+                      edge: 'edge_S_in',
+                      axis: 'NS',
+                      q: telemetry?.approach_queues?.S?.longitudinal_queue_m ?? telemetry?.queues_m?.S ?? 0,
+                      vehs: telemetry?.approach_queues?.S?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.S?.is_saturated ?? false,
+                      gt_q: telemetry?.approach_queues?.S?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.S?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.S?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.S?.lanes,
+                    },
+                    {
+                      id: 'E',
+                      det: 'det_E',
+                      label: 'East Approach',
+                      edge: 'edge_E_in',
+                      axis: 'EW',
+                      q: telemetry?.approach_queues?.E?.longitudinal_queue_m ?? telemetry?.queues_m?.E ?? 0,
+                      vehs: telemetry?.approach_queues?.E?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.E?.is_saturated ?? false,
+                      gt_q: telemetry?.approach_queues?.E?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.E?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.E?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.E?.lanes,
+                    },
+                    {
+                      id: 'W',
+                      det: 'det_W',
+                      label: 'West Approach',
+                      edge: 'edge_W_in',
+                      axis: 'EW',
+                      q: telemetry?.approach_queues?.W?.longitudinal_queue_m ?? telemetry?.queues_m?.W ?? 0,
+                      vehs: telemetry?.approach_queues?.W?.total_queued_vehicles ?? 0,
+                      isSat: telemetry?.approach_queues?.W?.is_saturated ?? false,
+                      gt_q: telemetry?.approach_queues?.W?.ground_truth_queue_m,
+                      gt_v: telemetry?.approach_queues?.W?.ground_truth_veh_count,
+                      wait_s: telemetry?.approach_queues?.W?.total_waiting_time_s,
+                      lanes: telemetry?.approach_queues?.W?.lanes,
+                    },
                   ]
               ).map((arm) => {
-                const pct = Math.min(100, Math.max(0, (arm.val / maxDetectorLen) * 100));
+                const pct = Math.min(100, Math.max(0, (arm.q / maxDetectorLen) * 100));
                 const isArmGreen = telemetry?.axis === arm.axis && telemetry?.phase === 'GREEN';
+                const isArmYellow = telemetry?.axis === arm.axis && telemetry?.phase === 'YELLOW';
                 return (
-                  <div key={arm.id} className="space-y-1">
+                  <div key={arm.id} className="p-2.5 bg-slate-900/80 border border-white/5 rounded space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5 font-mono">
-                        <span className={`w-2 h-2 rounded-full ${isArmGreen ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                        <span className="text-slate-300">{arm.label}</span>
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            isArmGreen ? 'bg-emerald-400 dp1-pulse' : isArmYellow ? 'bg-amber-400' : 'bg-red-400'
+                          }`}
+                        />
+                        <span className="font-semibold text-slate-200">{arm.label}</span>
                       </div>
-                      <span className="font-mono font-bold text-white">{arm.val.toFixed(1)} m</span>
+                      <div className="flex items-center gap-1.5">
+                        {arm.isSat && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                            SATURATED
+                          </span>
+                        )}
+                        <span className="font-mono font-bold text-white text-sm">{arm.q.toFixed(1)} m</span>
+                      </div>
                     </div>
-                    <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+
+                    {/* Progress Bar */}
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
-                          arm.axis === 'NS' ? 'bg-blue-500' : 'bg-cyan-500'
+                          arm.isSat ? 'bg-amber-400' : arm.axis === 'NS' ? 'bg-blue-500' : 'bg-cyan-500'
                         }`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
+
+                    {/* Secondary Metrics */}
+                    <div className="grid grid-cols-3 gap-1 pt-1 text-[11px] font-mono text-slate-400 border-t border-white/5">
+                      <div>
+                        Queued: <span className="text-slate-200 font-bold">{arm.vehs} veh</span>
+                      </div>
+                      <div>
+                        Wait: <span className="text-slate-200">{arm.wait_s !== undefined ? `${arm.wait_s}s` : '—'}</span>
+                      </div>
+                      <div className="text-right" title="Microscopic ground truth queue extent">
+                        GT: <span className="text-blue-300">{arm.gt_q !== undefined ? `${arm.gt_q}m` : '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* Per-lane Breakdown (if available) */}
+                    {arm.lanes && arm.lanes.length > 0 && (
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 pt-0.5">
+                        {arm.lanes.map((l, lIdx) => (
+                          <span key={lIdx} className="bg-slate-950/60 px-1.5 py-0.5 rounded border border-white/5">
+                            L{l.lane_index}: <strong className="text-slate-300">{l.detector_queue_m}m</strong> ({l.detector_veh_count}v, {l.mean_speed_mps}m/s)
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -358,6 +532,240 @@ export function LiveMonitorView() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Full-Width Adaptive Signal Decision & Explanation Panel */}
+      <div className="dp1-card p-5 space-y-5 border-blue-500/30 bg-gradient-to-br from-[#0c1322] via-[#0E131F] to-[#0A0D14]">
+        {/* Header Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+              <Zap size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-white tracking-wide">
+                  Adaptive Signal Decision Engine
+                </h2>
+                <span className="dp1-badge dp1-badge-purple text-[10px] font-mono">
+                  Hybrid Webster + Queue-Adaptive
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Live explainability supervisor: baseline allocation, dynamic extension approvals, fairness bounds, and clearance enforcement.
+              </p>
+            </div>
+          </div>
+
+          {/* Current Green Axis Badge */}
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="text-slate-400">Current Phase:</span>
+            <span
+              className={`px-3 py-1 rounded-md font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                telemetry?.phase === 'GREEN'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                  : telemetry?.phase === 'YELLOW'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'bg-red-500/20 text-red-300 border border-red-500/40'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  telemetry?.phase === 'GREEN'
+                    ? 'bg-emerald-400 dp1-pulse'
+                    : telemetry?.phase === 'YELLOW'
+                    ? 'bg-amber-400'
+                    : 'bg-red-400'
+                }`}
+              />
+              <span>
+                {telemetry?.phase || 'GREEN'}{' '}
+                {telemetry?.axis === 'NS' ? '— North–South (ORR)' : telemetry?.axis === 'EW' ? '— East–West (Varthur)' : ''}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* 6-Column Metrics Grid */}
+        {(() => {
+          const dec = telemetry?.adaptive_decision || (decisionsHistory.length > 0 ? decisionsHistory[0] : null);
+          const gBase = dec?.g_base_s ?? (telemetry?.axis === 'NS' ? 20.0 : 20.0);
+          const elapsed = dec?.elapsed_s ?? (telemetry?.sim_time_s ? (telemetry.sim_time_s % 60) : 0);
+          const deltaG = dec?.delta_g_app_s ?? (dec?.action === 'EXTEND' ? 3.0 : 0.0);
+          const gExtra = dec?.g_extra_s ?? 0.0;
+          const gTarget = dec?.target_green_s ?? (gBase + gExtra);
+          const scoreActive = dec?.score_active ?? dec?.q_active_m ?? 0.0;
+          const scoreComp = dec?.score_competing ?? dec?.q_competing_m ?? 0.0;
+
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Webster Baseline (G_base)</div>
+                  <div className="text-xl font-bold font-mono text-blue-300">{Number(gBase).toFixed(1)}s</div>
+                  <div className="text-[10px] text-slate-500">Nominal cycle split</div>
+                </div>
+
+                <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Elapsed Green (t_el)</div>
+                  <div className="text-xl font-bold font-mono text-white">{Number(elapsed).toFixed(1)}s</div>
+                  <div className="text-[10px] text-slate-500">Current green service</div>
+                </div>
+
+                <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Approved Increment (ΔG)</div>
+                  <div className="text-xl font-bold font-mono text-emerald-400">
+                    {deltaG > 0 ? `+${Number(deltaG).toFixed(1)}s` : '0.0s'}
+                  </div>
+                  <div className="text-[10px] text-slate-500">Step: 3.0s bounded</div>
+                </div>
+
+                <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Accumulated Extra (G_extra)</div>
+                  <div className="text-xl font-bold font-mono text-cyan-300">+{Number(gExtra).toFixed(1)}s</div>
+                  <div className="text-[10px] text-slate-500">Total approved bonus</div>
+                </div>
+
+                <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Target Duration (G_target)</div>
+                  <div className="text-xl font-bold font-mono text-indigo-300">{Number(gTarget).toFixed(1)}s</div>
+                  <div className="text-[10px] text-slate-500">Max ceiling: 60s</div>
+                </div>
+
+                <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
+                  <div className="text-[11px] font-mono text-slate-400 uppercase">Active vs Opposing Score</div>
+                  <div className="text-base font-bold font-mono text-amber-300 flex items-baseline gap-1 mt-1">
+                    <span>{Number(scoreActive).toFixed(1)}</span>
+                    <span className="text-slate-500 text-xs">/</span>
+                    <span className="text-slate-400 text-xs">{Number(scoreComp).toFixed(1)}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">Fairness ratio: 1.2x</div>
+                </div>
+              </div>
+
+              {/* Real-Time Explanation Card */}
+              <div className="p-4 bg-slate-900/90 border border-blue-500/20 rounded-lg space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Activity size={14} className="text-blue-400" />
+                      <span>Latest Decision Rationale</span>
+                    </span>
+                    {dec?.action && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
+                          dec.action === 'EXTEND'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : dec.action === 'ENTER_GREEN'
+                            ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                            : dec.action === 'GAP_OUT'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : dec.action === 'REQUEST_SWITCH'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                        }`}
+                      >
+                        {dec.action}
+                      </span>
+                    )}
+                    {dec?.reason_code && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-slate-300 border border-white/10">
+                        {dec.reason_code}
+                      </span>
+                    )}
+                  </div>
+                  {dec?.t !== undefined && (
+                    <span className="text-xs font-mono text-slate-400">
+                      Sim Time: <strong className="text-slate-200">{Number(dec.t).toFixed(1)}s</strong> (Cycle {dec.cycle ?? 0})
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-3 bg-slate-950/60 rounded border border-white/5 font-mono text-xs text-slate-200 leading-relaxed">
+                  {dec?.reason || 'Monitoring approach demand and queue states...'}
+                </div>
+              </div>
+
+              {/* Chronological Decision History Table */}
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock size={13} className="text-slate-400" />
+                    <span>Chronological Decision Log (Recent Events)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    Showing latest {decisionsHistory.length} events
+                  </span>
+                </div>
+
+                {decisionsHistory.length === 0 ? (
+                  <div className="p-4 bg-slate-900/40 rounded border border-white/5 text-center text-xs text-slate-500">
+                    No decision events recorded yet. Run simulation with hybrid_queue_adaptive controller to observe real-time rationale stream.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto max-h-64 border border-white/5 rounded-lg">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead className="bg-slate-900/90 text-[11px] text-slate-400 uppercase sticky top-0 border-b border-white/5">
+                        <tr>
+                          <th className="p-2.5">Time</th>
+                          <th className="p-2.5">Axis</th>
+                          <th className="p-2.5">Action</th>
+                          <th className="p-2.5">ΔG App</th>
+                          <th className="p-2.5">G Target</th>
+                          <th className="p-2.5">Active / Comp Queue</th>
+                          <th className="p-2.5">Rule / Rationale</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 bg-slate-950/40">
+                        {decisionsHistory.map((d, idx) => (
+                          <tr key={`${d.t}-${d.action}-${idx}`} className="hover:bg-white/[0.02]">
+                            <td className="p-2.5 text-slate-300">{Number(d.t).toFixed(1)}s</td>
+                            <td className="p-2.5">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                  d.axis === 'NS' ? 'bg-blue-500/20 text-blue-300' : 'bg-cyan-500/20 text-cyan-300'
+                                }`}
+                              >
+                                {d.axis}
+                              </span>
+                            </td>
+                            <td className="p-2.5">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  d.action === 'EXTEND'
+                                    ? 'text-emerald-400'
+                                    : d.action === 'ENTER_GREEN'
+                                    ? 'text-blue-400'
+                                    : d.action === 'GAP_OUT'
+                                    ? 'text-amber-400'
+                                    : d.action === 'REQUEST_SWITCH'
+                                    ? 'text-rose-400'
+                                    : 'text-slate-400'
+                                }`}
+                              >
+                                {d.action}
+                              </span>
+                            </td>
+                            <td className="p-2.5 text-slate-300">
+                              {d.delta_g_app_s > 0 ? `+${d.delta_g_app_s}s` : '0.0s'}
+                            </td>
+                            <td className="p-2.5 text-slate-300">{d.target_green_s ?? d.green_s ?? '—'}s</td>
+                            <td className="p-2.5 text-slate-400">
+                              {d.q_active_m !== undefined ? `${d.q_active_m}m / ${d.q_competing_m}m` : '—'}
+                            </td>
+                            <td className="p-2.5 text-slate-300 max-w-md truncate" title={d.reason}>
+                              {d.reason}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Launch Simulation Drawer / Modal */}
@@ -457,6 +865,7 @@ export function LiveMonitorView() {
                     onChange={(e) => setLaunchParams({ ...launchParams, policy: e.target.value })}
                     className="w-full bg-slate-900 border border-white/10 rounded px-2.5 py-1.5 text-white"
                   >
+                    <option value="hybrid_queue_adaptive">Hybrid Queue-Adaptive (Mentor Enhanced)</option>
                     <option value="fixed">Fixed-Time Baseline</option>
                     <option value="fixed_webster">Webster Optimal Fixed-Time</option>
                     <option value="adaptive">Adaptive Queue-Length</option>

@@ -76,6 +76,30 @@ class QueueExtensionConfig:
 
 
 @dataclass(frozen=True)
+class HybridQueueAdaptiveConfig:
+    """Settings for Hybrid Queue-Adaptive traffic signal controller.
+
+    Combines:
+    1. Baseline Webster-derived green allocation (G_base) appropriate to Marathahalli/scenario demand.
+    2. Dynamic queue-aware green extensions (delta_G = 3s increments) evaluated each step.
+    3. Safety and fairness supervisor enforcing min_green, max_green, anti-monopoly waiting limits,
+       and gap-out clearance.
+    """
+    min_green_s: float = 10.0           # Minimum green duration before any switch can be considered
+    max_green_s: float = 60.0           # Hard upper bound on green phase duration
+    extend_step_s: float = 3.0          # Green increment granted per approved extension evaluation
+    extend_threshold_m: float = 4.0     # Minimum active approach queue required to justify extension
+    min_competing_queue_m: float = 2.0  # Competing queue threshold triggering anti-monopoly fairness
+    max_competing_wait_s: float = 35.0  # Maximum red wait time for competing axis before switch is forced
+    fairness_ratio: float = 1.2         # Competing queue accumulation factor vs active queue
+    gap_out_s: float = 3.0              # Gap-out persistence duration when active queue clears
+    k_s_per_m: float = 0.30             # Green scaling factor per metre of queue
+    demand_weight_active: float = 1.0   # Weight for active approach queue in demand score
+    demand_weight_competing: float = 1.0 # Weight for competing approach queue in demand score
+    arrival_detection_threshold: float = 0.5 # Min queue delta to detect active arrivals
+
+
+@dataclass(frozen=True)
 class ActionConfig:
     """Action seam configuration for external / RL controllers."""
     min_green_s: float = 10.0
@@ -175,9 +199,14 @@ FIXED_MARATHAHALLI = FixedTimeConfig(
 ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
+HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig()
 ACTION = ActionConfig()
 RL = RLConfig()
 SIM = SimConfig()
+
+# Evaluation policy rosters
+STANDARD_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
+HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive")
 
 # Demand levels and multipliers (P3)
 DEMAND_LEVELS = {

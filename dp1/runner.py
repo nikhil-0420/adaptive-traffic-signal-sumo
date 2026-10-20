@@ -1,5 +1,6 @@
 """Run ONE simulation (scenario x policy x seed) through TraCI and write its outputs."""
 import csv
+import dataclasses
 import json
 import os
 import random
@@ -11,6 +12,7 @@ from . import config as C
 from .controllers import POLICIES
 from .metrics import summarise_run
 from .network import NET_FILE, DET_FILE, build_network
+from .queues import QueueMeasurementEngine, queues_to_legacy_dict
 from .scenarios import build_routes, load_route_manifest
 from .signal_states import SignalStates
 from .sumo_utils import binary
@@ -170,6 +172,7 @@ def _run_once(
         run_id += "_em_pri" if emergency_priority else "_em"
 
     ctl = POLICIES[policy](states, **kwargs)
+    q_engine = QueueMeasurementEngine(network=network)
     series = []
     _write_atomic_telemetry(out_dir, {
         "run_id": run_id,
@@ -182,15 +185,20 @@ def _run_once(
         "updated_at": time.time(),
         "emergency_approaching": False,
         "emergency_dist_m": None,
+        "approach_queues": None,
+        "adaptive_decision": None,
     })
     try:
         t = 0.0
-        ctl.start(t, read_queues(network=network))
+        init_queues = q_engine.measure_all(t)
+        q = queues_to_legacy_dict(init_queues)
+        ctl.start(t, q)
         ctl.apply()
         while t < C.SIM.max_sim_time_s:
             traci.simulationStep()
             t = traci.simulation.getTime()
-            q = read_queues(network=network)
+            app_queues = q_engine.measure_all(t)
+            q = queues_to_legacy_dict(app_queues)
             ctl.step(t, q)
 
             em_detected = False
@@ -231,6 +239,8 @@ def _run_once(
                     })
 
             series.append(series_rec)
+            app_queues_data = {a: dataclasses.asdict(info) for a, info in app_queues.items()}
+            adaptive_decision = getattr(ctl, "last_decision_record", None)
             _write_atomic_telemetry(out_dir, {
                 "run_id": run_id,
                 "status": "running",
@@ -243,6 +253,8 @@ def _run_once(
                 "emergency_approaching": em_detected,
                 "emergency_dist_m": em_dist,
                 "vehicles": vehs,
+                "approach_queues": app_queues_data,
+                "adaptive_decision": adaptive_decision,
             })
             if t >= C.SIM.demand_duration_s and traci.simulation.getMinExpectedNumber() == 0:
                 break
@@ -268,6 +280,7 @@ def _run_once(
         except Exception:
             pass
 
+    last_app_data = {a: dataclasses.asdict(info) for a, info in app_queues.items()} if "app_queues" in locals() else None
     _write_atomic_telemetry(out_dir, {
         "run_id": run_id,
         "status": "completed",
@@ -279,6 +292,8 @@ def _run_once(
         "updated_at": time.time(),
         "emergency_approaching": False,
         "emergency_dist_m": None,
+        "approach_queues": last_app_data,
+        "adaptive_decision": getattr(ctl, "last_decision_record", None),
     })
 
     _write_csv(out_dir / "timeseries.csv", series)

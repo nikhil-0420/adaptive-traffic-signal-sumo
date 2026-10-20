@@ -13,6 +13,7 @@ POLICY_COLORS = {
     "adaptive": "#0E7C86",
     "pressure": "#7C3AED",
     "queue_extension": "#059669",
+    "hybrid_queue_adaptive": "#0284C7",
     "rl_dqn": "#2563EB",
 }
 

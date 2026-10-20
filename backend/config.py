@@ -39,7 +39,7 @@ RESEARCH_DIR.mkdir(parents=True, exist_ok=True)
 # Allowlist definitions
 ALLOWED_SCENARIOS = list(C.scenarios()) + ["imbalanced_orr", "imbalanced_varthur", "surge_orr_north"]
 ALLOWED_NETWORKS = ["synthetic", "marathahalli"]
-ALLOWED_POLICIES = ["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"]
+ALLOWED_POLICIES = ["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive"]
 ALLOWED_DEMAND_LEVELS = ["low", "medium", "heavy"]
 ALLOWED_PRESETS = ["full", "smoke", "custom"]
 ALLOWED_EMERGENCY_APPROACHES = ["N", "S", "E", "W"]

@@ -13,7 +13,7 @@ def main():
 
     r = sub.add_parser("run", help="run one simulation")
     r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()) + ["imbalanced_orr", "imbalanced_varthur", "surge_orr_north"])
-    r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"])
+    r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "hybrid_queue_adaptive", "rl_dqn"])
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")
     r.add_argument("--decisions", action="store_true", help="print first 10 signal decisions (queue per approach -> green s)")
@@ -30,7 +30,7 @@ def main():
     c.add_argument("--seeds", type=int, default=len(C.SIM.seeds))
     c.add_argument("--held-out", action="store_true", help="use held-out seeds (11-15)")
     c.add_argument("--scenarios", nargs="*", default=None)
-    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn"])
+    c.add_argument("--policies", nargs="*", default=None, choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "hybrid_queue_adaptive", "rl_dqn"])
     c.add_argument("--jobs", type=int, default=1)
     c.add_argument("--model-path", type=str, default=None, help="path to trained RL model for rl_dqn policy")
 

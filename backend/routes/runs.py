@@ -428,6 +428,8 @@ def get_telemetry(run_id: str):
         emergency_approaching=bool(data.get("emergency_approaching", False)),
         emergency_dist_m=data.get("emergency_dist_m"),
         vehicles=data.get("vehicles"),
+        approach_queues=data.get("approach_queues"),
+        adaptive_decision=data.get("adaptive_decision"),
         error=data.get("error"),
     )
 

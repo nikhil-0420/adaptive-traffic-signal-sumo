@@ -6,7 +6,7 @@ import { FlaskConical, Play, Download, AlertTriangle, CheckCircle2, Clock, Shiel
 export function ResearchView() {
   const { connectionStatus } = useApp();
   const [experiments, setExperiments] = useState([]);
-  const [selectedExpId, setSelectedExpId] = useState('exp_marathahalli_site_720');
+  const [selectedExpId, setSelectedExpId] = useState('exp_marathahalli_hybrid_840');
   const [expStatus, setExpStatus] = useState(null);
   const [results, setResults] = useState({ aggregate: [], raw_runs: [] });
   const [loading, setLoading] = useState(true);

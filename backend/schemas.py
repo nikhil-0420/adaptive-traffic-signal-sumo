@@ -91,6 +91,8 @@ class TelemetryResponse(BaseModel):
     emergency_approaching: bool = False
     emergency_dist_m: Optional[float] = None
     vehicles: Optional[List[Dict[str, Any]]] = None
+    approach_queues: Optional[Dict[str, Any]] = None
+    adaptive_decision: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
 
