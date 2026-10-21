@@ -133,8 +133,8 @@ class ApiClient {
     // Fallback to snapshot run
     try {
       const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/metrics.json`);
-      if (res.ok) {
-        const metrics = await res.json();
+      const metrics = await this._parseJsonSafe(res);
+      if (metrics) {
         return {
           run_id: runId,
           status: 'completed',
@@ -213,7 +213,9 @@ class ApiClient {
           if (data && data.frames && data.frames.length > 0) {
             return data;
           }
-        } catch (e) {}
+        } catch (e) {
+          break; // Stop immediately on connection error
+        }
       }
     }
 
@@ -225,7 +227,9 @@ class ApiClient {
         if (data && data.frames && data.frames.length > 0) {
           return data;
         }
-      } catch (e) {}
+      } catch (e) {
+        break; // Stop immediately on connection error
+      }
     }
 
     return null;

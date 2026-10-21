@@ -137,8 +137,13 @@ export function IsometricIntersection({
     (liveTelemetry && (liveTelemetry.run_id?.includes('marathahalli') || liveTelemetry.network === 'marathahalli'))
   );
 
+  const lastRequestedRunIdRef = useRef(null);
+
   // Fetch replay dataset
   const loadReplay = useCallback(async (targetRunId) => {
+    if (!targetRunId) return;
+    if (lastRequestedRunIdRef.current === targetRunId) return;
+    lastRequestedRunIdRef.current = targetRunId;
     setLoadingReplay(true);
     try {
       const data = await api.getReplay(targetRunId);
@@ -149,7 +154,6 @@ export function IsometricIntersection({
         setReplayData(null);
       }
     } catch (err) {
-      console.warn('Failed to load replay:', err);
       setReplayData(null);
     } finally {
       setLoadingReplay(false);

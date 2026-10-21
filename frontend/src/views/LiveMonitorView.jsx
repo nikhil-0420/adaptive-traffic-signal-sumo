@@ -70,7 +70,7 @@ export function LiveMonitorView() {
     return () => {
       active = false;
     };
-  }, [isLiveApi, selectedRunId, telemetry?.status]);
+  }, [isLiveApi, selectedRunId]);
 
   // Bounded poll execution with exponential backoff and lifecycle cleanup
   const executePoll = async () => {
@@ -118,16 +118,13 @@ export function LiveMonitorView() {
         console.warn(`[LiveMonitor] Telemetry poll failed for ${selectedRunId}:`, err.message);
       }
 
-      if (errCount <= 5 && isLiveApi && isMountedRef.current) {
-        // Bounded exponential backoff: 2s, 4s, 8s, 16s
-        const backoffMs = Math.min(2000 * Math.pow(2, errCount - 1), 16000);
-        setPollError(`Connection error: ${err.message}. Retrying in ${Math.round(backoffMs / 1000)}s (attempt ${errCount}/5)...`);
+      if (errCount <= 3 && isLiveApi && isMountedRef.current) {
+        // Bounded exponential backoff: 2s, 4s, 8s
+        const backoffMs = Math.min(2000 * Math.pow(2, errCount - 1), 8000);
+        setPollError(`Connection error: ${err.message}. Retrying in ${Math.round(backoffMs / 1000)}s (attempt ${errCount}/3)...`);
         pollTimeoutRef.current = setTimeout(executePoll, backoffMs);
       } else {
-        if (errCount === 6) {
-          console.warn(`[LiveMonitor] Telemetry polling suspended after repeated connection failures.`);
-        }
-        setPollError('Connection to simulation backend lost. Polling suspended. Ensure backend is running (`python -m backend`).');
+        setPollError('Connection to simulation backend lost. Polling suspended. Click retry to reconnect.');
       }
     } finally {
       if (isMountedRef.current) {
