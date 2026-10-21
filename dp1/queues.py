@@ -40,14 +40,15 @@ class ApproachQueueInfo:
     longitudinal_queue_m: float    # max across lanes
     total_queued_vehicles: int     # sum of queued vehicles across lanes
     is_saturated: bool             # true if any lane queue reaches detector length
+    sensor_status: str = "MEASURING" # "SATURATED", "CONFIRMED_ZERO", "MEASURING", "OFFLINE"
     
     # Ground-truth microscopic metrics (for validation, distinct from sensor)
-    ground_truth_queue_m: float    # contiguous stopped cluster from stop line
-    ground_truth_veh_count: int
+    ground_truth_queue_m: float = 0.0   # contiguous stopped cluster from stop line
+    ground_truth_veh_count: int = 0
     
     # Dynamics and waiting
-    total_waiting_time_s: float
-    recent_arrival_rate_vpm: float # vehicles/minute arrival delta
+    total_waiting_time_s: float = 0.0
+    recent_arrival_rate_vpm: float = 0.0 # vehicles/minute arrival delta
     
     # Per-lane details
     lanes: List[LaneQueueInfo] = field(default_factory=list)
@@ -150,6 +151,7 @@ class QueueMeasurementEngine:
             det_len = spec["det_length_m"]
             sat_threshold = det_len - 0.5  # within 0.5m of physical detector limit
 
+            approach_data_valid = True
             for idx, lane_id in enumerate(spec["lanes"]):
                 det_id = spec["detectors"][idx] if idx < len(spec["detectors"]) else None
                 det_q = 0.0
@@ -168,6 +170,7 @@ class QueueMeasurementEngine:
                         det_vehs = 0
                         mean_spd = 0.0
                         is_sat = False
+                        approach_data_valid = False
 
                 # Ground truth microscopic computation on this lane
                 gt_q, gt_vehs = self._compute_lane_ground_truth(lane_id)
@@ -192,6 +195,16 @@ class QueueMeasurementEngine:
             gt_approach_q = max((l.ground_truth_queue_m for l in lane_infos), default=0.0)
             gt_approach_vehs = sum(l.ground_truth_veh_count for l in lane_infos)
 
+            # Determine explicit semantic status (never silence missing as healthy zero)
+            if not approach_data_valid:
+                status_label = "OFFLINE"
+            elif approach_sat:
+                status_label = "SATURATED"
+            elif longitudinal_q == 0.0:
+                status_label = "CONFIRMED_ZERO"
+            else:
+                status_label = "MEASURING"
+
             # Waiting time across approach lanes
             total_wait = 0.0
             for lane_id in spec["lanes"]:
@@ -215,6 +228,7 @@ class QueueMeasurementEngine:
                 longitudinal_queue_m=round(longitudinal_q, 2),
                 total_queued_vehicles=total_vehs,
                 is_saturated=approach_sat,
+                sensor_status=status_label,
                 ground_truth_queue_m=round(gt_approach_q, 2),
                 ground_truth_veh_count=gt_approach_vehs,
                 total_waiting_time_s=round(total_wait, 1),
@@ -222,7 +236,7 @@ class QueueMeasurementEngine:
                 lanes=lane_infos,
                 timestamp=t,
                 freshness_s=0.0,
-                data_valid=True,
+                data_valid=approach_data_valid,
             )
 
         return results

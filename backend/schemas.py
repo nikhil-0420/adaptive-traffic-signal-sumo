@@ -78,6 +78,30 @@ class DecisionsResponse(BaseModel):
     decisions: List[Dict[str, Any]]
 
 
+class AdaptiveDecisionSchema(BaseModel):
+    t: float = Field(..., description="Simulation time in seconds")
+    cycle: int = Field(..., description="Signal cycle number")
+    axis: str = Field(..., description="Active axis: NS or EW")
+    proposed_action: Optional[str] = Field(None, description="Proposed action: e.g. EXTEND, HOLD, GAP_OUT, ENTER_GREEN")
+    applied_action: Optional[str] = Field(None, description="Actual applied action: e.g. EXTEND, REQUEST_SWITCH, HOLD, ENTER_GREEN")
+    decision_outcome: Optional[str] = Field(None, description="Decision outcome: e.g. EXTEND_APPROVED, SWITCH_FAIRNESS_WAIT_LIMIT")
+    action: str = Field(..., description="Backwards-compatible applied action (never EXTEND if rejected)")
+    reason: str = Field(..., description="Human-readable decision explanation")
+    reason_code: str = Field(..., description="Deterministic machine-readable reason code")
+    g_base_s: float = Field(..., description="Webster baseline green duration in seconds")
+    delta_g_req_s: float = Field(0.0, description="Requested green increment in seconds")
+    delta_g_app_s: float = Field(0.0, description="Applied green increment in seconds")
+    g_extra_s: float = Field(0.0, description="Accumulated extra green seconds granted so far")
+    target_green_s: float = Field(..., description="Target green duration including accumulated extra")
+    elapsed_s: float = Field(..., description="Green service duration elapsed at evaluation")
+    actual_green_s: Optional[float] = Field(None, description="Total green duration served upon phase termination")
+    q_active_m: float = Field(..., description="Active approach queue in metres")
+    q_competing_m: float = Field(..., description="Competing approach queue in metres")
+    score_active: float = Field(..., description="Calculated demand score for active axis")
+    score_competing: float = Field(..., description="Calculated demand score for competing axis")
+    is_max_green: bool = Field(False, description="Whether max green ceiling was reached")
+
+
 class TelemetryResponse(BaseModel):
     run_id: str
     status: str

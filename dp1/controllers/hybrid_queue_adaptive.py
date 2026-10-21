@@ -90,6 +90,9 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             "t": round(t, 1),
             "cycle": self.cycle,
             "axis": axis,
+            "proposed_action": "ENTER_GREEN",
+            "applied_action": "ENTER_GREEN",
+            "decision_outcome": "BASELINE_ENTRY",
             "action": "ENTER_GREEN",
             "reason": f"{axis_label} green initiated with Webster baseline allocation {g_base:.1f}s.",
             "reason_code": "BASELINE_ENTRY",
@@ -140,7 +143,8 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "HOLD",
                 f"{axis_label} elapsed green ({elapsed:.1f}s) < minimum green floor ({c.min_green_s:.1f}s); switch prohibited by safety invariant.",
-                "HOLD_MIN_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                "HOLD_MIN_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                proposed_action="HOLD", applied_action="HOLD", decision_outcome="HOLD_MIN_GREEN"
             )
             self.last_decision_record = rec
             return False
@@ -152,9 +156,11 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"{axis_label} elapsed green ({elapsed:.1f}s) >= maximum green ceiling ({c.max_green_s:.1f}s); switch forced to prevent approach starvation.",
-                "SWITCH_MAX_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, True
+                "SWITCH_MAX_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, True,
+                proposed_action="REQUEST_SWITCH", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_MAX_GREEN"
             )
             self.last_decision_record = rec
+            self.decisions.append(rec)
             return True
 
         # -------------------------------------------------------------
@@ -168,15 +174,18 @@ class HybridQueueAdaptiveController(PhaseMachineController):
                 rec = self._make_record(
                     t, axis, "GAP_OUT",
                     f"{axis_label} queue cleared (0.0m for {empty_duration:.1f}s >= gap-out threshold {c.gap_out_s:.1f}s) while {comp_label} is waiting ({comp_q:.1f}m); gapping out early.",
-                    "SWITCH_GAP_OUT", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                    "SWITCH_GAP_OUT", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                    proposed_action="GAP_OUT", applied_action="GAP_OUT", decision_outcome="SWITCH_GAP_OUT"
                 )
                 self.last_decision_record = rec
+                self.decisions.append(rec)
                 return True
             else:
                 rec = self._make_record(
                     t, axis, "HOLD",
                     f"{axis_label} queue empty for {empty_duration:.1f}s (< gap-out persistence {c.gap_out_s:.1f}s); holding green for clearance.",
-                    "HOLD_CLEARING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                    "HOLD_CLEARING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                    proposed_action="GAP_OUT", applied_action="HOLD", decision_outcome="HOLD_CLEARING"
                 )
                 self.last_decision_record = rec
                 return False
@@ -190,7 +199,8 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "HOLD",
                 f"{axis_label} green servicing within approved target ({self.target_green_s:.1f}s = baseline {self.baseline_green_s[axis]:.1f}s + extra {self.accumulated_extra_s:.1f}s); elapsed: {elapsed:.1f}s.",
-                "HOLD_SERVICING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                "HOLD_SERVICING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                proposed_action="HOLD", applied_action="HOLD", decision_outcome="HOLD_SERVICING"
             )
             self.last_decision_record = rec
             return False
@@ -206,9 +216,11 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: {axis_label} target green ({self.target_green_s:.1f}s) has reached maximum ceiling ({c.max_green_s:.1f}s). Enforcing mandatory switch.",
-                "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, True
+                "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, True,
+                proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_CEILING_REACHED"
             )
             self.last_decision_record = rec
+            self.decisions.append(rec)
             return True
 
         # 5b. Anti-Monopoly Check: Competing red wait limit
@@ -216,9 +228,11 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= maximum allowed wait ({c.max_competing_wait_s:.1f}s) with waiting queue ({comp_q:.1f}m). Triggering fair phase switch.",
-                "SWITCH_FAIRNESS_WAIT_LIMIT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                "SWITCH_FAIRNESS_WAIT_LIMIT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_WAIT_LIMIT"
             )
             self.last_decision_record = rec
+            self.decisions.append(rec)
             return True
 
         # 5c. Demand Imbalance Check: Competing score exceeds fairness ratio
@@ -226,9 +240,11 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: Competing {comp_label} demand score ({score_competing:.1f}) exceeds active {axis_label} score ({score_active:.1f}) by fairness ratio ({c.fairness_ratio}). Switching to relieve opposing corridor.",
-                "SWITCH_DEMAND_FAIRNESS", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                "SWITCH_DEMAND_FAIRNESS", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_FAIRNESS"
             )
             self.last_decision_record = rec
+            self.decisions.append(rec)
             return True
 
         # 5d. Active Demand Justification: Queue must exceed threshold or have arrivals
@@ -236,9 +252,11 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: Active {axis_label} queue ({own_q:.1f}m < threshold {c.extend_threshold_m:.1f}m) and no new arrivals detected (delta Q = {delta_q:.1f}m). Terminating green phase.",
-                "SWITCH_DEMAND_EXHAUSTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+                "SWITCH_DEMAND_EXHAUSTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_EXHAUSTED"
             )
             self.last_decision_record = rec
+            self.decisions.append(rec)
             return True
 
         # -------------------------------------------------------------
@@ -259,7 +277,8 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         rec = self._make_record(
             t, axis, "EXTEND",
             explanation,
-            "EXTEND_APPROVED", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, queues, False
+            "EXTEND_APPROVED", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+            proposed_action="EXTEND", applied_action="EXTEND", decision_outcome="EXTEND_APPROVED"
         )
         self.last_decision_record = rec
         self.decisions.append(rec)
@@ -281,13 +300,23 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         score_competing: float,
         queues: Dict[str, float],
         is_max: bool,
+        proposed_action: Optional[str] = None,
+        applied_action: Optional[str] = None,
+        decision_outcome: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Construct structured decision record."""
+        prop = proposed_action or ("EXTEND" if req_increment > 0 or action == "EXTEND" else action)
+        app = applied_action or action
+        outcome = decision_outcome or reason_code
+
         return {
             "t": round(t, 1),
             "cycle": self.cycle,
             "axis": axis,
-            "action": action,
+            "proposed_action": prop,
+            "applied_action": app,
+            "decision_outcome": outcome,
+            "action": app,
             "reason": reason,
             "reason_code": reason_code,
             "g_base_s": round(self.baseline_green_s[axis], 1),
@@ -296,12 +325,12 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             "g_extra_s": round(self.accumulated_extra_s, 1),
             "target_green_s": round(self.target_green_s, 1),
             "elapsed_s": round(elapsed, 1),
+            "actual_green_s": round(elapsed, 1),
             "q_active_m": round(own_q, 1),
             "q_competing_m": round(comp_q, 1),
             "score_active": round(score_active, 1),
             "score_competing": round(score_competing, 1),
             "is_max_green": is_max,
             "green_s": round(self.target_green_s, 1),
-            "actual_green_s": round(elapsed, 1),
             **{f"q_{a}_m": round(queues.get(a, 0.0), 1) for a in C.APPROACHES},
         }

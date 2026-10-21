@@ -311,6 +311,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.N?.longitudinal_queue_m ?? telemetry?.queues_m?.N ?? 0,
                       vehs: telemetry?.approach_queues?.N?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.N?.is_saturated ?? ((telemetry?.queues_m?.N ?? 0) >= 24.4),
+                      sensor_status: telemetry?.approach_queues?.N?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.N?.data_valid,
                       gt_q: telemetry?.approach_queues?.N?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.N?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.N?.total_waiting_time_s,
@@ -325,6 +327,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.S?.longitudinal_queue_m ?? telemetry?.queues_m?.S ?? 0,
                       vehs: telemetry?.approach_queues?.S?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.S?.is_saturated ?? ((telemetry?.queues_m?.S ?? 0) >= 24.4),
+                      sensor_status: telemetry?.approach_queues?.S?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.S?.data_valid,
                       gt_q: telemetry?.approach_queues?.S?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.S?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.S?.total_waiting_time_s,
@@ -339,6 +343,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.E?.longitudinal_queue_m ?? telemetry?.queues_m?.E ?? 0,
                       vehs: telemetry?.approach_queues?.E?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.E?.is_saturated ?? ((telemetry?.queues_m?.E ?? 0) >= 24.4),
+                      sensor_status: telemetry?.approach_queues?.E?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.E?.data_valid,
                       gt_q: telemetry?.approach_queues?.E?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.E?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.E?.total_waiting_time_s,
@@ -353,6 +359,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.W?.longitudinal_queue_m ?? telemetry?.queues_m?.W ?? 0,
                       vehs: telemetry?.approach_queues?.W?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.W?.is_saturated ?? ((telemetry?.queues_m?.W ?? 0) >= 24.4),
+                      sensor_status: telemetry?.approach_queues?.W?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.W?.data_valid,
                       gt_q: telemetry?.approach_queues?.W?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.W?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.W?.total_waiting_time_s,
@@ -369,6 +377,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.N?.longitudinal_queue_m ?? telemetry?.queues_m?.N ?? 0,
                       vehs: telemetry?.approach_queues?.N?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.N?.is_saturated ?? false,
+                      sensor_status: telemetry?.approach_queues?.N?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.N?.data_valid,
                       gt_q: telemetry?.approach_queues?.N?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.N?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.N?.total_waiting_time_s,
@@ -383,6 +393,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.S?.longitudinal_queue_m ?? telemetry?.queues_m?.S ?? 0,
                       vehs: telemetry?.approach_queues?.S?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.S?.is_saturated ?? false,
+                      sensor_status: telemetry?.approach_queues?.S?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.S?.data_valid,
                       gt_q: telemetry?.approach_queues?.S?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.S?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.S?.total_waiting_time_s,
@@ -397,6 +409,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.E?.longitudinal_queue_m ?? telemetry?.queues_m?.E ?? 0,
                       vehs: telemetry?.approach_queues?.E?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.E?.is_saturated ?? false,
+                      sensor_status: telemetry?.approach_queues?.E?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.E?.data_valid,
                       gt_q: telemetry?.approach_queues?.E?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.E?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.E?.total_waiting_time_s,
@@ -411,6 +425,8 @@ export function LiveMonitorView() {
                       q: telemetry?.approach_queues?.W?.longitudinal_queue_m ?? telemetry?.queues_m?.W ?? 0,
                       vehs: telemetry?.approach_queues?.W?.total_queued_vehicles ?? 0,
                       isSat: telemetry?.approach_queues?.W?.is_saturated ?? false,
+                      sensor_status: telemetry?.approach_queues?.W?.sensor_status,
+                      data_valid: telemetry?.approach_queues?.W?.data_valid,
                       gt_q: telemetry?.approach_queues?.W?.ground_truth_queue_m,
                       gt_v: telemetry?.approach_queues?.W?.ground_truth_veh_count,
                       wait_s: telemetry?.approach_queues?.W?.total_waiting_time_s,
@@ -433,9 +449,21 @@ export function LiveMonitorView() {
                         <span className="font-semibold text-slate-200">{arm.label}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        {arm.isSat && (
+                        {arm.data_valid === false || arm.sensor_status === 'OFFLINE' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            OFFLINE
+                          </span>
+                        ) : arm.isSat || arm.sensor_status === 'SATURATED' ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
                             SATURATED
+                          </span>
+                        ) : arm.q === 0 ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            CLEAR
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                            MEASURING
                           </span>
                         )}
                         <span className="font-mono font-bold text-white text-sm">{arm.q.toFixed(1)} m</span>
@@ -591,7 +619,9 @@ export function LiveMonitorView() {
           const dec = telemetry?.adaptive_decision || (decisionsHistory.length > 0 ? decisionsHistory[0] : null);
           const gBase = dec?.g_base_s ?? (telemetry?.axis === 'NS' ? 20.0 : 20.0);
           const elapsed = dec?.elapsed_s ?? (telemetry?.sim_time_s ? (telemetry.sim_time_s % 60) : 0);
-          const deltaG = dec?.delta_g_app_s ?? (dec?.action === 'EXTEND' ? 3.0 : 0.0);
+          const deltaGApp = dec?.delta_g_app_s ?? (dec?.applied_action === 'EXTEND' || dec?.action === 'EXTEND' ? 3.0 : 0.0);
+          const deltaGReq = dec?.delta_g_req_s ?? (dec?.proposed_action === 'EXTEND' ? 3.0 : 0.0);
+          const isRejected = (dec?.proposed_action === 'EXTEND' && (dec?.applied_action !== 'EXTEND' || String(dec?.decision_outcome || '').startsWith('SWITCH_')));
           const gExtra = dec?.g_extra_s ?? 0.0;
           const gTarget = dec?.target_green_s ?? (gBase + gExtra);
           const scoreActive = dec?.score_active ?? dec?.q_active_m ?? 0.0;
@@ -614,10 +644,12 @@ export function LiveMonitorView() {
 
                 <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
                   <div className="text-[11px] font-mono text-slate-400 uppercase">Approved Increment (ΔG)</div>
-                  <div className="text-xl font-bold font-mono text-emerald-400">
-                    {deltaG > 0 ? `+${Number(deltaG).toFixed(1)}s` : '0.0s'}
+                  <div className={`text-xl font-bold font-mono ${deltaGApp > 0 ? 'text-emerald-400' : isRejected ? 'text-rose-400' : 'text-slate-400'}`}>
+                    {deltaGApp > 0 ? `+${Number(deltaGApp).toFixed(1)}s` : isRejected ? '0.0s (Rejected)' : '0.0s'}
                   </div>
-                  <div className="text-[10px] text-slate-500">Step: 3.0s bounded</div>
+                  <div className="text-[10px] text-slate-500">
+                    {isRejected ? 'Proposed +3.0s refused' : 'Step: 3.0s bounded'}
+                  </div>
                 </div>
 
                 <div className="p-3 bg-slate-900/80 rounded-lg border border-white/5 space-y-1">
@@ -646,31 +678,34 @@ export function LiveMonitorView() {
               {/* Real-Time Explanation Card */}
               <div className="p-4 bg-slate-900/90 border border-blue-500/20 rounded-lg space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5 mr-1">
                       <Activity size={14} className="text-blue-400" />
-                      <span>Latest Decision Rationale</span>
+                      <span>Latest Decision</span>
                     </span>
-                    {dec?.action && (
-                      <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
-                          dec.action === 'EXTEND'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            : dec.action === 'ENTER_GREEN'
-                            ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                            : dec.action === 'GAP_OUT'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            : dec.action === 'REQUEST_SWITCH'
-                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                            : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                        }`}
-                      >
-                        {dec.action}
+                    {dec?.proposed_action && (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                        Req: {dec.proposed_action} {dec.delta_g_req_s > 0 ? `(+${Number(dec.delta_g_req_s).toFixed(1)}s)` : ''}
                       </span>
                     )}
-                    {dec?.reason_code && (
+                    {(dec?.applied_action || dec?.action) && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
+                          (dec.applied_action === 'EXTEND' || (!dec.applied_action && dec.action === 'EXTEND'))
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : (dec.applied_action === 'REQUEST_SWITCH' || dec.action === 'REQUEST_SWITCH')
+                            ? (isRejected ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40')
+                            : (dec.applied_action === 'GAP_OUT' || dec.action === 'GAP_OUT')
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                        }`}
+                      >
+                        App: {(dec.applied_action === 'REQUEST_SWITCH' || dec.action === 'REQUEST_SWITCH') && isRejected ? 'SWITCH (Rejected Ext)' : (dec.applied_action || dec.action)}
+                      </span>
+                    )}
+                    {(dec?.decision_outcome || dec?.reason_code) && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-slate-300 border border-white/10">
-                        {dec.reason_code}
+                        {dec.decision_outcome || dec.reason_code}
                       </span>
                     )}
                   </div>
@@ -709,55 +744,68 @@ export function LiveMonitorView() {
                         <tr>
                           <th className="p-2.5">Time</th>
                           <th className="p-2.5">Axis</th>
-                          <th className="p-2.5">Action</th>
-                          <th className="p-2.5">ΔG App</th>
+                          <th className="p-2.5">Proposed</th>
+                          <th className="p-2.5">Applied / Outcome</th>
+                          <th className="p-2.5">ΔG (Req / App)</th>
                           <th className="p-2.5">G Target</th>
                           <th className="p-2.5">Active / Comp Queue</th>
                           <th className="p-2.5">Rule / Rationale</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5 bg-slate-950/40">
-                        {decisionsHistory.map((d, idx) => (
-                          <tr key={`${d.t}-${d.action}-${idx}`} className="hover:bg-white/[0.02]">
-                            <td className="p-2.5 text-slate-300">{Number(d.t).toFixed(1)}s</td>
-                            <td className="p-2.5">
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] ${
-                                  d.axis === 'NS' ? 'bg-blue-500/20 text-blue-300' : 'bg-cyan-500/20 text-cyan-300'
-                                }`}
-                              >
-                                {d.axis}
-                              </span>
-                            </td>
-                            <td className="p-2.5">
-                              <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                  d.action === 'EXTEND'
-                                    ? 'text-emerald-400'
-                                    : d.action === 'ENTER_GREEN'
-                                    ? 'text-blue-400'
-                                    : d.action === 'GAP_OUT'
-                                    ? 'text-amber-400'
-                                    : d.action === 'REQUEST_SWITCH'
-                                    ? 'text-rose-400'
-                                    : 'text-slate-400'
-                                }`}
-                              >
-                                {d.action}
-                              </span>
-                            </td>
-                            <td className="p-2.5 text-slate-300">
-                              {d.delta_g_app_s > 0 ? `+${d.delta_g_app_s}s` : '0.0s'}
-                            </td>
-                            <td className="p-2.5 text-slate-300">{d.target_green_s ?? d.green_s ?? '—'}s</td>
-                            <td className="p-2.5 text-slate-400">
-                              {d.q_active_m !== undefined ? `${d.q_active_m}m / ${d.q_competing_m}m` : '—'}
-                            </td>
-                            <td className="p-2.5 text-slate-300 max-w-md truncate" title={d.reason}>
-                              {d.reason}
-                            </td>
-                          </tr>
-                        ))}
+                        {decisionsHistory.map((d, idx) => {
+                          const rowReq = d.proposed_action || (d.delta_g_req_s > 0 ? 'EXTEND' : d.action);
+                          const rowApp = d.applied_action || d.action;
+                          const rowOutcome = d.decision_outcome || d.reason_code;
+                          const rowRejected = (rowReq === 'EXTEND' && (rowApp !== 'EXTEND' || String(rowOutcome || '').startsWith('SWITCH_')));
+
+                          return (
+                            <tr key={`${d.t}-${d.action}-${idx}`} className="hover:bg-white/[0.02]">
+                              <td className="p-2.5 text-slate-300">{Number(d.t).toFixed(1)}s</td>
+                              <td className="p-2.5">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                    d.axis === 'NS' ? 'bg-blue-500/20 text-blue-300' : 'bg-cyan-500/20 text-cyan-300'
+                                  }`}
+                                >
+                                  {d.axis}
+                                </span>
+                              </td>
+                              <td className="p-2.5 text-slate-300">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
+                                  {rowReq}
+                                </span>
+                              </td>
+                              <td className="p-2.5">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    rowApp === 'EXTEND'
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                      : rowApp === 'REQUEST_SWITCH'
+                                      ? (rowRejected ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40')
+                                      : rowApp === 'GAP_OUT'
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                                  }`}
+                                >
+                                  {rowApp === 'REQUEST_SWITCH' && rowRejected ? 'SWITCH (Rejected)' : rowApp}
+                                </span>
+                              </td>
+                              <td className="p-2.5 text-slate-300">
+                                {d.delta_g_req_s !== undefined && d.delta_g_app_s !== undefined
+                                  ? `${Number(d.delta_g_req_s).toFixed(1)}s / ${Number(d.delta_g_app_s).toFixed(1)}s`
+                                  : d.delta_g_app_s > 0 ? `+${d.delta_g_app_s}s` : '0.0s'}
+                              </td>
+                              <td className="p-2.5 text-slate-300">{d.target_green_s ?? d.green_s ?? '—'}s</td>
+                              <td className="p-2.5 text-slate-400">
+                                {d.q_active_m !== undefined ? `${d.q_active_m}m / ${d.q_competing_m}m` : '—'}
+                              </td>
+                              <td className="p-2.5 text-slate-300 max-w-md truncate" title={d.reason}>
+                                {d.reason}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

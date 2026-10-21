@@ -286,3 +286,109 @@ def test_phase_state_machine_strict_sequence():
     ctl.step(t, queues)
     assert ctl.phase == "GREEN"
     assert ctl.axis == "EW"
+
+
+# -----------------------------------------------------------------------------
+# 4. Schema Separation and Sensor Semantics Regression Tests
+# -----------------------------------------------------------------------------
+
+def test_approved_and_rejected_extension_schema_separation():
+    """Verify unambiguous separation of proposed_action and applied_action.
+
+    When an extension is approved:
+      proposed_action == 'EXTEND', applied_action == 'EXTEND', action == 'EXTEND',
+      decision_outcome == 'EXTEND_APPROVED', delta_g_req_s == 3.0, delta_g_app_s == 3.0.
+
+    When an extension is requested at target green but rejected due to fairness (competing wait limit):
+      proposed_action == 'EXTEND', applied_action == 'REQUEST_SWITCH', action == 'REQUEST_SWITCH',
+      decision_outcome == 'SWITCH_FAIRNESS_WAIT_LIMIT', delta_g_req_s == 3.0, delta_g_app_s == 0.0.
+      The applied action must NEVER be 'EXTEND', and the switch record must be appended as a separate event.
+    """
+    states = DummyStates()
+    cfg = C.HybridQueueAdaptiveConfig(
+        min_green_s=10.0, max_green_s=60.0, extend_step_s=3.0,
+        extend_threshold_m=5.0, max_competing_wait_s=35.0
+    )
+    ctl = HybridQueueAdaptiveController(states, cfg=cfg)
+
+    # 1. Start NS green with baseline 20.0s
+    ctl.baseline_green_s["NS"] = 20.0
+    queues = {"N": 15.0, "S": 15.0, "E": 10.0, "W": 10.0}
+    ctl.decide_green("NS", queues, t=0.0)
+
+    # At elapsed = 20.0s: target green reached, competing red wait = 20.0s (< 35.0s limit)
+    # Extension is APPROVED (+3.0s)
+    should_end = ctl.green_should_end("NS", elapsed=20.0, queues=queues, t=20.0)
+    assert not should_end
+    appr_rec = ctl.last_decision_record
+    assert appr_rec["proposed_action"] == "EXTEND"
+    assert appr_rec["applied_action"] == "EXTEND"
+    assert appr_rec["action"] == "EXTEND"
+    assert appr_rec["decision_outcome"] == "EXTEND_APPROVED"
+    assert appr_rec["delta_g_req_s"] == 3.0
+    assert appr_rec["delta_g_app_s"] == 3.0
+    assert appr_rec["g_extra_s"] == 3.0
+    assert appr_rec["target_green_s"] == 23.0
+    assert len(ctl.decisions) == 1
+    assert ctl.decisions[0]["action"] == "EXTEND"
+
+    # Advance time: t = 36.0s, elapsed = 36.0s, competing_red_elapsed >= 35.0s limit
+    ctl.competing_red_start_s = 0.0
+    ctl.baseline_green_s["NS"] = 36.0
+    ctl.target_green_s = 36.0
+    should_end = ctl.green_should_end("NS", elapsed=36.0, queues=queues, t=36.0)
+    assert should_end  # Must switch!
+    rej_rec = ctl.last_decision_record
+    assert rej_rec["proposed_action"] == "EXTEND"
+    assert rej_rec["applied_action"] == "REQUEST_SWITCH"
+    assert rej_rec["action"] == "REQUEST_SWITCH"
+    assert rej_rec["action"] != "EXTEND"  # Invariant: rejected extension MUST NOT show action=EXTEND
+    assert rej_rec["decision_outcome"] == "SWITCH_FAIRNESS_WAIT_LIMIT"
+    assert rej_rec["delta_g_req_s"] == 3.0
+    assert rej_rec["delta_g_app_s"] == 0.0
+    # Decisions history must contain both: first the approved extend, second the rejected switch
+    assert len(ctl.decisions) == 2
+    assert ctl.decisions[0]["action"] == "EXTEND"
+    assert ctl.decisions[0]["decision_outcome"] == "EXTEND_APPROVED"
+    assert ctl.decisions[1]["action"] == "REQUEST_SWITCH"
+    assert ctl.decisions[1]["decision_outcome"] == "SWITCH_FAIRNESS_WAIT_LIMIT"
+
+
+def test_sensor_semantics_and_saturation_status():
+    """Verify detector saturation and zero-queue semantics in ApproachQueueInfo."""
+    # 1. Saturation: queue >= length - 0.5m
+    info_sat = ApproachQueueInfo(
+        approach="N", name="ORR North (KR Puram)", axis="NS", edge_id="leg_orr_n_in",
+        detector_length_m=24.9, longitudinal_queue_m=24.5, total_queued_vehicles=5,
+        is_saturated=True, sensor_status="SATURATED", data_valid=True
+    )
+    assert info_sat.is_saturated is True
+    assert info_sat.sensor_status == "SATURATED"
+    assert info_sat.data_valid is True
+
+    # 2. Confirmed zero queue: queue == 0.0 with valid sensor reading
+    info_zero = ApproachQueueInfo(
+        approach="S", name="ORR South (Kadubeesanahalli)", axis="NS", edge_id="leg_orr_s_in",
+        detector_length_m=24.9, longitudinal_queue_m=0.0, total_queued_vehicles=0,
+        is_saturated=False, sensor_status="CONFIRMED_ZERO", data_valid=True
+    )
+    assert info_zero.is_saturated is False
+    assert info_zero.sensor_status == "CONFIRMED_ZERO"
+    assert info_zero.longitudinal_queue_m == 0.0
+
+    # 3. Active queue measuring
+    info_measuring = ApproachQueueInfo(
+        approach="E", name="Varthur East (Whitefield)", axis="EW", edge_id="leg_wf_in",
+        detector_length_m=24.9, longitudinal_queue_m=14.2, total_queued_vehicles=3,
+        is_saturated=False, sensor_status="MEASURING", data_valid=True
+    )
+    assert info_measuring.sensor_status == "MEASURING"
+
+    # 4. Sensor offline/failure
+    info_offline = ApproachQueueInfo(
+        approach="W", name="Varthur West (HAL Airport Rd)", axis="EW", edge_id="leg_hal_in",
+        detector_length_m=24.9, longitudinal_queue_m=0.0, total_queued_vehicles=0,
+        is_saturated=False, sensor_status="OFFLINE", data_valid=False
+    )
+    assert info_offline.sensor_status == "OFFLINE"
+    assert info_offline.data_valid is False
