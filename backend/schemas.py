@@ -42,6 +42,7 @@ class RunLaunchRequest(BaseModel):
     emergency_depart: float = Field(300.0, description="Emergency departure time (seconds)")
     model_path: Optional[str] = Field(None, description="Path to trained RL model for rl_dqn")
     gui: bool = Field(False, description="Launch in sumo-gui (local desktop only)")
+    force: bool = Field(False, description="Force cancel and restart if run already active")
 
 
 class RunStatusResponse(BaseModel):

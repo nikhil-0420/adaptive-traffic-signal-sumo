@@ -150,6 +150,7 @@ export function IsometricIntersection({
       if (data && data.frames && data.frames.length > 0) {
         setReplayData(data);
         setCurrentFrameIdx(0);
+        setIsPlaying(true);
       } else {
         lastRequestedRunIdRef.current = null;
         setReplayData(null);
@@ -1242,6 +1243,18 @@ export function IsometricIntersection({
             </span>
           </div>
 
+          {/* Top HUD Play/Pause button for replay mode */}
+          {!isLiveMode && replayData && replayData.frames && replayData.frames.length > 0 && (
+            <button
+              onClick={() => setIsPlaying((v) => !v)}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs shadow transition-colors"
+              title={isPlaying ? 'Pause Replay' : 'Play Replay'}
+            >
+              {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+              <span>{isPlaying ? 'Pause' : 'Play'}</span>
+            </button>
+          )}
+
           {/* Active Vehicles count */}
           <div className="hidden md:flex items-center gap-1 px-2 py-1 bg-white/5 rounded text-[11px] font-mono text-slate-400">
             <Gauge size={12} className="text-slate-400" />
@@ -1361,7 +1374,7 @@ export function IsometricIntersection({
       )}
 
       {/* --- CANVAS VIEWPORT --- */}
-      <div ref={containerRef} className="relative w-full h-[500px] md:h-[560px] flex-1 overflow-hidden">
+      <div ref={containerRef} className="relative w-full h-[420px] md:h-[480px] flex-1 overflow-hidden">
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}

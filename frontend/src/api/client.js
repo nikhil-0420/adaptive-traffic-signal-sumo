@@ -301,12 +301,20 @@ class ApiClient {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        const detailMsg = typeof err.detail === 'string'
-          ? err.detail
-          : (err.detail?.message || err.detail?.detail || `Launch failed: ${res.statusText}`);
+        let detailMsg = `Launch failed: ${res.statusText}`;
+        let activeRunId = null;
+        if (typeof err.detail === 'string') {
+          detailMsg = err.detail;
+          const match = err.detail.match(/Run '([^']+)' is already running/);
+          if (match) activeRunId = match[1];
+        } else if (err.detail && typeof err.detail === 'object') {
+          detailMsg = err.detail.message || err.detail.detail || detailMsg;
+          activeRunId = err.detail.run_id || null;
+        }
         const launchErr = new Error(detailMsg);
         launchErr.status = res.status;
         launchErr.isConflict = res.status === 409;
+        launchErr.activeRunId = activeRunId || params?.run_id || null;
         throw launchErr;
       }
       return await res.json();

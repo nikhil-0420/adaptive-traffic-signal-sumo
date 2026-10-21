@@ -199,7 +199,7 @@ export function LiveMonitorView() {
   };
 
   // Handle launch run
-  const handleLaunch = async (e) => {
+  const handleLaunch = async (e, force = false) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!isLiveApi) return;
 
@@ -207,7 +207,7 @@ export function LiveMonitorView() {
     setLaunchError(null);
 
     try {
-      const res = await api.launchRun(launchParams);
+      const res = await api.launchRun({ ...launchParams, force });
       if (res && res.run_id) {
         setSelectedRunId(res.run_id);
         setIsDrawerOpen(false);
@@ -220,7 +220,7 @@ export function LiveMonitorView() {
         setLaunchError({
           isConflict: true,
           message: err.message,
-          activeRunId: err.activeRunId,
+          activeRunId: err.activeRunId || selectedRunId,
         });
       } else {
         setLaunchError({
@@ -233,11 +233,12 @@ export function LiveMonitorView() {
     }
   };
 
-  // Determine staleness
+  // Determine staleness (only active when running; completed runs are never marked stale)
   const nowSec = Date.now() / 1000;
   const isStale =
-    telemetry?.is_stale ||
-    (isLiveApi && telemetry?.updated_at && nowSec - telemetry.updated_at > 5.0);
+    telemetry?.status === 'running' &&
+    (telemetry?.is_stale ||
+      (isLiveApi && telemetry?.updated_at && nowSec - telemetry.updated_at > 8.0));
 
   const selectedRunData = allRuns.find((r) => r.run_id === selectedRunId);
   const isMarathahalli =
@@ -566,7 +567,7 @@ export function LiveMonitorView() {
                       id: 'N',
                       det: 'det_N',
                       label: 'North Approach',
-                      edge: 'edge_N_in',
+                      edge: 'N_in',
                       axis: 'NS',
                       q: telemetry?.approach_queues?.N?.longitudinal_queue_m ?? telemetry?.queues_m?.N ?? 0,
                       vehs: telemetry?.approach_queues?.N?.total_queued_vehicles ?? 0,
@@ -582,7 +583,7 @@ export function LiveMonitorView() {
                       id: 'S',
                       det: 'det_S',
                       label: 'South Approach',
-                      edge: 'edge_S_in',
+                      edge: 'S_in',
                       axis: 'NS',
                       q: telemetry?.approach_queues?.S?.longitudinal_queue_m ?? telemetry?.queues_m?.S ?? 0,
                       vehs: telemetry?.approach_queues?.S?.total_queued_vehicles ?? 0,
@@ -598,7 +599,7 @@ export function LiveMonitorView() {
                       id: 'E',
                       det: 'det_E',
                       label: 'East Approach',
-                      edge: 'edge_E_in',
+                      edge: 'E_in',
                       axis: 'EW',
                       q: telemetry?.approach_queues?.E?.longitudinal_queue_m ?? telemetry?.queues_m?.E ?? 0,
                       vehs: telemetry?.approach_queues?.E?.total_queued_vehicles ?? 0,
@@ -614,7 +615,7 @@ export function LiveMonitorView() {
                       id: 'W',
                       det: 'det_W',
                       label: 'West Approach',
-                      edge: 'edge_W_in',
+                      edge: 'W_in',
                       axis: 'EW',
                       q: telemetry?.approach_queues?.W?.longitudinal_queue_m ?? telemetry?.queues_m?.W ?? 0,
                       vehs: telemetry?.approach_queues?.W?.total_queued_vehicles ?? 0,
@@ -1055,12 +1056,13 @@ export function LiveMonitorView() {
                       <AlertCircle size={14} className="shrink-0 text-red-400" />
                       <span>{typeof launchError === 'string' ? launchError : launchError.message}</span>
                     </div>
-                    {launchError?.isConflict && launchError.activeRunId && (
+                    {launchError?.isConflict && (
                       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-red-500/20">
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedRunId(launchError.activeRunId);
+                            const target = launchError.activeRunId || selectedRunId;
+                            if (target) setSelectedRunId(target);
                             setIsDrawerOpen(false);
                             setLaunchError(null);
                           }}
@@ -1071,9 +1073,12 @@ export function LiveMonitorView() {
                         <button
                           type="button"
                           onClick={async () => {
-                            await api.stopRun(launchError.activeRunId);
+                            const target = launchError.activeRunId || selectedRunId;
+                            if (target) {
+                              await api.stopRun(target).catch(() => {});
+                            }
                             setLaunchError(null);
-                            handleLaunch();
+                            handleLaunch(null, true);
                           }}
                           className="px-2.5 py-1 bg-red-800 hover:bg-red-700 text-white rounded text-[11px] font-medium"
                         >

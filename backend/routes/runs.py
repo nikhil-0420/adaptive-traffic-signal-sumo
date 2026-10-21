@@ -194,12 +194,16 @@ def launch_run(
 
     # 3. Prevent duplicate active runs with detailed actionable message
     if process_manager.is_running(run_id):
-        info = process_manager.get_info(run_id)
-        pid_str = f" (PID {info.proc.pid})" if info and info.proc else ""
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Run '{run_id}' is already running{pid_str}. You can reconnect to monitor it in Live Twin Monitor or stop it to launch a new simulation.",
-        )
+        if req.force:
+            process_manager.cancel(run_id)
+            time.sleep(0.5)
+        else:
+            info = process_manager.get_info(run_id)
+            pid_str = f" (PID {info.proc.pid})" if info and info.proc else ""
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Run '{run_id}' is already running{pid_str}. You can reconnect to monitor it in Live Twin Monitor or stop it to launch a new simulation.",
+            )
 
     # 4. Launch subprocess safely
     success, msg = process_manager.launch_run(
