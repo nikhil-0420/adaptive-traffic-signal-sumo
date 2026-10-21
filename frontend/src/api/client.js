@@ -48,6 +48,19 @@ class ApiClient {
     }
   }
 
+  async _parseJsonSafe(res) {
+    if (!res || !res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return null;
+    }
+    try {
+      return await res.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
   async checkConnection() {
     // 1. Try hitting /api/health if base URL or proxy is present
     try {
@@ -156,14 +169,16 @@ class ApiClient {
       try {
         const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/decisions` : `/api/runs/${runId}/decisions`;
         const res = await this._fetchWithTimeout(url, { signal });
-        if (res.ok) return await res.json();
+        const data = await this._parseJsonSafe(res);
+        if (data) return data;
       } catch (e) {
         if (e.name === 'AbortError') throw e;
       }
     }
     try {
       const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`, { signal });
-      if (res.ok) return await res.json();
+      const data = await this._parseJsonSafe(res);
+      if (data) return data;
     } catch (e) {
       if (e.name === 'AbortError') throw e;
     }
@@ -171,13 +186,15 @@ class ApiClient {
   }
 
   async getReplay(runId) {
+    if (!runId) return null;
+
     const candidates = [runId];
     if (runId.includes('_medium_')) {
       candidates.push(runId.replace('_medium_', '_'));
     } else {
       const parts = runId.split('_');
       if (parts.length >= 3) {
-        const idx = parts.findIndex((p) => ['adaptive', 'fixed', 'pressure', 'rl'].includes(p));
+        const idx = parts.findIndex((p) => ['adaptive', 'fixed', 'pressure', 'rl', 'hybrid'].includes(p));
         if (idx > 0) {
           const c = [...parts];
           c.splice(idx, 0, 'medium');
@@ -186,19 +203,31 @@ class ApiClient {
       }
     }
 
-    for (const cid of candidates) {
-      if (this.mode === 'api') {
+    // 1. Try API endpoints
+    if (this.mode === 'api') {
+      for (const cid of candidates) {
         try {
           const url = this.baseUrl ? `${this.baseUrl}/api/runs/${cid}/replay` : `/api/runs/${cid}/replay`;
           const res = await this._fetchWithTimeout(url, {}, 5000);
-          if (res.ok) return await res.json();
+          const data = await this._parseJsonSafe(res);
+          if (data && data.frames && data.frames.length > 0) {
+            return data;
+          }
         } catch (e) {}
       }
+    }
+
+    // 2. Try static demo-data files
+    for (const cid of candidates) {
       try {
-        const res = await this._fetchWithTimeout(`/demo-data/runs/${cid}/replay.json`, {}, 5000);
-        if (res.ok) return await res.json();
+        const res = await this._fetchWithTimeout(`/demo-data/runs/${cid}/replay.json`, {}, 4000);
+        const data = await this._parseJsonSafe(res);
+        if (data && data.frames && data.frames.length > 0) {
+          return data;
+        }
       } catch (e) {}
     }
+
     return null;
   }
 
@@ -206,8 +235,13 @@ class ApiClient {
     if (this.mode === 'api') {
       const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/telemetry` : `/api/runs/${runId}/telemetry`;
       const res = await this._fetchWithTimeout(url, { signal }, 3000);
-      if (res.ok) return await res.json();
-      throw new Error(`Telemetry error: ${res.statusText}`);
+      const data = await this._parseJsonSafe(res);
+      if (data) return data;
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Telemetry error: ${res.statusText}`);
+      }
+      throw new Error(`Telemetry error: unexpected response format`);
     }
     // In snapshot mode, synthesize completed telemetry from metrics
     const run = await this.getRun(runId);
@@ -226,42 +260,27 @@ class ApiClient {
     };
   }
 
-  async getReplay(runId) {
-    if (!runId) return null;
-    // 1. If in API mode, query the live backend endpoint
-    if (this.mode === 'api') {
-      try {
-        const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/replay` : `/api/runs/${runId}/replay`;
-        const res = await this._fetchWithTimeout(url, {}, 5000);
-        if (res.ok) {
-          return await res.json();
-        }
-      } catch (e) {
-        console.warn(`API getReplay failed for ${runId}, falling back to static snapshot:`, e);
-      }
-    }
-
-    // 2. Static snapshot / demo-data fallback
+  async getActiveRuns() {
+    if (this.mode !== 'api') return [];
     try {
-      const snapRes = await this._fetchWithTimeout(`/demo-data/runs/${runId}/replay.json`, {}, 4000);
-      if (snapRes.ok) {
-        return await snapRes.json();
-      }
-      // Check alternative naming (e.g. without or with _medium_)
-      const altRunId = runId.includes('_medium_')
-        ? runId.replace('_medium_', '_')
-        : runId.replace('_adaptive_', '_medium_adaptive_')
-               .replace('_fixed_', '_medium_fixed_')
-               .replace('_queue_extension_', '_medium_queue_extension_');
-      const snapResAlt = await this._fetchWithTimeout(`/demo-data/runs/${altRunId}/replay.json`, {}, 4000);
-      if (snapResAlt.ok) {
-        return await snapResAlt.json();
-      }
+      const url = this.baseUrl ? `${this.baseUrl}/api/runs/active` : '/api/runs/active';
+      const res = await this._fetchWithTimeout(url, {}, 3000);
+      const data = await this._parseJsonSafe(res);
+      return data?.active_runs || [];
     } catch (e) {
-      console.warn(`Static getReplay failed for ${runId}:`, e);
+      return [];
     }
+  }
 
-    return null;
+  async stopRun(runId) {
+    if (this.mode !== 'api') return { status: 'stopped' };
+    try {
+      const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/stop` : `/api/runs/${runId}/stop`;
+      const res = await this._fetchWithTimeout(url, { method: 'POST' }, 5000);
+      return (await this._parseJsonSafe(res)) || { status: 'stopped' };
+    } catch (e) {
+      return { status: 'stopped', error: e.message };
+    }
   }
 
   async launchRun(params) {
@@ -279,7 +298,13 @@ class ApiClient {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Launch failed: ${res.statusText}`);
+        const detailMsg = typeof err.detail === 'string'
+          ? err.detail
+          : (err.detail?.message || err.detail?.detail || `Launch failed: ${res.statusText}`);
+        const launchErr = new Error(detailMsg);
+        launchErr.status = res.status;
+        launchErr.isConflict = res.status === 409;
+        throw launchErr;
       }
       return await res.json();
     } catch (err) {

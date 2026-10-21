@@ -11,6 +11,7 @@ from ..config import (
     ALLOWED_EMERGENCY_APPROACHES,
     ALLOWED_POLICIES,
     ALLOWED_SCENARIOS,
+    REPO_ROOT,
     RESEARCH_DIR,
     RESULTS_DIR,
     RUNS_DIR,
@@ -114,7 +115,8 @@ def launch_run(
             detail=f"Seed {req.seed} out of acceptable range [0, 100000].",
         )
 
-    # 2. Check concurrency
+    # 2. Check and clean stale processes, then check concurrency
+    process_manager.clean_stale_processes()
     if process_manager.count_active("run") >= 2:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -123,11 +125,13 @@ def launch_run(
 
     run_id = _derive_run_id(req)
 
-    # 3. Prevent duplicate active runs
+    # 3. Prevent duplicate active runs with detailed actionable message
     if process_manager.is_running(run_id):
+        info = process_manager.get_info(run_id)
+        pid_str = f" (PID {info.proc.pid})" if info and info.proc else ""
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Run '{run_id}' is already running.",
+            detail=f"Run '{run_id}' is already running{pid_str}. You can reconnect to monitor it in Live Twin Monitor or stop it to launch a new simulation.",
         )
 
     # 4. Launch subprocess safely
@@ -157,6 +161,43 @@ def launch_run(
         message=msg,
         started_at=time.time(),
     )
+
+
+@router.get("/active")
+def get_active_runs():
+    """List all currently active simulation runs managed by the backend."""
+    process_manager.clean_stale_processes()
+    active = []
+    with process_manager._lock:
+        for run_id, info in process_manager._processes.items():
+            if info.item_type == "run" and info.poll_status() == "running":
+                active.append({
+                    "run_id": run_id,
+                    "pid": info.proc.pid if info.proc else None,
+                    "started_at": info.started_at,
+                    "status": "running",
+                })
+    return {"active_runs": active}
+
+
+@router.post("/{run_id}/stop")
+def stop_run(run_id: str):
+    """Safely terminate an active simulation run."""
+    success, msg = process_manager.cancel(run_id)
+    run_dir = RUNS_DIR / run_id
+    telem_file = run_dir / "telemetry.json"
+    if telem_file.exists():
+        try:
+            with open(telem_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            data["status"] = "stopped"
+            data["updated_at"] = time.time()
+            data["error"] = "Simulation stopped by user."
+            with open(telem_file, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+        except Exception:
+            pass
+    return {"run_id": run_id, "status": "stopped", "message": msg}
 
 
 @router.get("/{run_id}", response_model=RunDetailResponse)
@@ -385,16 +426,55 @@ def get_decisions(
 @router.get("/{run_id}/telemetry", response_model=TelemetryResponse)
 def get_telemetry(run_id: str):
     """Retrieve live atomic telemetry for an active or completed simulation run."""
+    info = process_manager.get_info(run_id)
     run_dir = resolve_safe_run_dir(run_id)
     if not run_dir.exists():
         alt = _find_run_dir(run_id)
         if alt:
             run_dir = alt
+        elif info and info.poll_status() == "running":
+            # Process has started but run directory / telemetry is initializing
+            return TelemetryResponse(
+                run_id=run_id,
+                status="starting",
+                sim_time_s=0.0,
+                phase="GREEN",
+                axis="NS",
+                queues_m={},
+                traffic_light_state="",
+                updated_at=info.started_at,
+                is_stale=False,
+                emergency_approaching=False,
+                emergency_dist_m=None,
+                vehicles=[],
+                approach_queues=None,
+                adaptive_decision=None,
+                error=None,
+            )
         else:
             raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
 
     telem_file = run_dir / "telemetry.json"
     if not telem_file.exists():
+        if info and info.poll_status() == "running":
+            # Simulation process active but initial telemetry step pending
+            return TelemetryResponse(
+                run_id=run_id,
+                status="starting",
+                sim_time_s=0.0,
+                phase="GREEN",
+                axis="NS",
+                queues_m={},
+                traffic_light_state="",
+                updated_at=info.started_at,
+                is_stale=False,
+                emergency_approaching=False,
+                emergency_dist_m=None,
+                vehicles=[],
+                approach_queues=None,
+                adaptive_decision=None,
+                error=None,
+            )
         raise HTTPException(
             status_code=404,
             detail=f"Telemetry not available for run '{run_id}'. Run may have completed prior to telemetry support.",
@@ -410,7 +490,6 @@ def get_telemetry(run_id: str):
     is_stale = (time.time() - updated_at) > TELEMETRY_STALE_THRESHOLD_S
 
     status_str = data.get("status", "unknown")
-    info = process_manager.get_info(run_id)
     if info and info.poll_status() != "running" and status_str == "running":
         # Process has terminated but telemetry still says running -> stale/failed
         status_str = info.poll_status()
@@ -437,16 +516,28 @@ def get_telemetry(run_id: str):
 @router.get("/{run_id}/replay", response_model=ReplayResponse)
 def get_replay(run_id: str):
     """Retrieve full microscopic vehicle replay data for a run."""
+    replay_file = None
     run_dir = resolve_safe_run_dir(run_id)
-    if not run_dir.exists():
+    if run_dir.exists() and (run_dir / "replay.json").exists():
+        replay_file = run_dir / "replay.json"
+    else:
         alt = _find_run_dir(run_id)
-        if alt:
+        if alt and (alt / "replay.json").exists():
+            replay_file = alt / "replay.json"
             run_dir = alt
         else:
-            raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+            # Check demo-data in public directory
+            demo_replay = REPO_ROOT / "frontend" / "public" / "demo-data" / "runs" / run_id / "replay.json"
+            if demo_replay.exists():
+                replay_file = demo_replay
+            else:
+                alt_name = run_id.replace("_medium_", "_") if "_medium_" in run_id else None
+                if alt_name:
+                    demo_alt = REPO_ROOT / "frontend" / "public" / "demo-data" / "runs" / alt_name / "replay.json"
+                    if demo_alt.exists():
+                        replay_file = demo_alt
 
-    replay_file = run_dir / "replay.json"
-    if not replay_file.exists():
+    if not replay_file or not replay_file.exists():
         raise HTTPException(
             status_code=404,
             detail=f"Replay not available for run '{run_id}'. Run may need replay generation.",
@@ -459,7 +550,7 @@ def get_replay(run_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to read replay data: {e}")
 
     if not data.get("network"):
-        if "marathahalli" in run_dir.name or "orr" in data.get("scenario", ""):
+        if "marathahalli" in str(replay_file) or "orr" in data.get("scenario", ""):
             data["network"] = "marathahalli"
         else:
             data["network"] = "synthetic"

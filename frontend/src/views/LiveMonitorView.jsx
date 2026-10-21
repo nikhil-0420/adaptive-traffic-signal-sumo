@@ -43,11 +43,34 @@ export function LiveMonitorView() {
   const [launchError, setLaunchError] = useState(null);
   const [pollError, setPollError] = useState(null);
 
+  const [stopping, setStopping] = useState(false);
+  const [activeBackendRun, setActiveBackendRun] = useState(null);
+
   const isLiveApi = connectionStatus === 'api';
   const pollTimeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
   const consecutiveErrorsRef = useRef(0);
   const isMountedRef = useRef(true);
+
+  // Check for active backend runs to support reconnecting
+  useEffect(() => {
+    if (!isLiveApi) return;
+    let active = true;
+    api.getActiveRuns()
+      .then((res) => {
+        if (!active) return;
+        if (res?.active_runs?.length > 0) {
+          const first = res.active_runs[0];
+          setActiveBackendRun(first);
+        } else {
+          setActiveBackendRun(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isLiveApi, selectedRunId, telemetry?.status]);
 
   // Bounded poll execution with exponential backoff and lifecycle cleanup
   const executePoll = async () => {
@@ -81,7 +104,8 @@ export function LiveMonitorView() {
       // Check if simulation has ended: stop polling if complete or failed
       const isFinished = data?.status === 'completed' || data?.status === 'failed' || data?.status === 'stopped';
       if (isLiveApi && !isFinished && isMountedRef.current) {
-        pollTimeoutRef.current = setTimeout(executePoll, 1500);
+        const intervalMs = data?.status === 'starting' ? 1000 : 1500;
+        pollTimeoutRef.current = setTimeout(executePoll, intervalMs);
       }
     } catch (err) {
       if (!isMountedRef.current || err.name === 'AbortError') return;
@@ -162,9 +186,24 @@ export function LiveMonitorView() {
     executePoll();
   };
 
+  // Handle stopping active simulation
+  const handleStopRun = async (runIdToStop) => {
+    const target = runIdToStop || selectedRunId;
+    if (!target) return;
+    setStopping(true);
+    try {
+      await api.stopRun(target);
+      executePoll();
+    } catch (err) {
+      console.warn('Failed to stop run:', err);
+    } finally {
+      setStopping(false);
+    }
+  };
+
   // Handle launch run
   const handleLaunch = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!isLiveApi) return;
 
     setLaunching(true);
@@ -180,7 +219,18 @@ export function LiveMonitorView() {
         executePoll();
       }
     } catch (err) {
-      setLaunchError(err.message || 'Simulation launch failed.');
+      if (err.isConflict) {
+        setLaunchError({
+          isConflict: true,
+          message: err.message,
+          activeRunId: err.activeRunId,
+        });
+      } else {
+        setLaunchError({
+          isConflict: false,
+          message: err.message || 'Simulation launch failed.',
+        });
+      }
     } finally {
       setLaunching(false);
     }
@@ -263,6 +313,51 @@ export function LiveMonitorView() {
         </div>
       </div>
 
+      {/* Active Live Simulation in Progress Banner */}
+      {isLiveApi && (telemetry?.status === 'running' || telemetry?.status === 'starting') && (
+        <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/40 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-200">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <div>
+              <span className="font-semibold text-emerald-300">
+                Live Simulation Active: <span className="font-mono">{selectedRunId}</span>
+              </span>
+              <span className="text-emerald-400/80 ml-2">
+                (Clock: {Number(telemetry?.sim_time_s || 0).toFixed(1)}s • Phase: {telemetry?.phase || 'GREEN'} {telemetry?.axis || 'NS'})
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => handleStopRun(selectedRunId)}
+            disabled={stopping}
+            className="px-3 py-1 bg-red-900/60 hover:bg-red-800 text-red-100 border border-red-500/40 rounded text-xs font-medium shrink-0 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+          >
+            <span>{stopping ? 'Stopping...' : 'Stop Simulation'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Another Active Backend Run Detected Banner */}
+      {activeBackendRun && activeBackendRun.run_id !== selectedRunId && activeBackendRun.is_alive && (
+        <div className="p-3 bg-blue-950/60 border border-blue-500/40 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-200">
+          <div className="flex items-center gap-2">
+            <Info size={16} className="text-blue-400 shrink-0" />
+            <span>
+              Another simulation is currently running: <strong className="font-mono text-white">{activeBackendRun.run_id}</strong>
+            </span>
+          </div>
+          <button
+            onClick={() => setSelectedRunId(activeBackendRun.run_id)}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium shrink-0 flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <span>Monitor Active Run</span>
+          </button>
+        </div>
+      )}
+
       {/* Snapshot / Offline Notice Banner */}
       {!isLiveApi && (
         <div className="p-3.5 bg-amber-950/30 border border-amber-500/30 rounded-lg flex items-start gap-3 text-xs text-amber-200">
@@ -313,10 +408,24 @@ export function LiveMonitorView() {
                 <AlertTriangle size={11} className="text-amber-400" />
                 <span>STALE</span>
               </span>
+            ) : telemetry?.status === 'starting' ? (
+              <span className="dp1-badge dp1-badge-blue text-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span>STARTING</span>
+              </span>
             ) : telemetry?.status === 'running' ? (
               <span className="dp1-badge dp1-badge-green text-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 dp1-pulse" />
                 <span>RUNNING</span>
+              </span>
+            ) : telemetry?.status === 'stopped' ? (
+              <span className="dp1-badge dp1-badge-yellow text-xs">
+                <span>STOPPED</span>
+              </span>
+            ) : telemetry?.status === 'failed' ? (
+              <span className="dp1-badge dp1-badge-red text-xs">
+                <AlertCircle size={11} className="text-red-400" />
+                <span>FAILED</span>
               </span>
             ) : (
               <span className="dp1-badge dp1-badge-blue text-xs">
@@ -358,7 +467,12 @@ export function LiveMonitorView() {
             runId={selectedRunId}
             network={isMarathahalli ? 'marathahalli' : 'synthetic'}
             liveTelemetry={telemetry}
-            isLiveMode={isLiveApi && telemetry?.status === 'running'}
+            isLiveMode={isLiveApi && (telemetry?.status === 'running' || telemetry?.status === 'starting')}
+            modeLabel={
+              isLiveApi && (telemetry?.status === 'running' || telemetry?.status === 'starting')
+                ? 'REAL-TIME TRACI LIVE TWIN'
+                : 'COMPLETED / RECORDED RUN'
+            }
             availableRuns={allRuns.map((r) => ({
               id: r.run_id,
               label: `${r.network === 'marathahalli' ? '[Marathahalli] ' : ''}${r.scenario} • ${r.policy} (s${r.seed})`,
@@ -939,9 +1053,37 @@ export function LiveMonitorView() {
             ) : (
               <form onSubmit={handleLaunch} className="space-y-4 text-xs">
                 {launchError && (
-                  <div className="p-2.5 bg-red-950/50 border border-red-500/40 rounded text-red-200 flex items-center gap-2">
-                    <AlertCircle size={14} className="shrink-0" />
-                    <span>{launchError}</span>
+                  <div className="p-3 bg-red-950/50 border border-red-500/40 rounded space-y-2 text-red-200">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={14} className="shrink-0 text-red-400" />
+                      <span>{typeof launchError === 'string' ? launchError : launchError.message}</span>
+                    </div>
+                    {launchError?.isConflict && launchError.activeRunId && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-red-500/20">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRunId(launchError.activeRunId);
+                            setIsDrawerOpen(false);
+                            setLaunchError(null);
+                          }}
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-medium"
+                        >
+                          Reconnect to Active Run
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await api.stopRun(launchError.activeRunId);
+                            setLaunchError(null);
+                            handleLaunch();
+                          }}
+                          className="px-2.5 py-1 bg-red-800 hover:bg-red-700 text-white rounded text-[11px] font-medium"
+                        >
+                          Stop Active Run & Launch Fresh
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

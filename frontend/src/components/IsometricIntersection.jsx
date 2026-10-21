@@ -29,6 +29,7 @@ export function IsometricIntersection({
   onRunChange = null,
   availableRuns = [],
   className = '',
+  modeLabel = null,
 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -156,10 +157,11 @@ export function IsometricIntersection({
   }, []);
 
   useEffect(() => {
-    if (!isLiveMode) {
+    const isLiveActive = isLiveMode || liveTelemetry?.status === 'running' || liveTelemetry?.status === 'starting';
+    if (!isLiveActive && runId) {
       loadReplay(runId);
     }
-  }, [runId, isLiveMode, loadReplay]);
+  }, [runId, isLiveMode, liveTelemetry?.status, loadReplay]);
 
   // Current frame determination
   const activeFrame = isLiveMode && liveTelemetry
@@ -1038,9 +1040,9 @@ export function IsometricIntersection({
         {/* Left: Run info & Mode */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+            <span className={`w-2.5 h-2.5 rounded-full ${isLiveMode ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]' : 'bg-blue-400'}`} />
             <span className="font-semibold text-slate-100 tracking-wide uppercase text-[11px]">
-              {isLiveMode ? 'Live TraCI Simulation Twin' : 'Verified TraCI Microscopic Replay'}
+              {modeLabel || (isLiveMode ? 'Live TraCI Simulation Twin' : 'Verified TraCI Microscopic Replay')}
             </span>
           </div>
 

@@ -29,18 +29,19 @@ export function SiteModelView() {
   const { setCurrentView, setSelectedRunId, connectionStatus } = useApp();
   const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('simulation_runner'); // 'simulation_runner' | 'topology' | 'grade_separation' | 'signal_plan' | 'provenance'
+  const [activeTab, setActiveTab] = useState('topology'); // 'topology' | 'grade_separation' | 'signal_plan' | 'provenance' | 'simulation_runner'
   const [selectedMovement, setSelectedMovement] = useState('all');
   const [zoomedImage, setZoomedImage] = useState(null);
   const [selectedTopologyRun, setSelectedTopologyRun] = useState('marathahalli_imbalanced_orr_adaptive_s121');
 
   // Simulation Runner State
-  const [simPolicy, setSimPolicy] = useState('adaptive');
+  const [simPolicy, setSimPolicy] = useState('hybrid_queue_adaptive');
   const [simScenario, setSimScenario] = useState('imbalanced_orr');
   const [simDemand, setSimDemand] = useState('medium');
   const [simSeed, setSimSeed] = useState(121);
   const [simLaunching, setSimLaunching] = useState(false);
   const [simError, setSimError] = useState(null);
+  const [simConflictRunId, setSimConflictRunId] = useState(null);
   const [copiedCmd, setCopiedCmd] = useState(null);
 
   const copyToClipboard = (text, id) => {
@@ -52,6 +53,7 @@ export function SiteModelView() {
   const handleLaunchSimulation = async () => {
     setSimLaunching(true);
     setSimError(null);
+    setSimConflictRunId(null);
     try {
       const res = await api.launchRun({
         network: 'marathahalli',
@@ -65,7 +67,15 @@ export function SiteModelView() {
         setCurrentView('live-monitor');
       }
     } catch (err) {
-      setSimError(err.message || 'Failed to launch simulation on Marathahalli.');
+      const msg = err.message || 'Failed to launch simulation on Marathahalli.';
+      setSimError(msg);
+      if (err.isConflict || msg.includes('already actively running') || msg.includes('already running')) {
+        const netTag = 'marathahalli_';
+        const targetId = simDemand === 'medium'
+          ? `${netTag}${simScenario}_${simPolicy}_s${simSeed}`
+          : `${netTag}${simScenario}_${simDemand}_${simPolicy}_s${simSeed}`;
+        setSimConflictRunId(targetId);
+      }
     } finally {
       setSimLaunching(false);
     }
@@ -200,19 +210,19 @@ export function SiteModelView() {
       {/* Tab: Run Simulation & Optimization */}
       {activeTab === 'simulation_runner' && (
         <div className="space-y-6">
-          {/* Card 1: In-View Simulation Twin on Marathahalli Topology */}
+          {/* Card 1: In-View Simulation Twin on Marathahalli Topology (Explicitly Labelled Preview) */}
           <div className="bg-[#0f172a]/90 border border-white/10 rounded-2xl p-5 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Play size={18} className="text-emerald-400" />
-                  <span>Marathahalli Simulation Twin & Policy Preview</span>
+                  <Play size={18} className="text-blue-400" />
+                  <span>Marathahalli Topology & Vehicle Dynamics Preview</span>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
-                    Microscopic TraCI
+                    Recorded Sample Preview
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Observe how real signal controllers clear queues at <code className="text-amber-300">marathahalli_tls</code> while through traffic traverses the flyover and underpass.
+                  Pre-recorded reference demonstration of vehicles navigating <code className="text-amber-300">marathahalli_tls</code> across sample controllers. This is a reference preview, not an active simulation.
                 </p>
               </div>
 
@@ -228,7 +238,7 @@ export function SiteModelView() {
                     onClick={() => setSelectedTopologyRun(run.id)}
                     className={`px-2.5 py-1 rounded text-xs font-mono transition-colors ${
                       selectedTopologyRun === run.id
-                        ? 'bg-emerald-600 text-white font-bold'
+                        ? 'bg-blue-600 text-white font-bold'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -241,6 +251,7 @@ export function SiteModelView() {
             <IsometricIntersection
               runId={selectedTopologyRun}
               network="marathahalli"
+              modeLabel="Recorded Sample Preview (Historical Replay)"
               availableRuns={[
                 { id: 'marathahalli_imbalanced_orr_adaptive_s121', label: 'Adaptive Queue • Imbalanced ORR (s121)' },
                 { id: 'marathahalli_imbalanced_orr_fixed_webster_s121', label: 'Webster Delay-Optimal (s121)' },
@@ -264,7 +275,7 @@ export function SiteModelView() {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Launch a live microscopic simulation on the Marathahalli road construction with real signal optimization algorithms.
+                  Launch a live microscopic simulation on the Marathahalli road construction. When launched, you will transition to Live Twin Monitor to observe live step-by-step telemetry.
                 </p>
               </div>
 
@@ -281,9 +292,38 @@ export function SiteModelView() {
             </div>
 
             {simError && (
-              <div className="p-3 bg-red-950/50 border border-red-500/40 rounded-xl text-red-200 text-xs flex items-center gap-2 mb-4">
-                <AlertCircle size={15} className="shrink-0 text-red-400" />
-                <span>{simError}</span>
+              <div className="p-3.5 bg-amber-950/60 border border-amber-500/40 rounded-xl text-amber-200 text-xs space-y-2 mb-4 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={15} className="shrink-0 text-amber-400" />
+                  <span className="font-medium">{simError}</span>
+                </div>
+                {simConflictRunId && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-500/20">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedRunId(simConflictRunId);
+                        setCurrentView('live-monitor');
+                      }}
+                      className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors flex items-center gap-1.5 shadow"
+                    >
+                      <Activity size={13} />
+                      <span>Reconnect to Live Simulation</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await api.stopRun(simConflictRunId);
+                        setSimConflictRunId(null);
+                        setSimError(null);
+                        handleLaunchSimulation();
+                      }}
+                      className="px-3 py-1 rounded bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/40 font-medium text-xs transition-colors"
+                    >
+                      <span>Stop Simulation & Launch Fresh</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -299,6 +339,7 @@ export function SiteModelView() {
                   onChange={(e) => setSimPolicy(e.target.value)}
                   className="dp1-select w-full text-xs font-medium text-white"
                 >
+                  <option value="hybrid_queue_adaptive">Hybrid Queue-Adaptive (Mentor Enhanced)</option>
                   <option value="adaptive">Adaptive Queue-Length</option>
                   <option value="fixed_webster">Webster Delay-Optimal Fixed-Time</option>
                   <option value="queue_extension">Bounded Queue-Extension</option>
@@ -307,6 +348,7 @@ export function SiteModelView() {
                   <option value="fixed">BTP Fixed-Time Baseline</option>
                 </select>
                 <p className="text-[11px] text-slate-400">
+                  {simPolicy === 'hybrid_queue_adaptive' && 'Combines bounded queue-length extension with minimum-green guarantees and all-red clearance enforcement.'}
                   {simPolicy === 'adaptive' && 'Sizes green dynamically based on stop-line E2 queue lengths (min 10s, max 60s).'}
                   {simPolicy === 'fixed_webster' && 'Applies Webster formula C_opt = (1.5L + 5)/(1 - Y) using 35% surface flow split.'}
                   {simPolicy === 'queue_extension' && 'Dynamically extends green while approach queues persist until gap-out or cap.'}

@@ -1,4 +1,5 @@
 """Process manager for launching and tracking SUMO simulation subprocesses safely."""
+import json
 import os
 import subprocess
 import sys
@@ -57,7 +58,71 @@ class ProcessManager:
             info = self._processes.get(item_id)
             if not info:
                 return False
-            return info.poll_status() == "running"
+            status = info.poll_status()
+            if status != "running":
+                return False
+
+            # Check for stale telemetry if process has been active > 10s
+            run_dir = RUNS_DIR / item_id
+            telem_file = run_dir / "telemetry.json"
+            if telem_file.exists():
+                try:
+                    with open(telem_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    updated_at = float(data.get("updated_at", 0))
+                    if (time.time() - info.started_at > 10.0) and (time.time() - updated_at > 15.0):
+                        # Process stalled: terminate safely and release lock
+                        try:
+                            info.proc.terminate()
+                            info.proc.wait(timeout=2.0)
+                        except Exception:
+                            try:
+                                info.proc.kill()
+                            except Exception:
+                                pass
+                        info.finished_at = time.time()
+                        info.exit_code = -1
+                        data["status"] = "failed"
+                        data["error"] = "Simulation process stalled; telemetry ceased advancing."
+                        with open(telem_file, "w", encoding="utf-8") as f:
+                            json.dump(data, f)
+                        return False
+                except Exception:
+                    pass
+            return True
+
+    def clean_stale_processes(self, stale_threshold_s: float = 15.0) -> int:
+        """Scan active runs and recover any stalled or dead child processes."""
+        cleaned = 0
+        with self._lock:
+            for item_id, info in list(self._processes.items()):
+                if info.poll_status() == "running":
+                    run_dir = RUNS_DIR / item_id
+                    telem_file = run_dir / "telemetry.json"
+                    if telem_file.exists():
+                        try:
+                            with open(telem_file, "r", encoding="utf-8") as f:
+                                data = json.load(f)
+                            updated_at = float(data.get("updated_at", 0))
+                            if (time.time() - info.started_at > 10.0) and (time.time() - updated_at > stale_threshold_s):
+                                try:
+                                    info.proc.terminate()
+                                    info.proc.wait(timeout=2.0)
+                                except Exception:
+                                    try:
+                                        info.proc.kill()
+                                    except Exception:
+                                        pass
+                                info.finished_at = time.time()
+                                info.exit_code = -1
+                                data["status"] = "failed"
+                                data["error"] = "Simulation process stalled; telemetry ceased advancing."
+                                with open(telem_file, "w", encoding="utf-8") as f:
+                                    json.dump(data, f)
+                                cleaned += 1
+                        except Exception:
+                            pass
+        return cleaned
 
     def count_active(self, item_type: Optional[str] = None) -> int:
         with self._lock:
