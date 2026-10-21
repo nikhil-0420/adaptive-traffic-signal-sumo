@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 export function LiveMonitorView() {
-  const { allRuns, selectedRunId, setSelectedRunId, connectionStatus, connectionInfo } = useApp();
+  const { allRuns, selectedRunId, setSelectedRunId, connectionStatus, connectionInfo, refreshConnection } = useApp();
 
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,14 +44,32 @@ export function LiveMonitorView() {
   const [pollError, setPollError] = useState(null);
 
   const isLiveApi = connectionStatus === 'api';
-  const pollTimerRef = useRef(null);
+  const pollTimeoutRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const consecutiveErrorsRef = useRef(0);
+  const isMountedRef = useRef(true);
 
-  // Fetch telemetry
-  const fetchTelemetry = async () => {
+  // Bounded poll execution with exponential backoff and lifecycle cleanup
+  const executePoll = async () => {
+    if (!isMountedRef.current) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
+      const data = await api.getTelemetry(selectedRunId, controller.signal);
+      if (!isMountedRef.current) return;
+
+      // Successful poll -> reset error counters
+      if (consecutiveErrorsRef.current > 0) {
+        consecutiveErrorsRef.current = 0;
+      }
       setPollError(null);
-      const data = await api.getTelemetry(selectedRunId);
       setTelemetry(data);
+
       if (data?.adaptive_decision && data.adaptive_decision.t !== undefined) {
         setDecisionsHistory((prev) => {
           const latest = data.adaptive_decision;
@@ -59,44 +77,90 @@ export function LiveMonitorView() {
           return [latest, ...prev].slice(0, 30);
         });
       }
+
+      // Check if simulation has ended: stop polling if complete or failed
+      const isFinished = data?.status === 'completed' || data?.status === 'failed' || data?.status === 'stopped';
+      if (isLiveApi && !isFinished && isMountedRef.current) {
+        pollTimeoutRef.current = setTimeout(executePoll, 1500);
+      }
     } catch (err) {
-      console.warn('Telemetry poll error:', err.message);
-      setPollError(err.message);
+      if (!isMountedRef.current || err.name === 'AbortError') return;
+
+      consecutiveErrorsRef.current += 1;
+      const errCount = consecutiveErrorsRef.current;
+
+      // Log once on first failure for diagnostics without console spam
+      if (errCount === 1) {
+        console.warn(`[LiveMonitor] Telemetry poll failed for ${selectedRunId}:`, err.message);
+      }
+
+      if (errCount <= 5 && isLiveApi && isMountedRef.current) {
+        // Bounded exponential backoff: 2s, 4s, 8s, 16s
+        const backoffMs = Math.min(2000 * Math.pow(2, errCount - 1), 16000);
+        setPollError(`Connection error: ${err.message}. Retrying in ${Math.round(backoffMs / 1000)}s (attempt ${errCount}/5)...`);
+        pollTimeoutRef.current = setTimeout(executePoll, backoffMs);
+      } else {
+        if (errCount === 6) {
+          console.warn(`[LiveMonitor] Telemetry polling suspended after repeated connection failures.`);
+        }
+        setPollError('Connection to simulation backend lost. Polling suspended. Ensure backend is running (`python -m backend`).');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
-  // Fetch decision history on run change
+  // Fetch decision history on run change with abort signal
   useEffect(() => {
-    let active = true;
-    api.getDecisions(selectedRunId)
+    const controller = new AbortController();
+    api.getDecisions(selectedRunId, controller.signal)
       .then((res) => {
-        if (active && res?.decisions?.length > 0) {
+        if (res?.decisions?.length > 0) {
           setDecisionsHistory([...res.decisions].reverse().slice(0, 30));
-        } else if (active) {
+        } else {
           setDecisionsHistory([]);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          // Keep decisionsHistory intact on error
+        }
+      });
+
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [selectedRunId]);
 
-  // Setup polling
+  // Setup single polling loop per active run
   useEffect(() => {
+    isMountedRef.current = true;
+    consecutiveErrorsRef.current = 0;
+    setPollError(null);
     setLoading(true);
-    fetchTelemetry();
 
-    if (isLiveApi) {
-      pollTimerRef.current = setInterval(fetchTelemetry, 1500);
-    }
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+
+    executePoll();
 
     return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      isMountedRef.current = false;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, [selectedRunId, isLiveApi]);
+
+  const handleManualRetry = () => {
+    consecutiveErrorsRef.current = 0;
+    setPollError(null);
+    setLoading(true);
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    if (refreshConnection) refreshConnection();
+    executePoll();
+  };
 
   // Handle launch run
   const handleLaunch = async (e) => {
@@ -111,7 +175,9 @@ export function LiveMonitorView() {
       if (res && res.run_id) {
         setSelectedRunId(res.run_id);
         setIsDrawerOpen(false);
-        fetchTelemetry();
+        consecutiveErrorsRef.current = 0;
+        setPollError(null);
+        executePoll();
       }
     } catch (err) {
       setLaunchError(err.message || 'Simulation launch failed.');
@@ -207,6 +273,23 @@ export function LiveMonitorView() {
               Displaying final recorded junction states from verified repository artifacts. Live interactive execution, real-time stepping, and process controls require a connected Python backend running Eclipse SUMO.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* API Connection Error / Disconnected Banner */}
+      {pollError && (
+        <div className="p-3 bg-amber-950/60 border border-amber-500/40 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+            <span>{pollError}</span>
+          </div>
+          <button
+            onClick={handleManualRetry}
+            className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded text-xs font-medium shrink-0 flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <RotateCcw size={12} />
+            <span>Retry Connection</span>
+          </button>
         </div>
       )}
 

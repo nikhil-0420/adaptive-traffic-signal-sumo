@@ -20,6 +20,15 @@ class ApiClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // If caller provided an external abort signal, link it to the local controller
+    if (options.signal) {
+      if (options.signal.aborted) {
+        clearTimeout(timeoutId);
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -30,6 +39,9 @@ class ApiClient {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
+        if (options.signal?.aborted) {
+          throw err;
+        }
         throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`);
       }
       throw err;
@@ -139,18 +151,22 @@ class ApiClient {
     return { run_id: runId, total_points: 0, points: [] };
   }
 
-  async getDecisions(runId) {
+  async getDecisions(runId, signal = null) {
     if (this.mode === 'api') {
       try {
         const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/decisions` : `/api/runs/${runId}/decisions`;
-        const res = await this._fetchWithTimeout(url);
+        const res = await this._fetchWithTimeout(url, { signal });
         if (res.ok) return await res.json();
-      } catch (e) {}
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
     }
     try {
-      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`);
+      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`, { signal });
       if (res.ok) return await res.json();
-    } catch (e) {}
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
     return { run_id: runId, total_decisions: 0, decisions: [] };
   }
 
@@ -186,10 +202,10 @@ class ApiClient {
     return null;
   }
 
-  async getTelemetry(runId) {
+  async getTelemetry(runId, signal = null) {
     if (this.mode === 'api') {
       const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/telemetry` : `/api/runs/${runId}/telemetry`;
-      const res = await this._fetchWithTimeout(url, {}, 3000);
+      const res = await this._fetchWithTimeout(url, { signal }, 3000);
       if (res.ok) return await res.json();
       throw new Error(`Telemetry error: ${res.statusText}`);
     }
@@ -255,16 +271,25 @@ class ApiClient {
       );
     }
     const url = this.baseUrl ? `${this.baseUrl}/api/runs` : '/api/runs';
-    const res = await this._fetchWithTimeout(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Launch failed: ${res.statusText}`);
+    try {
+      const res = await this._fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Launch failed: ${res.statusText}`);
+      }
+      return await res.json();
+    } catch (err) {
+      if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('connect ECONNREFUSED'))) {
+        throw new Error(
+          'Cannot connect to DP1 simulation API at http://127.0.0.1:8000. Verify the backend server is running (`python -m backend`).'
+        );
+      }
+      throw err;
     }
-    return await res.json();
   }
 
   async getExperiments() {
