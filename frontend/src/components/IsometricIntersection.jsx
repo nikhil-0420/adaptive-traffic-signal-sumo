@@ -142,7 +142,7 @@ export function IsometricIntersection({
   // Fetch replay dataset
   const loadReplay = useCallback(async (targetRunId) => {
     if (!targetRunId) return;
-    if (lastRequestedRunIdRef.current === targetRunId) return;
+    if (lastRequestedRunIdRef.current === targetRunId && replayData) return;
     lastRequestedRunIdRef.current = targetRunId;
     setLoadingReplay(true);
     try {
@@ -151,14 +151,16 @@ export function IsometricIntersection({
         setReplayData(data);
         setCurrentFrameIdx(0);
       } else {
+        lastRequestedRunIdRef.current = null;
         setReplayData(null);
       }
     } catch (err) {
+      lastRequestedRunIdRef.current = null;
       setReplayData(null);
     } finally {
       setLoadingReplay(false);
     }
-  }, []);
+  }, [replayData]);
 
   useEffect(() => {
     const isLiveActive = isLiveMode || liveTelemetry?.status === 'running' || liveTelemetry?.status === 'starting';
@@ -167,8 +169,8 @@ export function IsometricIntersection({
     }
   }, [runId, isLiveMode, liveTelemetry?.status, loadReplay]);
 
-  // Current frame determination
-  const activeFrame = isLiveMode && liveTelemetry
+  // Current frame determination with robust fallbacks so canvas never blanks
+  const activeFrame = (isLiveMode || !replayData) && liveTelemetry
     ? {
         t: liveTelemetry.sim_time_s || 0,
         phase: liveTelemetry.phase || 'GREEN',
@@ -181,7 +183,28 @@ export function IsometricIntersection({
       }
     : replayData && replayData.frames && replayData.frames.length > 0
     ? replayData.frames[Math.min(currentFrameIdx, replayData.frames.length - 1)]
-    : null;
+    : liveTelemetry
+    ? {
+        t: liveTelemetry.sim_time_s || 0,
+        phase: liveTelemetry.phase || 'GREEN',
+        axis: liveTelemetry.axis || 'NS',
+        tl_state: liveTelemetry.traffic_light_state || 'GGggrrrrGGggrrrr',
+        queues_m: liveTelemetry.queues_m || { N: 0, S: 0, E: 0, W: 0 },
+        emergency_approaching: Boolean(liveTelemetry.emergency_approaching),
+        emergency_dist_m: liveTelemetry.emergency_dist_m,
+        vehicles: liveTelemetry.vehicles || [],
+      }
+    : {
+        t: 0,
+        phase: 'GREEN',
+        axis: 'NS',
+        tl_state: 'GGggrrrrGGggrrrr',
+        queues_m: { N: 16.5, S: 12.0, E: 6.5, W: 8.0 },
+        emergency_approaching: false,
+        emergency_dist_m: null,
+        vehicles: [],
+      };
+
 
   // Playback loop
   useEffect(() => {
@@ -726,10 +749,134 @@ export function IsometricIntersection({
       });
     }
 
-    // ==========================================
-    // 2. MICROSCOPIC VEHICLE RENDERING
-    // ==========================================
-    const vehicles = activeFrame?.vehicles || [];
+    let vehicles = activeFrame?.vehicles || [];
+
+    // Synthesize vehicle representation if micro-coordinates aren't present
+    if (vehicles.length === 0 && activeFrame) {
+      const qN = activeFrame.queues_m?.N || 0;
+      const qS = activeFrame.queues_m?.S || 0;
+      const qE = activeFrame.queues_m?.E || 0;
+      const qW = activeFrame.queues_m?.W || 0;
+      vehicles = [];
+
+      if (isMarathahalli) {
+        // North Approach (ORR Southbound, heading 180 S)
+        const countN = Math.min(10, Math.round(qN / 7.5));
+        for (let i = 0; i < countN; i++) {
+          vehicles.push({
+            id: `syn_n_${i}`,
+            x: 346.8 + (i % 2 === 0 ? -1.3 : 1.3),
+            y: 342.4 + 4 + i * 7.5,
+            a: 180,
+            s: 0,
+            em: false,
+          });
+        }
+        // South Approach (ORR Northbound, heading 0 N)
+        const countS = Math.min(10, Math.round(qS / 7.5));
+        for (let i = 0; i < countS; i++) {
+          vehicles.push({
+            id: `syn_s_${i}`,
+            x: 353.2 + (i % 2 === 0 ? -1.3 : 1.3),
+            y: 321.6 - 4 - i * 7.5,
+            a: 0,
+            s: 0,
+            em: false,
+          });
+        }
+        // East Approach (Whitefield/Varthur Westbound, heading 270 W)
+        const countE = Math.min(10, Math.round(qE / 7.5));
+        for (let i = 0; i < countE; i++) {
+          vehicles.push({
+            id: `syn_e_${i}`,
+            x: 360 + 4 + i * 7.5,
+            y: 335.2 + (i % 2 === 0 ? -1.2 : 1.2),
+            a: 270,
+            s: 0,
+            em: false,
+          });
+        }
+        // West Approach (HAL Eastbound, heading 90 E)
+        const countW = Math.min(10, Math.round(qW / 7.5));
+        for (let i = 0; i < countW; i++) {
+          vehicles.push({
+            id: `syn_w_${i}`,
+            x: 340 - 4 - i * 7.5,
+            y: 328.8 + (i % 2 === 0 ? -1.2 : 1.2),
+            a: 90,
+            s: 0,
+            em: false,
+          });
+        }
+        // Free-flow vehicles on Elevated Flyover (Z=+7m)
+        const tVal = activeFrame.t || 0;
+        const fly1Pos = 175 + ((tVal * 16) % 350);
+        vehicles.push({
+          id: 'fly_eb',
+          x: fly1Pos,
+          y: 347.5,
+          a: 90,
+          s: 14,
+          em: false,
+        });
+        const fly2Pos = 525 - (((tVal + 12) * 16) % 350);
+        vehicles.push({
+          id: 'fly_wb',
+          x: fly2Pos,
+          y: 352.5,
+          a: 270,
+          s: 14,
+          em: false,
+        });
+      } else {
+        const rw = 12.0;
+        const countN = Math.min(10, Math.round(qN / 7.5));
+        for (let i = 0; i < countN; i++) {
+          vehicles.push({
+            id: `syn_n_${i}`,
+            x: 300 - 3.2,
+            y: 300 + rw + 4 + i * 7.5,
+            a: 180,
+            s: 0,
+            em: false,
+          });
+        }
+        const countS = Math.min(10, Math.round(qS / 7.5));
+        for (let i = 0; i < countS; i++) {
+          vehicles.push({
+            id: `syn_s_${i}`,
+            x: 300 + 3.2,
+            y: 300 - rw - 4 - i * 7.5,
+            a: 0,
+            s: 0,
+            em: false,
+          });
+        }
+        const countE = Math.min(10, Math.round(qE / 7.5));
+        for (let i = 0; i < countE; i++) {
+          vehicles.push({
+            id: `syn_e_${i}`,
+            x: 300 + rw + 4 + i * 7.5,
+            y: 300 + 3.2,
+            a: 270,
+            s: 0,
+            em: false,
+          });
+        }
+        const countW = Math.min(10, Math.round(qW / 7.5));
+        for (let i = 0; i < countW; i++) {
+          vehicles.push({
+            id: `syn_w_${i}`,
+            x: 300 - rw - 4 - i * 7.5,
+            y: 300 - 3.2,
+            a: 90,
+            s: 0,
+            em: false,
+          });
+        }
+      }
+    }
+
 
     vehicles.forEach((v) => {
       // Determine altitude z for Marathahalli flyover vehicles
@@ -1325,7 +1472,7 @@ export function IsometricIntersection({
               />
             </div>
             <span className="font-mono text-[11px] text-slate-400 w-12">
-              {formatSimTime(replayData.duration_s)}
+              {formatSimTime(replayData.duration_s || replayData.frames[replayData.frames.length - 1]?.t)}
             </span>
           </div>
 

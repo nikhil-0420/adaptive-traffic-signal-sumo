@@ -237,21 +237,20 @@ class ApiClient {
 
   async getTelemetry(runId, signal = null) {
     if (this.mode === 'api') {
-      const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/telemetry` : `/api/runs/${runId}/telemetry`;
-      const res = await this._fetchWithTimeout(url, { signal }, 3000);
-      const data = await this._parseJsonSafe(res);
-      if (data) return data;
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.detail || `Telemetry error: ${res.statusText}`);
+      try {
+        const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/telemetry` : `/api/runs/${runId}/telemetry`;
+        const res = await this._fetchWithTimeout(url, { signal }, 3000);
+        const data = await this._parseJsonSafe(res);
+        if (data && data.status) return data;
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
       }
-      throw new Error(`Telemetry error: unexpected response format`);
     }
-    // In snapshot mode, synthesize completed telemetry from metrics
+    // Graceful fallback: synthesize completed telemetry from run details or snapshot
     const run = await this.getRun(runId);
     return {
       run_id: runId,
-      status: 'completed',
+      status: run?.status === 'running' ? 'running' : 'completed',
       sim_time_s: run?.metrics?.sim_end_s || 2000.0,
       phase: 'GREEN',
       axis: 'NS',

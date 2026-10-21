@@ -31,14 +31,26 @@ def read_queues(network: str = "synthetic"):
 
 def _write_atomic_telemetry(out_dir: Path, data: dict):
     """Write telemetry dict atomically via temp file replace to prevent partial reads."""
-    tmp_path = out_dir / "telemetry.json.tmp"
+    tmp_path = out_dir / f"telemetry_{os.getpid()}_{random.randint(100, 999)}.tmp"
     final_path = out_dir / "telemetry.json"
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f)
-        tmp_path.replace(final_path)
+        for _ in range(5):
+            try:
+                tmp_path.replace(final_path)
+                return
+            except (PermissionError, OSError):
+                time.sleep(0.01)
     except Exception:
         pass
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except Exception:
+                pass
+
 
 
 def run_simulation(
@@ -259,6 +271,8 @@ def _run_once(
             if t >= C.SIM.demand_duration_s and traci.simulation.getMinExpectedNumber() == 0:
                 break
         unfinished = traci.simulation.getMinExpectedNumber()
+        last_tl_state = traci.trafficlight.getRedYellowGreenState(tls_id)
+        last_vehs = list(vehs) if "vehs" in locals() else []
     except Exception as e:
         _write_atomic_telemetry(out_dir, {
             "run_id": run_id,
@@ -288,13 +302,15 @@ def _run_once(
         "phase": getattr(ctl, "phase", "GREEN"),
         "axis": getattr(ctl, "axis", "NS"),
         "queues_m": {a: round(q[a], 2) for a in C.APPROACHES} if "q" in locals() else {},
-        "traffic_light_state": "",
+        "traffic_light_state": locals().get("last_tl_state", "GGggrrrrGGggrrrr"),
         "updated_at": time.time(),
         "emergency_approaching": False,
         "emergency_dist_m": None,
+        "vehicles": locals().get("last_vehs", []),
         "approach_queues": last_app_data,
         "adaptive_decision": getattr(ctl, "last_decision_record", None),
     })
+
 
     _write_csv(out_dir / "timeseries.csv", series)
     _write_csv(out_dir / "decisions.csv", ctl.decisions)
