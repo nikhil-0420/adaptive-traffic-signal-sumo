@@ -7,6 +7,7 @@ import { RunExplorerView } from './views/RunExplorerView';
 import { ResearchView } from './views/ResearchView';
 import { LiveMonitorView } from './views/LiveMonitorView';
 import { LandingPageView } from './views/LandingPageView';
+import { SiteModelView } from './views/SiteModelView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Database, ShieldCheck, AlertCircle, Info, ExternalLink } from 'lucide-react';
 
@@ -19,6 +20,8 @@ export function App() {
         return <LandingPageView />;
       case 'overview':
         return <OverviewView />;
+      case 'site-model':
+        return <SiteModelView />;
       case 'controller-lab':
         return <ControllerLabView />;
       case 'run-explorer':

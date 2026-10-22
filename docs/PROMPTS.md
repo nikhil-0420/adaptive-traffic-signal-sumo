@@ -3,7 +3,7 @@
 ## How to use this file
 
 - Open the **original DP1 repo root** in Antigravity.
-- Paste only one prompt at a time, in order: P0 → P1 → P2 → P3 → P4 → P5A → P5B → P5C → P6.
+- Paste only one prompt at a time, in this order: P0 → P1 → P2 → P3 → P4 → P5A → P5B → P5C → P6. Only after P6 passes, execute P7A → STOP for your review/approval → P7B.
 - Each prompt is a bounded implementation task. Do not ask the agent to “do everything” in one pass.
 - The agent must inspect the current code before editing, preserve working features, run the requested verification, and stop at the end of the phase with a concise report.
 - Do not accept “implemented” without showing changed file paths, commands actually run, test results, and real generated outputs.
@@ -41,17 +41,18 @@ VERIFICATION REQUIRED:
 - Stop after P0. Do not begin P1/P2 automatically.
 ```
 
-**Gate before P1:** verify the saved baseline and actual environment output, and ensure any failure is understood.
+**Gate before P1:** verify the saved baseline and actual environment output, and ensure any failure is understood. Do not build the Marathahalli network at this point.
 
 ---
 
 ## P1 — Create a safe controller action seam and extend regression tests
 
 ```text
-Continue in the existing DP1 repository. First read the latest docs/UPGRADE_BASELINE.md and re-check AGENTS.md plus docs/BUILD_PLAN.md. Implement ONLY the controller interface and regression-test preparation needed for future RL/emergency policies. Do not build a Gymnasium environment, train an RL model, add emergency vehicles, or build a dashboard yet.
+Continue in the existing DP1 repository. First read the latest docs/UPGRADE_BASELINE.md and re-check AGENTS.md plus docs/BUILD_PLAN.md. Implement ONLY the controller interface and regression-test preparation needed for future RL/emergency policies, on the existing synthetic network only. Do not require or read a site-network audit during this phase. Do not build a Gymnasium environment, train an RL model, add emergency vehicles, or build a dashboard yet.
 
 DESIGN:
-- `dp1/controllers/base.py` remains the single owner of phase transitions.
+- `dp1/controllers/base.py` (or a focused phase-plan abstraction supported by it) remains the single owner of phase transitions.
+- Preserve the existing synthetic two-axis phase behavior exactly. Do not implement site-specific phase stages or add a network selector in this phase; that extension is deferred to P7B.
 - Add a clean, testable “controller requests switch / continue” seam for GREEN decisions. Legacy policies must behave the same with all new options disabled.
 - Enforce min-green/max-green rules at the state-machine/controller boundary, not only inside the future RL agent. Switching always passes through the existing configured yellow and all-red intervals.
 - Where helpful, distinguish planned/target green time from actual elapsed green duration in decisions output. Do not silently change the meaning of existing `green_s` fields used by tests/reports. Add a new field rather than reinterpret old columns.
@@ -93,7 +94,7 @@ IMPLEMENTATION:
 1. Add `RLConfig` in dp1/config.py. It should include action/green bounds, reward weights, training hyperparameters, logging/output paths, and RL-only train/evaluation seed definitions. All tunable numbers live in config.py.
 2. Add a Gymnasium environment in `dp1/rl/env.py` (or a well-structured equivalent). Each environment step represents one SUMO simulation second and takes a Discrete(2) action: `0=HOLD`, `1=REQUEST_SWITCH`. Use TraCI observations available at the current step. The environment must cleanly close/reset SUMO, support deterministic seeds, and terminate using the existing demand/drain-cap rules.
 3. Use a documented fixed observation vector: four normalized approach queues, axis one-hot, phase one-hot, elapsed-green fraction, and simulation-time fraction (or an equally well-documented shape). Set observation_space/action_space to match exactly; no future-information leakage.
-4. Use a transparent, normalized per-second reward based primarily on total queue across all four approaches. If you include waiting time, configure its weight in RLConfig and log reward components. Avoid reward logic based on only one direction that could starve the competing direction.
+4. Use a transparent normalized per-second reward based primarily on total queue for the four approaches of the existing synthetic network. Only during deferred P7B may the observation be generalized to site approach IDs from the owner-approved network inventory. If you include waiting time, configure its weight and log reward components. Avoid reward logic that can starve a competing legal phase group.
 5. Reuse the existing phase-machine transition code; do not implement a second incompatible GREEN/YELLOW/ALL_RED state machine. Agent action can request a switch but never writes an arbitrary green state.
 6. Add an RL inference controller that loads a trained DQN checkpoint, validates the saved observation/action schema metadata, predicts deterministically for normal evaluation, and enforces min/max green. Make its missing-package/missing-model error actionable.
 7. Register a new policy key such as `rl_dqn`, add CLI model-path support for `run`, and extend `compare` policy choices without removing or changing existing choices.
@@ -123,13 +124,13 @@ NON-NEGOTIABLE RESEARCH CONTRACT:
 - Preserve all existing commands, controller names, default/medium demand rates and legacy CSV semantics.
 - Scenario patterns stay `balanced`, `imbalanced_ns`, `imbalanced_ew`, `surge_north`. Add `demand_level=low|medium|heavy` with config-driven multipliers 0.70, 1.00, 1.30. Medium is exactly the current profile. Make `fixed_webster` calculate from the selected scaled profile.
 - Keep current `TRAIN_SEEDS=(1..5)` and `HELD_OUT_SEEDS=(11..15)` compatibility. Add `RL_VALIDATION_SEEDS=(6..10)` and `RESEARCH_EVAL_SEEDS=(21..30)`. Freeze DQN and tunable controller parameters before seed 21. Final test seed results never select/tune the model.
-- Main matrix is 4 patterns × 3 levels × 5 policies (`fixed`, `fixed_webster`, `adaptive`, `pressure`, `rl_dqn`) × 10 research seeds = 600 runs. Must support a tiny `smoke` preset, a dry-run matrix preview, bounded execution, chunking and safe resume.
+- Phase A matrix is the existing synthetic network's 4 demand patterns × 3 levels × 5 policies (`fixed`, `fixed_webster`, `adaptive`, `pressure`, `rl_dqn`) × 10 research seeds (21–30) = target 600 runs. Every Phase A manifest must say `network_name=synthetic`; never combine its results with a different geometry. In deferred Phase B, if a policy is incompatible with the approved site phase plan, mark that site's cell blocked and the site study partial. Must support a tiny `smoke` preset, a dry-run preview, bounded execution, chunking and safe resume.
 
 TASKS:
 1. Add DQN training command with explicit timesteps, seed/config, model output, metadata, reward logs and optional TensorBoard. Save model ID/checksum, observation/action schema, hyperparameters, training/validation seed use, Python/package versions and command. Model path must be explicit.
 2. Add demand level to route generation/run orchestration without changing current callers/defaults. Ensure a given `(pattern, level, seed)` produces byte-identical ordinary traffic routes/manifests across every policy. Record route content hash and vehicle ID -> origin approach mapping; don't guess origins from incomplete tripinfo.
 3. Add or extend an `evaluate-research` CLI command/orchestrator (name can follow project convention) that creates unique `results/research/<experiment_id>/` output, can print the matrix without running (`--dry-run`), can run a tiny subset (`--preset smoke`), can limit/chunk work, and can resume only when completed outputs and their config/hashes validate. Store every requested cell as pending/running/complete/failed/blocked/skipped; never silently drop a failure or missing model.
-4. Calculate all metrics in docs/RESEARCH_EVALUATION_SPEC.md while preserving legacy columns/definitions. Add per-origin sample count/wait/p95, per-approach queue summaries, NS/EW origin wait means, directional wait disparity, and approach max-min wait gap. Return null for empty groups, not zero. Add `completed_in_demand_window` while retaining existing throughput semantics.
+4. Calculate all metrics in docs/RESEARCH_EVALUATION_SPEC.md while preserving legacy columns/definitions. Add per-origin/entry-approach sample count, wait and p95; per-approach queue summaries; disparity between meaningful groups from the approved phase plan; and the max-min approach wait gap. For Phase A, keep NS/EW summaries for the synthetic network. Only during deferred Phase B, report site phase-group summaries where meaningful. Return null for empty groups, not zero. Add `completed_in_demand_window` while retaining existing throughput semantics.
 5. Compute aggregate mean and sample SD over seeds for each pattern × demand level × policy. For each policy, compare against `fixed` using paired same-condition/same-seed deltas. Produce a deterministic 95% paired-bootstrap percentile CI (default 10,000 resamples with logged RNG seed) for `avg_wait_s` and `avg_time_loss_s`. Save per-seed deltas, n_pairs, interval and missing-pair counts. Do not report unsupported p-values or a universal winner.
 6. Generate the deliverables in docs/RESEARCH_EVALUATION_SPEC.md: manifest/config, raw runs, aggregates, paired deltas/intervals, fairness-by-approach and fairness-by-direction tables, matrix status, failure log, plots and report. Unique output directories only; no manual edits to result artifacts.
 7. Add the separate paired emergency matrix specification from docs/RESEARCH_EVALUATION_SPEC.md, or wire its parameters into this orchestrator so P4 can activate the feature without a second incompatible matrix format. The emergency priority on/off toggle itself is implemented in P4; here define the matrix schema/config and keep it feature-gated until P4 exists.
@@ -166,7 +167,7 @@ REQUIREMENTS:
 2. Extend seeded route generation with an optional, visually distinguishable ambulance vehicle. Make the option explicit (for example `--emergency-event`). The same scenario+seed+event configuration must yield identical background vehicle IDs/routes/departures and the same ambulance departure/approach/route across policy runs. Do not alter the route files for non-emergency runs.
 3. Detect the ambulance only while it is approaching the junction within the configured distance. Determine its approach axis from current route/edge data safely; avoid treating it as approaching after it has crossed the junction or completed its route.
 4. Add an independent `--emergency-priority` toggle. The event exists regardless of whether priority is enabled, so off/on runs compare the same traffic. When enabled, priority can request a safe change to the emergency axis after minimum green; if that axis is already green, hold it long enough for the ambulance to pass, subject to the configured maximum extension.
-5. Keep the base phase machine as the only state transition authority. All preemption still follows GREEN → YELLOW → ALL_RED → GREEN. Respect configured yellow/all-red seconds; never directly set the desired state from the emergency handler. Apply a fairness/max-extension bound so the other axis cannot be starved without limit.
+5. Keep the shared phase machine as the only state-transition authority. During P0–P6 on the synthetic network preserve GREEN → YELLOW → ALL_RED → GREEN. Do not add Marathahalli preemption in this phase; if the site layout supports a defensible ambulance event, adapt it only in P7B to the owner-approved legal phase sequence and clearance. Never directly set a target signal string from the emergency handler. Apply a fairness/max-extension bound so other legal phase groups cannot be starved indefinitely.
 6. Make the option work with fixed, Webster, adaptive, pressure and rl_dqn without changing their default behaviour when priority is disabled.
 7. Extend metrics using actual SUMO tripinfo for the emergency vehicle: completed flag, waiting time, timeLoss, and trip duration/arrival if available. Explain that SUMO `timeLoss` is not identical to signal waiting. Record incomplete emergency vehicles; do not silently drop them.
 8. Extend CLI and experiment CSVs with explicit emergency flags and a unique run ID/config record. Keep old result CSVs readable.
@@ -263,7 +264,7 @@ FRONTEND IMPLEMENTATION:
 - Show all key research rows with exact sample counts and seed IDs. Charts need meaningful axis labels/units and uncertainty encoding. A smaller NS/EW wait disparity must be explained as more even observed wait, not necessarily better total traffic performance.
 - If the backend doesn't support an action, present it as unavailable with a clear reason; don't fake a launch, matrix progress, CI, sample count or download link. In no-API snapshot mode, exploration is read-only.
 - Make results auditable: clicking a comparison can navigate to the matching run details; every chart must map to the selected data/filter and show labels, axes, units, tooltips and empty states. Use queue-by-approach time series, signal phase timeline, controller comparison with variation/error bars where feasible, and clear running/complete/failed statuses.
-- Use a traffic-specific schematic or signal visualization only when it conveys the actual current phase and four approach queues; do not add decorative fake-map imagery. Keep all status indicators driven by data from the current API/snapshot.
+- During P0–P6, any traffic schematic must truthfully depict the existing synthetic four-way junction and must be labelled as simulated; do not imply that it is a real Bengaluru map. Do not add a Marathahalli map or Network/Site Model view yet. In P7B, if the accepted site topology is irregular/grade-separated, render that verified topology and selected control node rather than a generic four-way diagram. Keep all status indicators driven by current API/snapshot data.
 - Keep design purposeful and distinctive; do not create a generic dashboard of identical rounded cards. Avoid giant marketing hero sections, stock pictures, emoji-based navigation, arbitrary rainbow gradients, excessive glassmorphism, tiny gray text, and unnecessary animation. Let the generated design system guide the final aesthetic rather than making an unreviewed palette guess.
 - Animation should clarify state transitions or focus: use a deliberate enter/exit curve, restrained stagger only where useful, intentional shadow/surface changes and balanced spacing. Respect prefers-reduced-motion and never animate chart values in ways that imply false data changes.
 - The dashboard must work at desktop and narrow mobile widths. On mobile, make tables usable (responsive columns/card rows or horizontal overflow with visible affordance) and avoid clipped nav or chart labels.
@@ -319,49 +320,145 @@ Stop after P5C and report exactly what was checked/fixed, test output, build out
 
 ---
 
-## P6 — Final full-matrix validation, report, README and demo freeze
+## P6 — Final synthetic-upgrade validation, report and release freeze
 
 ```text
-Perform the final integration and reproducibility pass for the DP1 advanced upgrade. Do not add new features in this phase. Read the whole docs/BUILD_PLAN.md and docs/UPGRADE_BASELINE.md, inspect git diff/status, and make sure each existing/new feature has a clear CLI path and test coverage.
+This is the release gate for the complete first upgrade on the current synthetic SUMO network. Do NOT build or integrate the Marathahalli/OpenCity road network in this phase. Do not add new features. Read docs/BUILD_PLAN.md, docs/UPGRADE_BASELINE.md, docs/RESEARCH_EVALUATION_SPEC.md, docs/UPGRADE_DECISIONS.md and the current git diff/status.
+
+GOAL: verify and freeze the whole synthetic-network release: legacy controllers, DQN, emergency priority, research-grade evaluation, FastAPI adapter, React + Vite + JSX dashboard, UI-skill review, and Vercel build readiness.
 
 FINAL CHECKLIST:
-1. Run `pytest -q` in the documented project environment. Fix real failures without deleting/weaking tests.
-2. Run all four legacy controllers on the same scenario/seed; run rl_dqn using the explicitly saved model path; verify all produce valid metrics.
-3. Regenerate the research test matrix for all 4 scenario patterns × low/medium/heavy demand levels × fixed/fixed_webster/adaptive/pressure/rl_dqn × research-only seeds 21–30. Keep the earlier pre-upgrade snapshot and legacy `HELD_OUT_SEEDS` unchanged. Store final artifacts under a unique `results/research/<experiment_id>/` folder and record model/run IDs. Use resumable execution; if not all 600 cells finish, label the study PARTIAL and list missing cells.
-4. Run the paired emergency research matrix: balanced + surge_north × low/medium/heavy × fixed/pressure/rl_dqn (if trained) × priority off/on × seeds 21–30. Use identical ordinary traffic and ambulance events in each pair. Report ambulance metrics, ordinary-traffic impact, directional fairness and all missing cells. If any matrix is partial, label it PARTIAL everywhere.
-5. Generate report Markdown and plots from raw generated CSV/XML only. Include experimental setup, seed split, metrics/units, mean ± standard deviation, best measured baseline, scenario-by-scenario DQN result, emergency result, model metadata, and explicit limitations. Do not assert DQN wins if it does not.
-6. Test the React dashboard snapshot mode, API disconnected state, completed/failed runs and stale telemetry; no stale state should be mistaken for the current run. Run frontend build/tests and FastAPI tests.
-7. Update README.md, docs/SPEC.md, docs/DEMO_SCRIPT.md, docs/CHANGELOG.md and command examples to match actual code. Remove the claim that docs/PROMPTS.md is missing; this file now exists. Ensure baseline timing/lane-count documentation matches the code and the BTP modelling caveat.
-8. Check `.gitignore` covers training checkpoints, logs, transient telemetry, generated route/network XML and result artifacts as appropriate. Do not remove source-controlled docs/papers. Do not commit generated weights/results unless repo policy explicitly calls for an evaluation snapshot.
-9. Run a no-RL/no-dashboard dependency check if feasible (base requirements only) to ensure legacy CLI/tests do not import optional packages eagerly.
-10. Validate the Research & Evaluation React page against the actual API/snapshot: matrix dimensions/count, progress states, per-seed rows, mean/std, paired CI, fairness groups, artifact download links, and failed/missing-cell handling. Cross-check UI aggregate values against generated CSV/report.
-11. Add a final `docs/FINAL_VALIDATION.md` with exact commands, Python/SUMO/package versions, pass/fail output, final artifact paths, train/validation/research-test seed split, matrix planned/completed/failed counts, and real metrics sourced from generated report/CSV. Explicitly state tests that were not run and why.
+1. Run `pytest -q` and all installed frontend/backend tests. Fix real failures without deleting or weakening tests.
+2. Smoke-test `fixed`, `fixed_webster`, `adaptive`, `pressure`, and trained `rl_dqn` on the existing synthetic network using explicitly recorded configs/seeds. Verify safe GREEN → YELLOW → ALL_RED → GREEN transitions and minimum/maximum green constraints.
+3. Run/resume the Phase A research matrix: 4 existing synthetic patterns × low/medium/heavy × 5 policies × test seeds 21–30 (target 600 runs). Save all artifacts under a unique `results/research/<experiment_id>/`. If not all cells finish, mark the study PARTIAL and list every missing/failed cell. Do not fabricate/hand-edit results.
+4. Run/resume the synthetic emergency-priority study: balanced + surge_north × low/medium/heavy × fixed/pressure/rl_dqn (when DQN is successfully trained) × priority off/on × seeds 21–30 (target 360 runs). Keep background vehicles and ambulance event paired. Report ambulance outcomes and ordinary-traffic impact. Mark partial runs clearly.
+5. Generate report Markdown and plots from actual raw files. Include exact synthetic network definition, demand/seed split, configs, units, mean ± SD, paired 95% bootstrap intervals, approach fairness, emergency effects, model metadata, completed/failed counts and limitations. Do not mention Marathahalli simulation results because none belong to Phase A.
+6. Validate the React dashboard snapshot mode, disconnected API, completed/failed runs, stale telemetry, missing model, empty data and long labels. Confirm Research & Evaluation table/charts match the generated CSVs and manifest. Run npm build with `VITE_API_BASE_URL` unset to verify snapshot mode; document live backend status honestly.
+7. Update README.md, docs/SPEC.md, docs/DEMO_SCRIPT.md, docs/CHANGELOG.md and command examples to match the actual synthetic implementation. State clearly that the road network is a synthetic four-way junction and BTP timing is only a timing-structure adaptation, not a geographic replica.
+8. Check `.gitignore` for model checkpoints, logs, telemetry, generated SUMO files and results. Do not remove source-controlled docs/papers or commit large artifacts unless policy explicitly requires them.
+9. Check core CLI/tests can work without optional RL/API/frontend packages being imported eagerly where feasible.
+10. Create `docs/FINAL_VALIDATION.md` with exact commands, interpreter/SUMO/package versions, pass/fail, artifact paths, seed splits, planned/completed/failed counts, actual measured results, UI skill evidence, frontend build state, API deployment state and explicit items not verified.
+11. Inspect the final diff and freeze the working synthetic release. Do not add a site selector, Network/Site Model page or Marathahalli network now; those are Phase 7A/7B tasks.
 
 DEMO ORDER:
-A. Show one legacy fixed run and one strongest measured non-RL adaptive run.
-B. Show DQN training metadata and trained-model inference (not training reward alone).
-C. Open the React dashboard and inspect one controller comparison and queue time series. Demonstrate saved snapshot mode and (if configured) live API mode.
-D. Open the Research & Evaluation workspace. Show the matrix dimensions/count, a completed or explicitly partial experiment, one paired policy result with its 95% interval, the N/S/E/W and NS/EW fairness breakdown, and downloads for generated artifacts.
-E. Demonstrate the same ambulance event with priority off and on; show yellow/all-red clearance remains intact.
-F. Present research-test mean ± standard deviation and paired-bootstrap intervals for seeds 21–30; discuss improvements, regressions, fairness trade-offs, uncertainty and limitations honestly. Show matrix completeness so no partial subset is mistaken for the full study.
+A. Show the existing synthetic four-way SUMO junction and explain that it is a demonstration network—not a geographically accurate Bengaluru model.
+B. Demonstrate fixed-time vs strongest measured non-RL controller and DQN on identical synthetic scenario/seed inputs.
+C. Show DQN training metadata and deterministic inference, not training reward alone.
+D. Open the React dashboard, inspect a controller comparison and queue time series, then show Research & Evaluation: matrix coverage, sample sizes, paired 95% interval, directional fairness and raw artifact downloads.
+E. Demonstrate the same synthetic ambulance event with priority off/on and show clearances are preserved.
+F. Present means/SD and paired-bootstrap intervals for test seeds 21–30; discuss improvements, regressions, fairness trade-offs, uncertainty and limitations. Clearly mark partial study matrices.
 
 SAFETY / INTEGRITY:
-- Do not hand-edit any measured number.
-- Do not run tuning on final held-out seeds.
-- Do not call simulated detectors “live traffic sensors”.
-- Do not use a single seed as conclusive evidence.
-- Do not hide a scenario where the DQN or emergency mode performs worse.
+- Never hand-edit measured numbers or generated report plots.
+- Never use research-test seeds for tuning.
+- Never call simulated detectors “live traffic sensors”.
+- Never claim DQN always wins or that simulation proves real-world gains.
+- Do not start Phase 7A until this P6 report is complete and the owner approves moving to the site-network extension.
 
 FINAL RESPONSE REQUIRED:
 - Changed files grouped by feature.
-- Exact commands actually run and pass/fail.
-- Model artifact + metadata path.
-- Final raw/aggregate/paired-delta/fairness/matrix-status/report artifacts, frontend build status, API status, Research & Evaluation view verification, and dashboard snapshot paths.
-- Short result table computed from the generated research-test data, with scenario, fixed/best non-RL/DQN wait, standard deviations and direction of change.
-- Emergency priority off/on result including ambulance and ordinary-traffic impact.
-- Limitations, partial tasks and anything not verified.
-Stop after the report. No further feature work.
+- Exact commands actually run and pass/fail output.
+- Model + metadata path.
+- Raw/aggregate/paired-delta/fairness/matrix-status/report artifacts.
+- Emergency priority off/on results and ordinary-traffic impact.
+- React build/test and API status; Research & Evaluation verification and snapshot paths.
+- Short result table from generated test data with scenario, fixed/best non-RL/DQN wait, standard deviations and direction of change.
+- Limitations, partial work and anything not verified.
+- Explicit P6 gate decision: READY FOR SITE PHASE / NOT READY.
+Stop. No Marathahalli implementation during P6.
 ```
+
+**P6 gate:** do not start Phase 7A unless the synthetic upgrade is tested, results are documented, the dashboard builds, and this freeze report explicitly says it is ready.
+
+---
+
+## P7A — OpenCity/Marathahalli network reconstruction (deferred until P6 freeze)
+
+```text
+You are working inside my existing DP1 repository. This phase is allowed only after P0–P6 have been completed, all base features are integrated, the synthetic research matrix is honestly reported, and the project owner accepts the P6 freeze. It is the final site-geometry extension, not a prerequisite for the earlier upgrade. Read docs/BUILD_PLAN.md, docs/MARATHAHALLI_NETWORK_SPEC.md, docs/SOURCES.md, the existing BTP timing PDF in docs/, dp1/network.py, dp1/config.py, dp1/scenarios.py, dp1/runner.py, dp1/cli.py, and current SUMO configuration before editing.
+
+PRECONDITION: verify `docs/FINAL_VALIDATION.md` confirms the P6 gate passed. If not, stop and report what is incomplete.
+
+GOAL: only now create a source-grounded SUMO network model for the Marathahalli Bridge / Varthur Road / Outer Ring Road area in Bengaluru, using OpenCity's map/data view and available downloadable geospatial datasets. Keep the existing synthetic network intact and runnable. Do not rewrite or remove the already-completed DQN, emergency-priority, research-evaluation, FastAPI or React/Vite/JSX features. Do not change the synthetic network or its frozen results.
+
+SOURCE WORKFLOW:
+1. Inspect OpenCity datasets and map view. Start with:
+   - https://data.opencity.in/dataset/bbmp-roads-centerline-map
+   - https://data.opencity.in/dataset/bengaluru-road-width-map
+   - https://data.opencity.in/dataset/bengaluru-ward-wise-street-map
+2. Prefer downloaded KML/CSV/vector geometry and attributes over screenshot tracing. Use map screenshots only as review evidence. Cross-check road connectivity with a current road map/OSM layer and available aerial imagery; inspect the project’s existing BTP timing document only for the signal facts it actually proves.
+3. Record dataset URL, title/provider, date accessed, published update date where shown, license/usage notes, downloaded filename, crop/conversion process, and facts extracted in `docs/MARATHAHALLI_NETWORK_AUDIT.md`. Do not commit an unneeded 90MB+ raw statewide file; preserve a source URL/hash/metadata and clip/trim a study-area extract where this preserves traceability. Add large licensed/source downloads to `.gitignore` if necessary and document how to reacquire them.
+4. If a source cannot be reached or downloaded, do not make up geometry. Record the exact blocker and request the owner to provide the KML/KMZ/CSV/export or screenshot. Continue only with verifiable items and stop at the owner review gate.
+
+NETWORK MODELLING:
+5. Define a study extent around Marathahalli Bridge / Varthur Road × ORR large enough to include the road connectors needed for routes. Inventory main roads, service roads, ramps/loops, U-turns, road directions, widths, known lanes, turn links, junction nodes, grade/level and known speed limits. Every fact needs source + confidence (`verified`, `inferred`, `unknown`). Road centerlines and widths do not prove lane count or traffic-light phases.
+6. Explicitly inspect grade separation. Do not turn a 2D crossing of the flyover and ORR into an at-grade conflict node. Model separate connectivity for separate levels; include service/ramp connectors only when map evidence supports them. Do not create fictional signals at the overpass crossing.
+7. Identify actual signal-controlled node(s) and available phase plan. Recommended scope for this project: a realistic site-area road graph with one initial verified control node/signal group. Do not assign one generic NS/EW light to the entire interchange. Do not blindly reuse 105 s NS / 95 s EW; use it on the site network only if the timing source is shown to refer to this exact control node and compatible movements. Where phase data remains unknown, label the proposed plan unverified and do not claim it is the real plan.
+8. Create a new network implementation under a clear site-specific path (for example `network/marathahalli/` plus a small loader in `dp1/site_network.py`, adapting to the actual repo architecture). Keep the existing procedural network accessible as `synthetic`. Add explicit network selection, e.g. `--network synthetic|marathahalli`, retaining `synthetic` as the backward-compatible default until the owner accepts the new network.
+9. Generate SUMO files from source inputs using supported tools/import pipelines. Never hand-edit generated `*.net.xml`; change source maps/config then regenerate. Keep source inputs, transformed inputs and generated SUMO artifacts clearly separated.
+10. Build deterministic route/OD smoke tests for every modeled entry/movement. If actual traffic counts are not available, demand profiles are synthetic scenarios on a real-layout-grounded network; they must not be called measured Marathahalli traffic.
+
+REQUIRED DELIVERABLES:
+- `docs/MARATHAHALLI_NETWORK_AUDIT.md`: site extent, source register, marked-up review screenshot, road/edge/node inventory, lane/turn/grade evidence table, signal node/phase inventory, selected control node, uncertainty and known omissions.
+- Site-specific SUMO network/config and reproducible build script or exact regeneration command.
+- A SUMO-GUI (or available network viewer) screenshot showing the generated network.
+- QA output for net validity, route connectivity, invalid/unconnected edges/turns, signal phases and seed-deterministic route generation.
+- `network_model_version`, `source_snapshot_id`, `signal_plan_id`, `assumption_status` fields or equivalent metadata structure ready for run manifests.
+- A `synthetic` network smoke run proving the old network remains intact.
+
+SAFETY/INTEGRITY:
+- Label each lane count, speed, movement and signal plan as verified/inferred/unknown.
+- Do not claim actual traffic-volume calibration unless authoritative counts are found and used.
+- Do not overwrite `results/baseline_pre_upgrade/`, Phase A synthetic research results, or frozen reports. Do not run site-network research experiments until P7A has passed this owner review.
+- The crossing topology must represent the real grade separation, not just look plausible in 2D.
+
+VERIFICATION:
+- Run existing tests and a smoke run on the legacy synthetic network.
+- Run the new network-generation and route-connectivity checks.
+- Open the network in SUMO-GUI or an available viewer and save evidence.
+- Show the source/assumption inventory, all test outputs and changed files.
+- STOP at the end of P7A for human review. Do not begin P7B until the user approves the site topology, chosen controlled node and signal plan.
+```
+
+**Gate before P7B:** the project owner reviews/approves the road topology, selected control node, verified-vs-assumed signal program and SUMO screenshot. P7B must not begin until approval is explicit.
+
+---
+
+
+## P7B — Integrate the approved Marathahalli network into the completed system
+
+```text
+This phase is permitted only after (1) docs/FINAL_VALIDATION.md records P6 READY FOR SITE PHASE and (2) the project owner has explicitly approved the P7A network audit, topology screenshot, selected control node and phase plan. If either condition is absent, stop without editing.
+
+Read docs/BUILD_PLAN.md, docs/MARATHAHALLI_NETWORK_SPEC.md, docs/MARATHAHALLI_NETWORK_AUDIT.md, docs/RESEARCH_EVALUATION_SPEC.md, docs/UPGRADE_DECISIONS.md, the current synthetic controller/RL/API/frontend code and docs/FINAL_VALIDATION.md.
+
+GOAL: add the owner-approved Marathahalli network as a second supported network while preserving the fully completed synthetic system and all its frozen results. This is an extension, not a rewrite.
+
+TASKS:
+1. Add a site-network loader/build pipeline using the verified source and transformation assets produced in P7A. Keep source vectors, clipped/transformed inputs and generated SUMO XML separate. Do not hand-edit generated .net.xml files; regenerate them from source/config.
+2. Add an explicit `synthetic` / `marathahalli` network selection while preserving the existing CLI defaults and dashboard results behaviour. All old CLI commands/tests must remain compatible. Record `network_name`, `network_model_version`, `source_snapshot_id`, `signal_plan_id`, `assumption_status` and source hashes in every site run/manifest.
+3. Adapt the central phase-plan/state-machine seam only to support the owner-approved site movements and clearance sequence. The RL controller and emergency logic may request actions only; the state machine alone applies legal transitions. Do not assume the site is a simple NS/EW two-phase junction and do not copy 105/95 timings unless the cited timing source verifies that exact controlled node.
+4. Implement route/OD generation for supported site approaches with deterministic manifests and hashes. Validate every route's connectivity and legal movements. If real traffic counts are unavailable, label low/medium/heavy input as synthetic demand on a map-grounded road layout.
+5. Train and save a **separate site-specific DQN model** with site seeds 101–105 and validation seeds 106–110. Capture observation/action schema and signal-plan/network compatibility in model metadata. Do not load the synthetic model into the site environment unless compatibility is proven by schema checks.
+6. Run the separate Phase B site research matrix described in docs/RESEARCH_EVALUATION_SPEC.md: 4 verified site patterns × low/medium/heavy × five legally compatible policies × research-test seeds 121–130 (up to 600 runs). Pair route manifests across policies. Use resumable batches, report blocked/failed/missing cells, paired deltas, 95% bootstrap intervals and fairness by actual site approach IDs. Never combine site results into synthetic aggregates.
+7. Run a site-specific emergency-priority paired evaluation only if the chosen control node and route topology support a defensible ambulance event. Keep identical background demand/event across priority-off/on runs and report any regular-traffic harm. If unsupported, document it rather than creating an unrealistic shortcut.
+8. Extend the existing React + Vite + JSX dashboard: add a Network/Site Model page/section with the audit screenshot/map view, selected signal node, legal phases, network version, source provenance and verified/inferred/unknown labels. Add a network selector to the research/explorer filters only after site data exists. The UI must visibly distinguish synthetic from Marathahalli results and prevent cross-network aggregate comparisons.
+9. Follow docs/UI_SKILL_CONTRACT.md, including actual use of `ui-ux-pro-max`, `Taste`, `emil-design-eng` and applicable installed `emilkowalski/skills`. Run animation/layout/edge-case QA for the added site view; do not redesign the completed app unnecessarily.
+10. Generate a separate site report and source audit. Keep `results/baseline_pre_upgrade/`, Phase A synthetic research artifacts, the P6 report and synthetic snapshot unchanged. Do not portray synthetic demand as observed Marathahalli traffic.
+
+VERIFICATION:
+- Existing synthetic tests and smoke runs still pass.
+- Site network generation is reproducible; routes connect; every active signal phase is legal for the actual modeled movements.
+- GUI/viewer screenshot and QA report are saved.
+- Model metadata matches site network/signal schema.
+- A smoke matrix runs/resumes and labels partial status correctly; full-matrix count is only claimed if every planned cell is actually complete.
+- React production build works in snapshot mode and app separates networks correctly; FastAPI tests pass.
+- Site source facts distinguish verified/inferred/unknown, and no unverifiable lane/turn/signal facts are presented as ground truth.
+
+Stop after P7B and report changed files, tests, commands, exact site artifacts, research coverage and remaining limitations. If source evidence is insufficient, stop at the blocker instead of fabricating geometry.
+```
+
+**P7B gate:** owner reviews site output separately. The frozen synthetic project remains a valid deliverable even if the site extension is blocked by unavailable source data.
 
 ---
 

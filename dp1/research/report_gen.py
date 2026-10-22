@@ -28,15 +28,40 @@ def generate_research_report(
     blocked_cells = status_counts.get("blocked", 0)
     matrix_state = manifest.get("status", "complete" if complete_cells == total_cells else "partial")
 
+    is_site = manifest.get("network") == "marathahalli"
+    if is_site:
+        notice_lines = [
+            "> **Simulation Integrity Notice — Marathahalli Real-Road Site Model**",
+            "> All metrics are derived from real execution of Eclipse SUMO with TraCI on the Marathahalli Bridge junction model.",
+            "> Topology and grade-separation are grounded in OpenCity GIS and OSM centerlines; traffic demand is synthetic on real geometry.",
+            "> Controller models and timings reflect the physical site layout and do not constitute live traffic sensor telemetry.",
+        ]
+        seed_lines = [
+            "- **Site Training Seeds:** `101..105` (used for Webster profile baseline and site DQN replay training).",
+            "- **Site RL Validation Seeds:** `106..110` (used strictly for model checkpoint selection).",
+            "- **Site Research Test Seeds:** `121..130` (strictly held out for final reporting; never used to tune or select policies).",
+        ]
+    else:
+        notice_lines = [
+            "> **Simulation Integrity Notice**",
+            "> All metrics are derived from real execution of Eclipse SUMO with TraCI on simulated lane-area detectors.",
+            "> Results reflect the synthetic four-way junction model and do not constitute field evidence from live roads.",
+        ]
+        seed_lines = [
+            "- **Training Seeds:** `1..5` (used for Webster profile baseline, heuristic thresholds, and legacy grid search).",
+            "- **RL Validation Seeds:** `6..10` (used strictly for model checkpoint selection).",
+            "- **Legacy Held-Out Seeds:** `11..15` (used for early development verification).",
+            "- **Research Test Seeds:** `21..30` (strictly held out for final reporting; never used to tune or select policies).",
+        ]
+
     lines = [
         f"# DP1 Research Evaluation Report — Experiment `{manifest.get('experiment_id')}`",
         "",
-        "> **Simulation Integrity Notice**",
-        "> All metrics are derived from real execution of Eclipse SUMO with TraCI on simulated lane-area detectors.",
-        "> Results reflect the synthetic four-way junction model and do not constitute field evidence from live roads.",
+        *notice_lines,
         "",
         "## 1. Executive Summary & Matrix Status",
         "",
+        f"- **Network:** `{'Marathahalli Bridge Real-Road Site' if is_site else 'Synthetic Four-Way Junction'}`",
         f"- **Experiment Status:** `{matrix_state.upper()}` ({complete_cells}/{total_cells} cells completed)",
         f"- **Failed Cells:** {failed_cells}",
         f"- **Blocked Cells:** {blocked_cells}",
@@ -53,10 +78,7 @@ def generate_research_report(
         "## 2. Experimental Setup & Seed Separation",
         "",
         "In compliance with fair evaluation protocols, controller hyperparameters and RL models were frozen prior to running on research evaluation seeds:",
-        "- **Training Seeds:** `1..5` (used for Webster profile baseline, heuristic thresholds, and legacy grid search).",
-        "- **RL Validation Seeds:** `6..10` (used strictly for model checkpoint selection).",
-        "- **Legacy Held-Out Seeds:** `11..15` (used for early development verification).",
-        "- **Research Test Seeds:** `21..30` (strictly held out for final reporting; never used to tune or select policies).",
+        *seed_lines,
         "",
         "## 3. Aggregate Performance Across Demand Levels",
         "",
@@ -119,8 +141,8 @@ def generate_research_report(
         "To eliminate inter-seed variance, candidates are compared by bootstrapping the paired difference in waiting time",
         r"across identical simulation seeds: $\Delta_{\text{paired}}(s) = \text{Wait}_{\text{leader}}(s) - \text{Wait}_{\text{runner\_up}}(s)$.",
         "If 0 is included within the 95% paired bootstrap confidence interval ($B=10,000$), the outcome is classified as a",
-        "**Statistical Tie** (`leader ~ runner_up`, $p > 0.05$). If $\\text{CI}_{\\text{upper}} < 0$, the primary leader is",
-        "statistically significantly superior ($p < 0.05$).",
+        "**Statistical Tie** (`leader ~ runner_up`, 95% bootstrap CI spans zero). If $\\text{CI}_{\\text{upper}} < 0$, the primary leader",
+        "demonstrates a statistically distinguishable reduction in delay over the runner-up at the 95% confidence level.",
         "",
         "| Pattern | Demand Level | Primary Leader | Secondary Candidate | Outcome Classification | Paired Delta [95% CI] | Statistical Evidence |",
         "|---|---|---|---|---|---:|---|",

@@ -42,7 +42,13 @@ def _worker_execute_cell(args: Tuple) -> Tuple[MatrixCell, Optional[Dict], Optio
     # Check for RL model if policy is rl_dqn
     policy_kwargs = {}
     if cell.policy == "rl_dqn":
-        resolved_model = Path(model_path_str) if model_path_str else (C.RL.models_dir / f"{C.RL.default_model_name}.zip")
+        if cell.network == "marathahalli":
+            default_m = C.ROOT / "models" / "dqn_marathahalli_site_best.zip"
+            if not default_m.exists():
+                default_m = C.RL.models_dir / "dqn_marathahalli_site_best.zip"
+        else:
+            default_m = C.RL.models_dir / f"{C.RL.default_model_name}.zip"
+        resolved_model = Path(model_path_str) if model_path_str else default_m
         if not resolved_model.exists() and resolved_model.with_suffix(".zip").exists():
             resolved_model = resolved_model.with_suffix(".zip")
         if not resolved_model.exists():
@@ -60,6 +66,7 @@ def _worker_execute_cell(args: Tuple) -> Tuple[MatrixCell, Optional[Dict], Optio
             demand_level=cell.demand_level,
             out_dir=cell_run_dir,
             policy_kwargs=policy_kwargs if policy_kwargs else None,
+            network=cell.network,
         )
         elapsed = time.time() - start_t
         cell.runtime_s = round(elapsed, 2)
@@ -70,6 +77,7 @@ def _worker_execute_cell(args: Tuple) -> Tuple[MatrixCell, Optional[Dict], Optio
         row = dict(metrics)
         row["pattern"] = cell.pattern
         row["cell_id"] = cell.cell_id
+        row["network"] = cell.network
         return cell, row, None
     except Exception as exc:
         elapsed = time.time() - start_t
@@ -94,6 +102,7 @@ def run_research_experiment(
     out_dir: Optional[Path] = None,
     model_path: Optional[str] = None,
     emergency_matrix: bool = False,
+    network: str = "synthetic",
 ) -> Tuple[ResearchMatrix, Path]:
     """Execute or preview a research evaluation matrix experiment."""
     exp_id = experiment_id or f"exp_{time.strftime('%Y%m%d_%H%M%S')}"
@@ -107,6 +116,7 @@ def run_research_experiment(
         policies=policies,
         seeds=seeds,
         preset=preset,
+        network=network,
     )
 
     if dry_run:
@@ -254,6 +264,7 @@ def run_research_experiment(
         "bootstrap_resamples": C.RESEARCH.bootstrap_resamples,
         "bootstrap_seed": C.RESEARCH.bootstrap_seed,
         "emergency_matrix": emergency_matrix,
+        "network": matrix.network,
         "git_commit": _get_git_commit(),
         "python_version": sys.version,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

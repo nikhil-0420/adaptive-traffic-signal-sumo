@@ -20,6 +20,7 @@ export function Navbar() {
   const navItems = [
     { id: 'landing', label: 'Product Overview', icon: Compass },
     { id: 'overview', label: 'Operations Overview', icon: Activity },
+    { id: 'site-model', label: 'Site Model', icon: Layers },
     { id: 'controller-lab', label: 'Controller Lab', icon: Sliders },
     { id: 'run-explorer', label: 'Run Explorer', icon: Search },
     { id: 'research', label: 'Research & Evaluation', icon: FlaskConical },

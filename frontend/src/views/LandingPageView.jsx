@@ -28,14 +28,15 @@ export function LandingPageView() {
   const [activeTab, setActiveTab] = useState('architecture');
 
   const demoRuns = [
-    { id: 'imbalanced_ns_adaptive_s1', label: 'Adaptive Queue (Imbalanced NS)' },
-    { id: 'imbalanced_ns_fixed_s1', label: 'Fixed Baseline (Imbalanced NS)' },
-    { id: 'imbalanced_ns_adaptive_s1_em_pri', label: 'EVSP Ambulance Priority (Active)' },
-    { id: 'imbalanced_ns_fixed_s1_em', label: 'Fixed Plan + Ambulance (No Preemption)' },
-    { id: 'surge_north_pressure_s1', label: 'Max-Pressure (Surge North)' },
+    { id: 'marathahalli_imbalanced_orr_adaptive_s121', label: 'Marathahalli Bridge • Adaptive Queue (s121)' },
+    { id: 'marathahalli_imbalanced_orr_fixed_webster_s121', label: 'Marathahalli Bridge • Webster Delay-Optimal' },
+    { id: 'imbalanced_ns_adaptive_s1', label: 'Synthetic 4-Way • Adaptive Queue (s1)' },
+    { id: 'imbalanced_ns_fixed_s1', label: 'Synthetic 4-Way • Fixed Baseline (s1)' },
+    { id: 'imbalanced_ns_adaptive_s1_em_pri', label: 'Synthetic 4-Way • EVSP Ambulance Priority' },
+    { id: 'surge_north_pressure_s1', label: 'Synthetic 4-Way • Max-Pressure (Surge North)' },
   ];
 
-  const [selectedDemoRun, setSelectedDemoRun] = useState('imbalanced_ns_adaptive_s1');
+  const [selectedDemoRun, setSelectedDemoRun] = useState('marathahalli_imbalanced_orr_adaptive_s121');
 
   const launchAppWithRun = (view, runId) => {
     if (runId) setSelectedRunId(runId);
@@ -101,6 +102,14 @@ export function LandingPageView() {
           >
             <BarChart3 size={16} className="text-emerald-400" />
             <span>Statistical Benchmarks</span>
+          </button>
+
+          <button
+            onClick={() => setCurrentView('site-model')}
+            className="px-6 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-cyan-500/30 font-medium text-sm flex items-center gap-2 transition-colors hover:border-cyan-400"
+          >
+            <Layers size={16} className="text-cyan-400" />
+            <span>Marathahalli Site Model</span>
           </button>
         </div>
 

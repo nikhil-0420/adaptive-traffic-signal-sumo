@@ -29,42 +29,67 @@ def generate_run_replay(
     max_duration_s: float = 400.0,
     out_dir: Optional[Path] = None,
     save_to_frontend: bool = True,
+    network: str = "synthetic",
 ) -> Path:
     """Run simulation through TraCI and record microscopic vehicle positions into replay.json."""
-    if not NET_FILE.exists():
-        build_network()
+    if network == "marathahalli":
+        from .site_network import get_network_paths, build_network as build_site_net
+        from .site_scenarios import build_site_routes
+        paths = get_network_paths("marathahalli")
+        net_file = paths["net_file"]
+        det_file = paths["det_file"]
+        if not net_file.exists() or not det_file.exists():
+            build_site_net("marathahalli")
+        tls_id = "marathahalli_tls"
+    else:
+        if not NET_FILE.exists() or not DET_FILE.exists():
+            build_network()
+        net_file = NET_FILE
+        det_file = DET_FILE
+        tls_id = C.TLS_ID
 
     em_cfg = C.EMERGENCY
     em_tag = ""
     if emergency_event:
         em_tag = "_em_pri" if emergency_priority else "_em"
 
+    net_tag = "" if network == "synthetic" else f"{network}_"
     if out_dir is None:
         if demand_level == C.DEFAULT_DEMAND_LEVEL:
-            out_dir = C.RESULTS_DIR / "runs" / f"{scenario}_{policy}_s{seed}{em_tag}"
+            out_dir = C.RESULTS_DIR / "runs" / f"{net_tag}{scenario}_{policy}_s{seed}{em_tag}"
         else:
-            out_dir = C.RESULTS_DIR / "runs" / f"{scenario}_{demand_level}_{policy}_s{seed}{em_tag}"
+            out_dir = C.RESULTS_DIR / "runs" / f"{net_tag}{scenario}_{demand_level}_{policy}_s{seed}{em_tag}"
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     run_id = out_dir.name
 
-    routes, n_vehicles = build_routes(
-        scenario,
-        seed,
-        out_dir=out_dir,
-        demand_level=demand_level,
-        emergency_event=emergency_event,
-        emergency_cfg=em_cfg,
-    )
+    if network == "marathahalli":
+        routes, n_vehicles = build_site_routes(
+            scenario,
+            seed,
+            out_dir=out_dir,
+            demand_level=demand_level,
+            emergency_event=emergency_event,
+            emergency_cfg=em_cfg,
+        )
+    else:
+        routes, n_vehicles = build_routes(
+            scenario,
+            seed,
+            out_dir=out_dir,
+            demand_level=demand_level,
+            emergency_event=emergency_event,
+            emergency_cfg=em_cfg,
+        )
     manifest = load_route_manifest(routes)
 
     tripinfo = out_dir / "tripinfo.xml"
     cmd = [
         binary("sumo"),
-        "-n", str(NET_FILE),
+        "-n", str(net_file),
         "-r", str(routes),
-        "-a", str(DET_FILE),
+        "-a", str(det_file),
         "--tripinfo-output", str(tripinfo),
         "--seed", str(seed),
         "--step-length", str(C.SIM.step_s),
@@ -77,8 +102,8 @@ def generate_run_replay(
     label = f"replay_{run_id}_{int(time.time()*1000)}"
     traci.start(cmd, label=label)
 
-    states = SignalStates(NET_FILE)
-    kwargs: Dict[str, Any] = {}
+    states = SignalStates(net_file, tls_id=tls_id)
+    kwargs: Dict[str, Any] = {"network": network, "tls_id": tls_id}
     if policy == "fixed_webster":
         kwargs["scenario"] = scenario
         kwargs["demand_level"] = demand_level
@@ -91,7 +116,7 @@ def generate_run_replay(
     frames = []
     try:
         t = 0.0
-        q = read_queues()
+        q = read_queues(network=network)
         ctl.start(t, q)
         ctl.apply()
 
@@ -100,14 +125,14 @@ def generate_run_replay(
         while t < limit_s:
             traci.simulationStep()
             t = traci.simulation.getTime()
-            q = read_queues()
+            q = read_queues(network=network)
             ctl.step(t, q)
 
             em_detected = False
             em_dist = None
             if emergency_event:
                 from .emergency import detect_approaching_emergency
-                det = detect_approaching_emergency(C.TLS_ID, em_cfg=em_cfg)
+                det = detect_approaching_emergency(tls_id, em_cfg=em_cfg)
                 if det is not None:
                     em_detected = True
                     em_dist = round(det[2], 1)
@@ -136,7 +161,7 @@ def generate_run_replay(
                 "t": round(t, 1),
                 "phase": ctl.phase,
                 "axis": ctl.axis,
-                "tl_state": traci.trafficlight.getRedYellowGreenState(C.TLS_ID),
+                "tl_state": traci.trafficlight.getRedYellowGreenState(tls_id),
                 "queues_m": {a: round(q[a], 1) for a in C.APPROACHES},
                 "emergency_approaching": em_detected,
                 "emergency_dist_m": em_dist,
@@ -153,6 +178,7 @@ def generate_run_replay(
 
     replay_data = {
         "run_id": run_id,
+        "network": network,
         "scenario": scenario,
         "policy": policy,
         "seed": seed,
@@ -182,6 +208,7 @@ def generate_run_replay(
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Generate SUMO replay JSON for a run")
+    parser.add_argument("--network", default="synthetic", choices=["synthetic", "marathahalli"])
     parser.add_argument("--scenario", default="imbalanced_ns")
     parser.add_argument("--policy", default="adaptive")
     parser.add_argument("--seed", type=int, default=1)
@@ -191,6 +218,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path = generate_run_replay(
+        network=args.network,
         scenario=args.scenario,
         policy=args.policy,
         seed=args.seed,

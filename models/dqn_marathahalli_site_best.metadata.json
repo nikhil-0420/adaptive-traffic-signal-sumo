@@ -1,0 +1,144 @@
+{
+  "run_id": "dqn_marathahalli_all_s101_1791958726",
+  "algorithm": "DQN",
+  "framework": "stable-baselines3",
+  "network_name": "marathahalli",
+  "scenario": "all",
+  "scenarios_rotated": [
+    "imbalanced_orr",
+    "imbalanced_varthur",
+    "balanced",
+    "surge_orr_north"
+  ],
+  "seed": 101,
+  "timesteps": 10000,
+  "training_duration_s": 70.9,
+  "obs_dim": 11,
+  "obs_schema_version": "1.0.0",
+  "obs_features": [
+    "q_N_normalized",
+    "q_S_normalized",
+    "q_E_normalized",
+    "q_W_normalized",
+    "axis_NS",
+    "axis_EW",
+    "phase_GREEN",
+    "phase_YELLOW",
+    "phase_ALL_RED",
+    "elapsed_green_fraction",
+    "demand_timeline_fraction"
+  ],
+  "action_mapping": {
+    "0": "HOLD",
+    "1": "REQUEST_SWITCH"
+  },
+  "bounds": {
+    "min_green_s": 10.0,
+    "max_green_s": 60.0,
+    "max_detector_m": 150.0
+  },
+  "hyperparameters": {
+    "learning_rate": 0.001,
+    "buffer_size": 10000,
+    "learning_starts": 100,
+    "batch_size": 32,
+    "gamma": 0.99,
+    "train_freq": 4,
+    "gradient_steps": 1,
+    "target_update_interval": 250,
+    "exploration_fraction": 0.2
+  },
+  "seed_splits": {
+    "train_seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "validation_seeds": [
+      106,
+      107,
+      108,
+      109,
+      110
+    ],
+    "eval_seeds": [
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120
+    ],
+    "research_seeds": [
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130
+    ]
+  },
+  "validation_summary": {
+    "best_validation_wait_s": 34.95,
+    "best_model_path": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_7500.zip",
+    "eval_checkpoints": [
+      {
+        "step": 2500,
+        "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_2500.zip",
+        "mean_val_wait_s": 39.6,
+        "mean_val_queue_m": 3.04,
+        "mean_val_completion": 1.0,
+        "timestamp": "2026-10-14T06:15:41Z"
+      },
+      {
+        "step": 5000,
+        "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_5000.zip",
+        "mean_val_wait_s": 38.9,
+        "mean_val_queue_m": 2.21,
+        "mean_val_completion": 1.0,
+        "timestamp": "2026-10-14T06:16:28Z"
+      },
+      {
+        "step": 7500,
+        "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_7500.zip",
+        "mean_val_wait_s": 34.95,
+        "mean_val_queue_m": 1.76,
+        "mean_val_completion": 1.0,
+        "timestamp": "2026-10-14T06:17:14Z"
+      },
+      {
+        "step": 10000,
+        "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_10000.zip",
+        "mean_val_wait_s": 35.52,
+        "mean_val_queue_m": 1.75,
+        "mean_val_completion": 1.0,
+        "timestamp": "2026-10-14T06:18:01Z"
+      },
+      {
+        "step": 10000,
+        "checkpoint": "E:\\dp1-traffic-signal\\models\\dqn_marathahalli_site_best.zip",
+        "mean_val_wait_s": 35.09,
+        "mean_val_queue_m": 1.7,
+        "mean_val_completion": 1.0,
+        "timestamp": "2026-10-14T06:18:46Z"
+      }
+    ]
+  },
+  "package_versions": {
+    "python": "3.11.9 (tags/v3.11.9:de54cf5, Apr  2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]",
+    "gymnasium": "1.4.0",
+    "stable_baselines3": "2.9.0",
+    "torch": "2.14.1+cpu"
+  },
+  "created_at": "2026-10-14T06:18:46Z"
+}

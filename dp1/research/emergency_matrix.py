@@ -38,6 +38,7 @@ class EmergencyCell:
     policy: str
     priority: bool
     seed: int
+    network: str = "synthetic"
     status: str = "pending"
     runtime_s: float = 0.0
     route_hash: Optional[str] = None
@@ -67,6 +68,7 @@ def _execute_emergency_cell(args: Tuple[Dict[str, Any], str, Optional[str]]) -> 
                 "policy": cell.policy,
                 "priority": cell.priority,
                 "seed": cell.seed,
+                "network": cell.network,
                 "route_hash": m.get("route_hash"),
                 "emergency_completed": m.get("emergency_completed"),
                 "emergency_wait_s": m.get("emergency_wait_s"),
@@ -98,6 +100,7 @@ def _execute_emergency_cell(args: Tuple[Dict[str, Any], str, Optional[str]]) -> 
             emergency_event=True,
             emergency_priority=cell.priority,
             record_vehicles=True,
+            network=cell.network,
         )
         dur = time.time() - start_t
         cell.status = "complete"
@@ -116,6 +119,7 @@ def _execute_emergency_cell(args: Tuple[Dict[str, Any], str, Optional[str]]) -> 
             "policy": cell.policy,
             "priority": cell.priority,
             "seed": cell.seed,
+            "network": cell.network,
             "route_hash": metrics.get("route_hash"),
             "emergency_completed": metrics.get("emergency_completed"),
             "emergency_wait_s": metrics.get("emergency_wait_s"),
@@ -138,33 +142,49 @@ def _execute_emergency_cell(args: Tuple[Dict[str, Any], str, Optional[str]]) -> 
 
 
 def run_emergency_evaluation(
-    experiment_id: str = "exp_emergency_360",
+    experiment_id: Optional[str] = None,
     jobs: int = 4,
     model_path: Optional[str] = None,
     resume: bool = True,
+    network: str = "synthetic",
 ) -> Path:
     """Run full 360-cell emergency evaluation matrix."""
+    if experiment_id is None:
+        experiment_id = "exp_marathahalli_emergency_360" if network == "marathahalli" else "exp_emergency_360"
     exp_dir = C.RESEARCH.research_dir / experiment_id
     exp_dir.mkdir(parents=True, exist_ok=True)
     runs_dir = exp_dir / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
 
+    # Determine patterns and seeds based on network
+    if network == "marathahalli":
+        pats = ("balanced", "surge_orr_north")
+        sds = tuple(range(121, 131))
+    else:
+        pats = PATTERNS
+        sds = SEEDS
+
     # Resolve model path
     if model_path is None:
-        best_val = C.RL.models_dir / "dqn_dp1_production_best_val.zip"
-        if best_val.exists():
-            model_path = str(best_val)
+        if network == "marathahalli":
+            site_m = C.ROOT / "models" / "dqn_marathahalli_site_best.zip"
+            model_path = str(site_m)
         else:
-            model_path = str(C.RL.models_dir / "dqn_dp1_production.zip")
+            best_val = C.RL.models_dir / "dqn_dp1_production_best_val.zip"
+            if best_val.exists():
+                model_path = str(best_val)
+            else:
+                model_path = str(C.RL.models_dir / "dqn_dp1_production.zip")
 
     cells: List[EmergencyCell] = []
-    for pat in PATTERNS:
+    for pat in pats:
         for lvl in LEVELS:
             for pol in POLICIES:
                 for pri in PRIORITY_STATES:
-                    for sd in SEEDS:
+                    for sd in sds:
                         pri_tag = "on" if pri else "off"
-                        cid = f"em_{pat}_{lvl}_{pol}_pri_{pri_tag}_s{sd}"
+                        net_prefix = f"em_{network}" if network != "synthetic" else "em"
+                        cid = f"{net_prefix}_{pat}_{lvl}_{pol}_pri_{pri_tag}_s{sd}"
                         cells.append(EmergencyCell(
                             cell_id=cid,
                             pattern=pat,
@@ -172,10 +192,11 @@ def run_emergency_evaluation(
                             policy=pol,
                             priority=pri,
                             seed=sd,
+                            network=network,
                         ))
 
-    print(f"\n[EMERGENCY RESEARCH] Experiment: {experiment_id}")
-    print(f"[EMERGENCY RESEARCH] Matrix: {len(PATTERNS)} patterns x {len(LEVELS)} levels x {len(POLICIES)} policies x 2 priorities x {len(SEEDS)} seeds = {len(cells)} cells")
+    print(f"\n[EMERGENCY RESEARCH] Experiment: {experiment_id} (Network: {network})")
+    print(f"[EMERGENCY RESEARCH] Matrix: {len(pats)} patterns x {len(LEVELS)} levels x {len(POLICIES)} policies x 2 priorities x {len(sds)} seeds = {len(cells)} cells")
     print(f"[EMERGENCY RESEARCH] RL Model: {model_path}")
     print(f"[EMERGENCY RESEARCH] Target Directory: {exp_dir}")
 
@@ -206,10 +227,10 @@ def run_emergency_evaluation(
 
     # Compute paired differences per (pattern, level, policy, seed)
     paired_records = []
-    for pat in PATTERNS:
+    for pat in pats:
         for lvl in LEVELS:
             for pol in POLICIES:
-                for sd in SEEDS:
+                for sd in sds:
                     off_row = raw_df[
                         (raw_df["pattern"] == pat) &
                         (raw_df["demand_level"] == lvl) &
@@ -271,24 +292,25 @@ def run_emergency_evaluation(
         "",
         "> **Simulation Integrity Notice**",
         "> All metrics are derived from real execution of Eclipse SUMO on simulated detectors.",
-        "> Emergency vehicle arrival is deterministic and background routes are byte-identical across pairs.",
+        f"> Network: {network}. Emergency vehicle arrival is deterministic and background routes are byte-identical across pairs.",
         "",
         "## 1. Executive Summary & Completion",
         "",
+        f"- **Network:** `{network}`",
         f"- **Total Prescribed Cells:** {len(cells)}",
         f"- **Completed Cells:** {len(raw_df)}",
         f"- **Failed Cells:** {len(failures)}",
         f"- **Valid Matched Pairs:** {len(paired_df)} (100% paired)",
         f"- **RL Model Checkpoint:** `{model_path}`",
-        f"- **Evaluation Seeds:** {list(SEEDS)}",
+        f"- **Evaluation Seeds:** {list(sds)}",
         "",
-        "## 2. Paired Comparison Summary by Condition (Mean over Seeds 21..30)",
+        f"## 2. Paired Comparison Summary by Condition (Mean over Seeds {sds[0]}..{sds[-1]})",
         "",
         "| Pattern | Level | Policy | Ambulance Trip (OFF) | Ambulance Trip (ON) | Emergency Delta | Background Wait (OFF) | Background Wait (ON) | Background Delta | Routes Identical |",
         "|---|---|---|---:|---:|---:|---:|---:|---:|:---:|",
     ]
 
-    for pat in PATTERNS:
+    for pat in pats:
         for lvl in LEVELS:
             for pol in POLICIES:
                 sub = paired_df[(paired_df["pattern"] == pat) & (paired_df["demand_level"] == lvl) & (paired_df["policy"] == pol)]
@@ -306,7 +328,7 @@ def run_emergency_evaluation(
 
     report_lines.extend([
         "",
-        "## 3. Overall Policy Mean Comparison (Across All 60 Evaluated Conditions per Policy)",
+        "## 3. Overall Policy Mean Comparison",
         "",
         "| Policy | Mean Ambulance Trip (OFF) | Mean Ambulance Trip (ON) | Net Mean Delta | Mean Non-Emergency Background Delay Delta |",
         "|---|---:|---:|---:|---:|",
@@ -328,13 +350,14 @@ def run_emergency_evaluation(
     # Manifest
     manifest = {
         "experiment_id": experiment_id,
+        "network": network,
         "total_cells": len(cells),
         "completed_cells": len(raw_df),
         "failed_cells": len(failures),
-        "patterns": list(PATTERNS),
+        "patterns": list(pats),
         "levels": list(LEVELS),
         "policies": list(POLICIES),
-        "seeds": list(SEEDS),
+        "seeds": list(sds),
         "model_path": model_path,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }

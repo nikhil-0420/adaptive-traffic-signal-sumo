@@ -76,6 +76,30 @@ class QueueExtensionConfig:
 
 
 @dataclass(frozen=True)
+class HybridQueueAdaptiveConfig:
+    """Settings for Hybrid Queue-Adaptive traffic signal controller.
+
+    Combines:
+    1. Baseline Webster-derived green allocation (G_base) appropriate to Marathahalli/scenario demand.
+    2. Dynamic queue-aware green extensions (delta_G = 3s increments) evaluated each step.
+    3. Safety and fairness supervisor enforcing min_green, max_green, anti-monopoly waiting limits,
+       and gap-out clearance.
+    """
+    min_green_s: float = 10.0           # Minimum green duration before any switch can be considered
+    max_green_s: float = 60.0           # Hard upper bound on green phase duration
+    extend_step_s: float = 3.0          # Green increment granted per approved extension evaluation
+    extend_threshold_m: float = 4.0     # Minimum active approach queue required to justify extension
+    min_competing_queue_m: float = 2.0  # Competing queue threshold triggering anti-monopoly fairness
+    max_competing_wait_s: float = 35.0  # Maximum red wait time for competing axis before switch is forced
+    fairness_ratio: float = 1.2         # Competing queue accumulation factor vs active queue
+    gap_out_s: float = 3.0              # Gap-out persistence duration when active queue clears
+    k_s_per_m: float = 0.30             # Green scaling factor per metre of queue
+    demand_weight_active: float = 1.0   # Weight for active approach queue in demand score
+    demand_weight_competing: float = 1.0 # Weight for competing approach queue in demand score
+    arrival_detection_threshold: float = 0.5 # Min queue delta to detect active arrivals
+
+
+@dataclass(frozen=True)
 class ActionConfig:
     """Action seam configuration for external / RL controllers."""
     min_green_s: float = 10.0
@@ -156,18 +180,33 @@ WEBSTER = WebsterConfig()
 # Old 30/30 plan kept for reference
 FIXED_PLACEHOLDER = FixedTimeConfig(green_ns_s=30, green_ew_s=30)
 
-# BTP Marathalli Bridge Junction (weekday 08:00-11:30): Phase 1 = 110s (NS), Phase 2 = 100s (EW)
-# Net green computed from TIMING by subtracting yellow and all-red clearance intervals
+# BTP Baseline Signal Timings (weekday 08:00-11:30):
+# Phase 1 = 110s, Phase 2 = 100s, Pedestrian = 15s (effective vehicle cycle = 210s)
+# Net green computed from TIMING by subtracting yellow (3s) and all-red (2s) clearance intervals (5s lost time per phase).
+# Synthetic network: historical mapping Phase 1 -> NS (105s), Phase 2 -> EW (95s) (preserved for baseline backward compatibility).
 FIXED = FixedTimeConfig(
-    green_ns_s=110 - (TIMING.yellow_s + TIMING.all_red_s),
-    green_ew_s=100 - (TIMING.yellow_s + TIMING.all_red_s),
+    green_ns_s=110 - (TIMING.yellow_s + TIMING.all_red_s),  # 105.0s
+    green_ew_s=100 - (TIMING.yellow_s + TIMING.all_red_s),  # 95.0s
+)
+
+# Marathahalli real-road site network:
+# Varthur Road (HAL Airport Rd <-> Whitefield) is the East-West axis (EW), corresponding to BTP Phase 1 (110s field -> 105s green).
+# Outer Ring Road (Kadubeesanahalli <-> KR Puram) is the North-South axis (NS), corresponding to BTP Phase 2 (100s field -> 95s green).
+FIXED_MARATHAHALLI = FixedTimeConfig(
+    green_ns_s=100 - (TIMING.yellow_s + TIMING.all_red_s),  # 95.0s
+    green_ew_s=110 - (TIMING.yellow_s + TIMING.all_red_s),  # 105.0s
 )
 ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
+HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig()
 ACTION = ActionConfig()
 RL = RLConfig()
 SIM = SimConfig()
+
+# Evaluation policy rosters
+STANDARD_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
+HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive")
 
 # Demand levels and multipliers (P3)
 DEMAND_LEVELS = {

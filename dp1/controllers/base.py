@@ -55,7 +55,7 @@ class PhaseMachineController:
         self.emergency_cfg = emergency_cfg or (C.EMERGENCY if emergency_priority else None)
         if self.emergency_priority:
             from ..emergency import EmergencyPriorityCoordinator
-            self.emergency_coordinator = EmergencyPriorityCoordinator(em_cfg=self.emergency_cfg)
+            self.emergency_coordinator = EmergencyPriorityCoordinator(em_cfg=self.emergency_cfg, tls_id=self.tls)
         else:
             self.emergency_coordinator = None
 
@@ -117,6 +117,8 @@ class PhaseMachineController:
             "actual_green_s": round(self.target_green, 1),
             **{f"q_{a}_m": round(queues[a], 1) for a in C.APPROACHES},
         }
+        if hasattr(self, "last_decision_record") and self.last_decision_record:
+            rec.update(self.last_decision_record)
         if self.emergency_priority and self.emergency_coordinator:
             rec["emergency_status"] = self.emergency_coordinator.last_status
         self.decisions.append(rec)
@@ -196,7 +198,14 @@ class PhaseMachineController:
         if self.phase == "GREEN":
             if self._evaluate_green_switch(elapsed, queues, t, action=action):
                 if self.decisions:
-                    self.decisions[-1]["actual_green_s"] = round(elapsed, 1)
+                    if self.decisions[-1].get("action") == "ENTER_GREEN":
+                        self.decisions[-1]["actual_green_s"] = round(elapsed, 1)
+                        if hasattr(self, "last_decision_record") and self.last_decision_record:
+                            if self.last_decision_record.get("action") in ("REQUEST_SWITCH", "GAP_OUT"):
+                                self.decisions[-1]["switch_reason"] = self.last_decision_record.get("reason")
+                                self.decisions[-1]["switch_reason_code"] = self.last_decision_record.get("reason_code")
+                    else:
+                        self.decisions[-1]["actual_green_s"] = round(elapsed, 1)
                     if self.emergency_priority and self.emergency_coordinator:
                         self.decisions[-1]["emergency_status"] = self.emergency_coordinator.last_status
                 self.phase, self.phase_start = "YELLOW", t

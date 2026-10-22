@@ -1,0 +1,42 @@
+[
+  {
+    "step": 2500,
+    "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_2500.zip",
+    "mean_val_wait_s": 39.6,
+    "mean_val_queue_m": 3.04,
+    "mean_val_completion": 1.0,
+    "timestamp": "2026-10-14T06:15:41Z"
+  },
+  {
+    "step": 5000,
+    "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_5000.zip",
+    "mean_val_wait_s": 38.9,
+    "mean_val_queue_m": 2.21,
+    "mean_val_completion": 1.0,
+    "timestamp": "2026-10-14T06:16:28Z"
+  },
+  {
+    "step": 7500,
+    "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_7500.zip",
+    "mean_val_wait_s": 34.95,
+    "mean_val_queue_m": 1.76,
+    "mean_val_completion": 1.0,
+    "timestamp": "2026-10-14T06:17:14Z"
+  },
+  {
+    "step": 10000,
+    "checkpoint": "E:\\dp1-traffic-signal\\models\\checkpoints\\dqn_marathahalli_step_10000.zip",
+    "mean_val_wait_s": 35.52,
+    "mean_val_queue_m": 1.75,
+    "mean_val_completion": 1.0,
+    "timestamp": "2026-10-14T06:18:01Z"
+  },
+  {
+    "step": 10000,
+    "checkpoint": "E:\\dp1-traffic-signal\\models\\dqn_marathahalli_site_best.zip",
+    "mean_val_wait_s": 35.09,
+    "mean_val_queue_m": 1.7,
+    "mean_val_completion": 1.0,
+    "timestamp": "2026-10-14T06:18:46Z"
+  }
+]

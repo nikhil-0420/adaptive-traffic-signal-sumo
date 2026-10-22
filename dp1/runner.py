@@ -1,5 +1,6 @@
 """Run ONE simulation (scenario x policy x seed) through TraCI and write its outputs."""
 import csv
+import dataclasses
 import json
 import os
 import random
@@ -11,25 +12,45 @@ from . import config as C
 from .controllers import POLICIES
 from .metrics import summarise_run
 from .network import NET_FILE, DET_FILE, build_network
+from .queues import QueueMeasurementEngine, queues_to_legacy_dict
 from .scenarios import build_routes, load_route_manifest
 from .signal_states import SignalStates
 from .sumo_utils import binary
 
 
-def read_queues():
+def read_queues(network: str = "synthetic"):
+    if network == "marathahalli":
+        return {
+            "W": max(traci.lanearea.getJamLengthMeters("det_hal_0"), traci.lanearea.getJamLengthMeters("det_hal_1")),
+            "E": max(traci.lanearea.getJamLengthMeters("det_wf_0"), traci.lanearea.getJamLengthMeters("det_wf_1")),
+            "S": max(traci.lanearea.getJamLengthMeters("det_orr_s_0"), traci.lanearea.getJamLengthMeters("det_orr_s_1")),
+            "N": max(traci.lanearea.getJamLengthMeters("det_orr_n_0"), traci.lanearea.getJamLengthMeters("det_orr_n_1")),
+        }
     return {a: max(traci.lanearea.getJamLengthMeters(f"det_{a}_{i}") for i in range(C.NET.lanes)) for a in C.APPROACHES}
 
 
 def _write_atomic_telemetry(out_dir: Path, data: dict):
     """Write telemetry dict atomically via temp file replace to prevent partial reads."""
-    tmp_path = out_dir / "telemetry.json.tmp"
+    tmp_path = out_dir / f"telemetry_{os.getpid()}_{random.randint(100, 999)}.tmp"
     final_path = out_dir / "telemetry.json"
     try:
         with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(data, f)
-        tmp_path.replace(final_path)
+        for _ in range(5):
+            try:
+                tmp_path.replace(final_path)
+                return
+            except (PermissionError, OSError):
+                time.sleep(0.01)
     except Exception:
         pass
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except Exception:
+                pass
+
 
 
 def run_simulation(
@@ -45,6 +66,7 @@ def run_simulation(
     emergency_priority: bool = False,
     emergency_cfg: C.EmergencyConfig = None,
     record_vehicles: bool = False,
+    network: str = "synthetic",
 ):
     """Run one simulation. Retries on TraCI connection failures (parallel runs can race for ports).
 
@@ -59,6 +81,7 @@ def run_simulation(
                 emergency_priority=emergency_priority,
                 emergency_cfg=emergency_cfg,
                 record_vehicles=record_vehicles,
+                network=network,
             )
         except Exception as e:
             last = e
@@ -67,43 +90,64 @@ def run_simulation(
             except Exception:
                 pass
             time.sleep(random.uniform(0.3, 1.5))
-    raise RuntimeError(f"SUMO failed {attempts} times for {scenario}/{demand_level}/{policy}/seed{seed}") from last
+    raise RuntimeError(f"SUMO failed {attempts} times for {network}/{scenario}/{demand_level}/{policy}/seed{seed}") from last
 
 
 def _run_once(
     scenario, policy, seed, gui, out_dir, policy_kwargs, demand_level,
     emergency_event=False, emergency_priority=False, emergency_cfg=None,
-    record_vehicles=False,
+    record_vehicles=False, network="synthetic",
 ):
-    if not NET_FILE.exists():
-        build_network()
+    if network == "marathahalli":
+        from .site_network import get_network_paths, build_network as build_site_net
+        from .site_scenarios import build_site_routes
+        paths = get_network_paths("marathahalli")
+        net_file = paths["net_file"]
+        det_file = paths["det_file"]
+        if not net_file.exists() or not det_file.exists():
+            build_site_net("marathahalli")
+        tls_id = "marathahalli_tls"
+    else:
+        if not NET_FILE.exists() or not DET_FILE.exists():
+            build_network()
+        net_file = NET_FILE
+        det_file = DET_FILE
+        tls_id = C.TLS_ID
 
+    em_tag = ""
+    if emergency_event:
+        em_tag = "_em_pri" if emergency_priority else "_em"
+
+    net_tag = "" if network == "synthetic" else f"{network}_"
     if out_dir is None:
-        em_tag = ""
-        if emergency_event:
-            em_tag = "_em_pri" if emergency_priority else "_em"
         if demand_level == C.DEFAULT_DEMAND_LEVEL:
-            out_dir = C.RESULTS_DIR / "runs" / f"{scenario}_{policy}_s{seed}{em_tag}"
+            out_dir = C.RESULTS_DIR / "runs" / f"{net_tag}{scenario}_{policy}_s{seed}{em_tag}"
         else:
-            out_dir = C.RESULTS_DIR / "runs" / f"{scenario}_{demand_level}_{policy}_s{seed}{em_tag}"
+            out_dir = C.RESULTS_DIR / "runs" / f"{net_tag}{scenario}_{demand_level}_{policy}_s{seed}{em_tag}"
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Build deterministic routes with companion manifest
     em_cfg = emergency_cfg or C.EMERGENCY
-    routes, n_vehicles = build_routes(
-        scenario, seed, out_dir=out_dir, demand_level=demand_level,
-        emergency_event=emergency_event, emergency_cfg=em_cfg,
-    )
+    if network == "marathahalli":
+        routes, n_vehicles = build_site_routes(
+            scenario, seed, out_dir=out_dir, demand_level=demand_level,
+            emergency_event=emergency_event, emergency_cfg=em_cfg,
+        )
+    else:
+        routes, n_vehicles = build_routes(
+            scenario, seed, out_dir=out_dir, demand_level=demand_level,
+            emergency_event=emergency_event, emergency_cfg=em_cfg,
+        )
     manifest = load_route_manifest(routes)
     route_hash = manifest.get("route_hash")
-    vehicle_origins = manifest.get("vehicle_origins")
+    vehicle_origins = manifest.get("vehicles") or manifest.get("vehicle_origins")
 
     tripinfo = out_dir / "tripinfo.xml"
 
     cmd = [
         binary("sumo-gui" if gui else "sumo"),
-        "-n", str(NET_FILE), "-r", str(routes), "-a", str(DET_FILE),
+        "-n", str(net_file), "-r", str(routes), "-a", str(det_file),
         "--tripinfo-output", str(tripinfo),
         "--seed", str(seed), "--step-length", str(C.SIM.step_s),
         "--time-to-teleport", "-1",          # no teleporting: jams must show up in the metrics
@@ -112,7 +156,7 @@ def _run_once(
     ]
     if gui:
         cmd += ["--start", "true", "--delay", "100"]
-    conn_label = f"{scenario}_{demand_level}_{policy}_{seed}_{os.getpid()}_{random.randint(1000, 9999)}"
+    conn_label = f"{net_tag}{scenario}_{demand_level}_{policy}_{seed}_{os.getpid()}_{random.randint(1000, 9999)}"
     for attempt in range(4):
         try:
             traci.start(cmd, label=conn_label)
@@ -122,8 +166,10 @@ def _run_once(
                 raise
             time.sleep(0.2 * (attempt + 1) + random.uniform(0.05, 0.2))
 
-    states = SignalStates(NET_FILE)
+    states = SignalStates(net_file, tls_id=tls_id)
     kwargs = dict(policy_kwargs or {})
+    kwargs["network"] = network
+    kwargs["tls_id"] = tls_id
     if policy == "fixed_webster":
         if "scenario" not in kwargs:
             kwargs["scenario"] = scenario
@@ -133,11 +179,12 @@ def _run_once(
         kwargs["emergency_priority"] = True
         kwargs["emergency_cfg"] = em_cfg
 
-    run_id = f"{scenario}_{demand_level}_{policy}_s{seed}"
+    run_id = f"{net_tag}{scenario}_{demand_level}_{policy}_s{seed}"
     if emergency_event:
         run_id += "_em_pri" if emergency_priority else "_em"
 
     ctl = POLICIES[policy](states, **kwargs)
+    q_engine = QueueMeasurementEngine(network=network)
     series = []
     _write_atomic_telemetry(out_dir, {
         "run_id": run_id,
@@ -150,22 +197,27 @@ def _run_once(
         "updated_at": time.time(),
         "emergency_approaching": False,
         "emergency_dist_m": None,
+        "approach_queues": None,
+        "adaptive_decision": None,
     })
     try:
         t = 0.0
-        ctl.start(t, read_queues())
+        init_queues = q_engine.measure_all(t)
+        q = queues_to_legacy_dict(init_queues)
+        ctl.start(t, q)
         ctl.apply()
         while t < C.SIM.max_sim_time_s:
             traci.simulationStep()
             t = traci.simulation.getTime()
-            q = read_queues()
+            app_queues = q_engine.measure_all(t)
+            q = queues_to_legacy_dict(app_queues)
             ctl.step(t, q)
 
             em_detected = False
             em_dist = None
             if emergency_event:
                 from .emergency import detect_approaching_emergency
-                det = detect_approaching_emergency(C.TLS_ID, em_cfg=em_cfg)
+                det = detect_approaching_emergency(tls_id, em_cfg=em_cfg)
                 if det is not None:
                     em_detected = True
                     em_dist = round(det[2], 1)
@@ -173,7 +225,7 @@ def _run_once(
             series_rec = {
                 "t": t, "phase": ctl.phase, "axis": ctl.axis,
                 **{f"q_{a}": round(q[a], 2) for a in C.APPROACHES},
-                "state": traci.trafficlight.getRedYellowGreenState(C.TLS_ID),
+                "state": traci.trafficlight.getRedYellowGreenState(tls_id),
             }
             if emergency_event:
                 series_rec["emergency_approaching"] = em_detected
@@ -199,6 +251,8 @@ def _run_once(
                     })
 
             series.append(series_rec)
+            app_queues_data = {a: dataclasses.asdict(info) for a, info in app_queues.items()}
+            adaptive_decision = getattr(ctl, "last_decision_record", None)
             _write_atomic_telemetry(out_dir, {
                 "run_id": run_id,
                 "status": "running",
@@ -206,15 +260,19 @@ def _run_once(
                 "phase": ctl.phase,
                 "axis": ctl.axis,
                 "queues_m": {a: round(q[a], 2) for a in C.APPROACHES},
-                "traffic_light_state": traci.trafficlight.getRedYellowGreenState(C.TLS_ID),
+                "traffic_light_state": traci.trafficlight.getRedYellowGreenState(tls_id),
                 "updated_at": time.time(),
                 "emergency_approaching": em_detected,
                 "emergency_dist_m": em_dist,
                 "vehicles": vehs,
+                "approach_queues": app_queues_data,
+                "adaptive_decision": adaptive_decision,
             })
             if t >= C.SIM.demand_duration_s and traci.simulation.getMinExpectedNumber() == 0:
                 break
         unfinished = traci.simulation.getMinExpectedNumber()
+        last_tl_state = traci.trafficlight.getRedYellowGreenState(tls_id)
+        last_vehs = list(vehs) if "vehs" in locals() else []
     except Exception as e:
         _write_atomic_telemetry(out_dir, {
             "run_id": run_id,
@@ -236,6 +294,7 @@ def _run_once(
         except Exception:
             pass
 
+    last_app_data = {a: dataclasses.asdict(info) for a, info in app_queues.items()} if "app_queues" in locals() else None
     _write_atomic_telemetry(out_dir, {
         "run_id": run_id,
         "status": "completed",
@@ -243,11 +302,15 @@ def _run_once(
         "phase": getattr(ctl, "phase", "GREEN"),
         "axis": getattr(ctl, "axis", "NS"),
         "queues_m": {a: round(q[a], 2) for a in C.APPROACHES} if "q" in locals() else {},
-        "traffic_light_state": "",
+        "traffic_light_state": locals().get("last_tl_state", "GGggrrrrGGggrrrr"),
         "updated_at": time.time(),
         "emergency_approaching": False,
         "emergency_dist_m": None,
+        "vehicles": locals().get("last_vehs", []),
+        "approach_queues": last_app_data,
+        "adaptive_decision": getattr(ctl, "last_decision_record", None),
     })
+
 
     _write_csv(out_dir / "timeseries.csv", series)
     _write_csv(out_dir / "decisions.csv", ctl.decisions)
@@ -265,6 +328,7 @@ def _run_once(
     )
 
     metrics.update(
+        network=network,
         scenario=scenario,
         demand_level=demand_level,
         policy=policy,

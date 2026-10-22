@@ -20,6 +20,7 @@ This contract applies to every implementation or visual-refinement task touching
 
 - Specific visual identity appropriate for a research-grade traffic simulation, not a generic admin or “AI dashboard” template.
 - Clear reading order between current run/signal state, key operational metrics, controller comparisons and detailed traces.
+- Sequencing constraint: do not implement a Network/Site Model page during P0–P6. The first dashboard release covers the existing synthetic network. Only after the P6 freeze and P7A owner approval may P7B add the Marathahalli view; that later view must show the verified topology, selected control node, network version, OpenCity provenance, and verified/inferred/unknown legend. Do not draw a generic four-way intersection if the accepted topology is grade-separated/irregular.
 - The Research & Evaluation page must make matrix coverage, selected demand level, policy, seed count, paired deltas/intervals and directional fairness understandable without turning into an unreadable spreadsheet. Use readable uncertainty cues and visibly label incomplete experiments.
 - Deliberate proportions and density: charts readable at desktop widths, filters and critical statuses still useful at mobile width, tables handle overflow intentionally.
 - Thoughtful depth using surface contrast, fine/transparent borders and restrained layered shadows rather than heavy solid borders on every card. Avoid using shadows on every element indiscriminately.

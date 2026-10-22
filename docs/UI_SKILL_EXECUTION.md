@@ -46,3 +46,21 @@ This document records the exact skills read, commands executed, library choices,
 | Missing metrics displaying as `0` | Explicitly rendered as `"—"` (null/unavailable) | Scientific integrity; avoids falsely claiming zero wait time or queue. |
 | Static status text | Live pulsing indicator with automatic 5s staleness detection | Clear operational visibility of simulation lifecycle. |
 | Linear slow transitions | `150ms cubic-bezier(0.16, 1, 0.3, 1)` ease-out | Snappy, responsive interaction without feeling sluggish. |
+
+---
+
+## 5. Phase 7B: Marathahalli Real-Road Site Model Integration
+
+Following the design system tokens, anti-cliché guidelines, and micro-animation standards, Phase 7B adds:
+
+1. **`SiteModelView.jsx` Workspace:**
+   - **Topology & SUMO Render Tab:** High-resolution network schematic alongside SUMO GUI renders (`/network/marathahalli/marathahalli_network_topology.png`, `sumo_gui_render.png`).
+   - **3-Tier Grade Separation Tab:** Detailed architectural cards explaining the elevated flyover (HAL Rd <-> Whitefield, 4 lanes, 60 km/h, 70% bypass), ORR mainline underpass (K.R. Puram <-> Sarjapur, 6 lanes, 70% bypass), and surface signal junction (`marathahalli_tls`, turning traffic & bus transit).
+   - **Phasing Machine & Detectors Tab:** Interactive breakdown of the 6-phase cycle with exact 16-character SUMO state strings, 3.0s yellow (`yyygrrrryyygrrrr`), 2.0s all-red clearance (`rrrrrrrrrrrrrrrr`), and induction/lane-area detector locations.
+   - **Data Grounding & Provenance Matrix Tab:** Rigorous scientific transparency table distinguishing verified inputs (BTP Marathahalli Yamlur PDF signal plan, OpenCity municipal GIS lane widths, OSM alignment) from synthetic assumptions (unmeasured vehicle demand volumes).
+
+2. **Network Switchers Across Workspaces:**
+   - **Navbar:** Added `Site Model` navigation item with active route indicator.
+   - **`LiveMonitorView.jsx`:** Network selector enabling users to switch between Synthetic 4-Way and Marathahalli Bridge Site, dynamically swapping available scenarios (`balanced`, `imbalanced_orr`, `imbalanced_varthur`, `surge_orr_north`).
+   - **`ResearchView.jsx`:** Matrix Experiment Launcher supports `--network marathahalli` and displays site matrix presets (600 cells) alongside synthetic presets (720 cells).
+

@@ -1,0 +1,51 @@
+{
+  "sources": [
+    {
+      "dataset_id": "opencity_bbmp_centerline",
+      "title": "BBMP Roads Centerline Map",
+      "provider": "OpenCity.in / Bruhat Bengaluru Mahanagara Palike (BBMP)",
+      "url": "https://data.opencity.in/dataset/bbmp-roads-centerline-map",
+      "download_url": "https://data.opencity.in/dataset/7c799791-472a-4dac-9747-d30bfe7bb31d/resource/f85e164c-6f62-4026-bfb8-70638fe08124/download/ca8e33d0-5b43-40a3-9edd-e7a3a4aee909.kml",
+      "date_accessed": "2026-10-14",
+      "license": "Public Domain / Open Data (OKD compliant)",
+      "raw_file_bytes": 95732689,
+      "raw_file_sha256": "90c186e82d69f93fc84ba7692f286abea340c16f0a6022aa7cc14374515499cd",
+      "cropped_file": "network/marathahalli/source/opencity_centerline_marathahalli.kml",
+      "cropped_features": 369,
+      "cropped_bytes": 377430
+    },
+    {
+      "dataset_id": "opencity_bengaluru_road_width",
+      "title": "Bengaluru Road Width Map",
+      "provider": "OpenCity.in / BBMP",
+      "url": "https://data.opencity.in/dataset/bengaluru-road-width-map",
+      "download_url": "https://data.opencity.in/dataset/0a72695d-0c48-4442-b8ee-e2a24b157d66/resource/bd9d5ea1-40c8-4699-87c9-d4a4f303cfff/download/ed239bef-1bf5-4926-8621-2fd84c7db3d0.kml",
+      "date_accessed": "2026-10-14",
+      "license": "Public Domain / Open Data (OKD compliant)",
+      "raw_file_bytes": 25737588,
+      "raw_file_sha256": "13daf1e57911eb6a76ce6dfe3b66256301b00a5c558eaf094faa0e67d673d06e",
+      "cropped_file": "network/marathahalli/source/opencity_road_width_marathahalli.kml",
+      "cropped_features": 62,
+      "cropped_bytes": 75030
+    },
+    {
+      "dataset_id": "btp_signal_timings_marathahalli",
+      "title": "Signal Timings Data - Marathalli Bridge & Yamlur Junctions",
+      "provider": "Bengaluru Traffic Police (BTP) / Airport Police Station via OpenCity",
+      "local_file": "docs/btp_marathalli_yamlur.pdf",
+      "junction_name": "Marathalli Bridge Junction, Airport Police Station - FIXED (Varthur Rd x Outer Ring Rd Jn)",
+      "verified_schedule": "Weekday 08:00-11:30: Phase 1 (Varthur Rd / HAL-WF) = 110s, Phase 2 (ORR / Kadubeesanahalli-KR Puram) = 100s, Phase 3 (Pedestrian) = 15s, Cycle = 225s"
+    }
+  ],
+  "study_extent_bbox": {
+    "lat_min": 12.95,
+    "lat_max": 12.964,
+    "lon_min": 77.694,
+    "lon_max": 77.708
+  },
+  "site_center": {
+    "lat": 12.9567,
+    "lon": 77.7011,
+    "name": "Marathahalli Bridge Junction"
+  }
+}

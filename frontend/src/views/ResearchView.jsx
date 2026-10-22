@@ -6,12 +6,13 @@ import { FlaskConical, Play, Download, AlertTriangle, CheckCircle2, Clock, Shiel
 export function ResearchView() {
   const { connectionStatus } = useApp();
   const [experiments, setExperiments] = useState([]);
-  const [selectedExpId, setSelectedExpId] = useState('exp_smoke_test');
+  const [selectedExpId, setSelectedExpId] = useState('exp_marathahalli_hybrid_840');
   const [expStatus, setExpStatus] = useState(null);
   const [results, setResults] = useState({ aggregate: [], raw_runs: [] });
   const [loading, setLoading] = useState(true);
 
   // Matrix Launch Form State
+  const [network, setNetwork] = useState('synthetic');
   const [preset, setPreset] = useState('smoke');
   const [jobs, setJobs] = useState(2);
   const [limit, setLimit] = useState('');
@@ -57,6 +58,7 @@ export function ResearchView() {
         jobs: parseInt(jobs, 10),
         limit: limit ? parseInt(limit, 10) : undefined,
         emergency_matrix: emergencyMatrix,
+        network,
       });
       setSelectedExpId(res.experiment_id);
     } catch (err) {
@@ -104,11 +106,11 @@ export function ResearchView() {
           <select
             value={selectedExpId}
             onChange={(e) => setSelectedExpId(e.target.value)}
-            className="dp1-select text-xs font-mono max-w-[240px]"
+            className="dp1-select text-xs font-mono max-w-[280px]"
           >
             {experiments.map((e) => (
               <option key={e.experiment_id} value={e.experiment_id}>
-                {e.experiment_id} ({e.status})
+                {e.experiment_id} {e.network === 'marathahalli' ? '[Site]' : '[Synthetic]'} ({e.status})
               </option>
             ))}
           </select>
@@ -136,6 +138,23 @@ export function ResearchView() {
 
             <form onSubmit={handleLaunch} className="space-y-3">
               <div>
+                <label className="block text-[11px] font-mono text-slate-400 mb-1">Network Architecture:</label>
+                <select
+                  value={network}
+                  onChange={(e) => {
+                    const net = e.target.value;
+                    setNetwork(net);
+                    setPreset(net === 'marathahalli' ? 'site' : 'smoke');
+                  }}
+                  disabled={!isLive}
+                  className="dp1-select w-full text-xs mb-2"
+                >
+                  <option value="synthetic">Synthetic 4-Way Junction</option>
+                  <option value="marathahalli">Marathahalli Bridge Site (Real Road)</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-[11px] font-mono text-slate-400 mb-1">Preset Design:</label>
                 <select
                   value={preset}
@@ -143,9 +162,20 @@ export function ResearchView() {
                   disabled={!isLive}
                   className="dp1-select w-full text-xs"
                 >
-                  <option value="smoke">Smoke Preset (3 cells • Quick Verify)</option>
-                  <option value="full">Full Primary Matrix (720 cells • 4x3x6x10)</option>
-                  <option value="custom">Custom Filter Matrix</option>
+                  {network === 'marathahalli' ? (
+                    <>
+                      <option value="full">Full Site Matrix (720 cells • 4x3x6x10 with queue_extension)</option>
+                      <option value="site">Legacy Site Matrix (600 cells • 4x3x5x10)</option>
+                      <option value="smoke">Smoke Preset (3 cells • Quick Verify)</option>
+                      <option value="custom">Custom Filter Matrix</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="smoke">Smoke Preset (3 cells • Quick Verify)</option>
+                      <option value="full">Full Primary Matrix (720 cells • 4x3x6x10)</option>
+                      <option value="custom">Custom Filter Matrix</option>
+                    </>
+                  )}
                 </select>
               </div>
 

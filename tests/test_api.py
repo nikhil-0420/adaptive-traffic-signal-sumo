@@ -358,3 +358,72 @@ def test_experiment_launch_validation():
     # Invalid pattern
     resp = client.post("/api/experiments", json={"preset": "smoke", "patterns": ["nonexistent_pattern"]})
     assert resp.status_code == 400
+
+
+# ------------------------------------------------------------------
+# Live Lifecycle: Active Runs, Stop, and Replay Fallback
+# ------------------------------------------------------------------
+
+def test_active_runs_and_stop_endpoints(monkeypatch):
+    """Verify /api/runs/active lists runs and /api/runs/{run_id}/stop halts the process."""
+    # When no runs are active
+    resp = client.get("/api/runs/active")
+    assert resp.status_code == 200
+    assert "active_runs" in resp.json()
+
+    # Simulate an active run in process_manager
+    class DummyProc:
+        pid = 99999
+        returncode = None
+        def poll(self):
+            return self.returncode
+        def terminate(self):
+            self.returncode = -15
+        def kill(self):
+            self.returncode = -9
+        def wait(self, timeout=None):
+            return self.returncode
+
+    dummy_proc = DummyProc()
+    info = ProcessInfo("test_sim_run_1", "run", dummy_proc, Path("/tmp/out.log"), time.time())
+    process_manager._processes["test_sim_run_1"] = info
+
+    try:
+        resp = client.get("/api/runs/active")
+        assert resp.status_code == 200
+        active_ids = [r["run_id"] for r in resp.json()["active_runs"]]
+        assert "test_sim_run_1" in active_ids
+
+        # Stop the run
+        resp_stop = client.post("/api/runs/test_sim_run_1/stop")
+        assert resp_stop.status_code == 200
+        assert resp_stop.json()["status"] == "stopped"
+        assert resp_stop.json()["run_id"] == "test_sim_run_1"
+    finally:
+        process_manager._processes.pop("test_sim_run_1", None)
+
+
+def test_starting_telemetry_and_replay_fallback(monkeypatch, tmp_path):
+    """Verify get_telemetry returns status starting if process is alive, and replay falls back cleanly."""
+    class DummyProc:
+        pid = 88888
+        returncode = None
+        def poll(self):
+            return self.returncode
+
+    dummy_proc = DummyProc()
+    info = ProcessInfo("starting_run_id", "run", dummy_proc, Path("/tmp/out.log"), time.time())
+    process_manager._processes["starting_run_id"] = info
+
+    try:
+        resp = client.get("/api/runs/starting_run_id/telemetry")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "starting"
+        assert data["sim_time_s"] == 0.0
+
+        # Test replay returns 404 cleanly when neither local artifact nor demo data exists
+        resp_replay = client.get("/api/runs/nonexistent_xyz_run/replay")
+        assert resp_replay.status_code == 404
+    finally:
+        process_manager._processes.pop("starting_run_id", None)

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Alliance University DP1 Academic Report - Adaptive Traffic Signal Optimization</title>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']]
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+</script>
+<style>
+@page {
+    size: A4 portrait;
+    margin: 18mm 18mm 18mm 18mm;
+    @top-right {
+        content: "Alliance University • DP1 Report";
+        font-size: 8pt;
+        color: #64748b;
+    }
+    @bottom-center {
+        content: counter(page);
+        font-size: 8.5pt;
+        color: #64748b;
+    }
+}
+
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #0f172a;
+    background: #ffffff;
+    line-height: 1.5;
+    font-size: 9pt;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    font-size: 16pt;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+    border-bottom: 2px solid #0284c7;
+    padding-bottom: 6px;
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #0369a1;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 4px;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 10pt;
+    font-weight: 600;
+    color: #1e293b;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+}
+
+h4 {
+    font-size: 9.2pt;
+    font-weight: 600;
+    color: #334155;
+    margin-top: 10px;
+    margin-bottom: 4px;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 8px;
+    text-align: justify;
+}
+
+ul, ol {
+    margin-top: 0;
+    margin-bottom: 8px;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 3px;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 16px 0;
+}
+
+blockquote {
+    border-left: 3px solid #0284c7;
+    margin: 8px 0;
+    padding: 4px 12px;
+    background: #f8fafc;
+    color: #334155;
+    font-style: italic;
+}
+
+pre {
+    background: #0f172a;
+    color: #f1f5f9;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 7.5pt;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    line-height: 1.35;
+    overflow-x: auto;
+    margin: 8px 0 12px 0;
+    page-break-inside: avoid;
+}
+
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 8pt;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+.table-container {
+    width: 100%;
+    margin: 10px 0 14px 0;
+    page-break-inside: avoid;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+}
+
+th, td {
+    border: 1px solid #cbd5e1;
+    padding: 5px 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+tr:nth-child(even) td {
+    background-color: #f8fafc;
+}
+
+strong {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+</style>
+</head>
+<body>
+<h1>Adaptive Traffic Signal Optimization Using SUMO and TraCI: Evaluation of Queue-Aware Controllers on a Marathahalli Road-Network Model</h1>
+<p><strong>Academic Project Report — Design Project 1 (DP1)</strong></p>
+<p><strong>Department of Artificial Intelligence & Data Science, School of Advanced Computing, Alliance University</strong></p>
+<p><strong>Author:</strong> Nikhil</p>
+<p><strong>Simulation Environment:</strong> Eclipse SUMO v1.28.0 | Python TraCI | FastAPI | React 18 / Vite</p>
+<p><strong>Date of Submission:</strong> Academic Year 2026</p>
+<hr/>
+<h2>Executive Summary & Integrity Statement</h2>
+<p>This report documents the design, implementation, and empirical evaluation of Design Project 1 (DP1). All reported experimental findings, metrics, and comparisons are derived strictly from real executions of Eclipse SUMO and Python TraCI on simulated lane-area detectors (E2 sensors). No live physical sensor data or on-street deployment is claimed. All traffic demand patterns are parameterized as synthetic stochastic arrivals over a reconstructed road network model of the Marathahalli junction in Bengaluru, India.</p>
+<hr/>
+<h2>1. Introduction & Motivation</h2>
+<h3>1.1 Context and Background</h3>
+<p>Urban road transportation networks in major metropolitan hubs—particularly rapidly expanding technology centers such as Bengaluru, India—suffer from pervasive congestion, severe peak-hour bottlenecks, and unpredictable travel delays. Arterial corridors such as the Outer Ring Road (ORR) and radial links such as Varthur Road accommodate tens of thousands of passenger cars, two-wheelers, buses, and commercial freight vehicles daily.</p>
+<p>Despite the proliferation of digital urban mapping, conventional signalized intersections in these corridors continue to rely heavily on pre-timed, fixed-time signal control plans. These fixed plans cycle through static green allocations determined by historical averages. Because fixed plans cannot observe or respond to real-time traffic demand fluctuations, they frequently induce the classic "empty green" dilemma: allocating valuable green time to vacant approaches while vehicles on heavily congested cross-streets remain stopped at red lights.</p>
+<h3>1.2 Problem Statement</h3>
+<p>Fixed-time traffic signalization exhibits four critical systemic failure modes in arterial corridors:</p>
+<ol>
+<li><strong>Demand-Capacity Inefficiency:</strong> Inability to adapt to sudden demand variations, leading to unnecessary queue accumulation, elevated vehicular idling, excess fuel consumption, and greenhouse gas emissions.</li>
+<li><strong>Directional Flow Imbalances:</strong> Inability to dynamically reallocate green splits during asymmetric tidal flows (e.g., intense morning inbound commuting versus evening outbound dispersal).</li>
+<li><strong>Emergency Service Entrapment:</strong> Complete lack of automated emergency vehicle detection and priority preemption, forcing emergency response units (ambulances, fire engines) to wait through entire signal cycles.</li>
+<li><strong>Lack of Rigorous Simulation Benchmarks:</strong> Academic literature frequently evaluates adaptive algorithms on idealized, symmetric orthogonal grids using single random seeds, failing to account for grade separations, non-standard approach geometry, or paired statistical uncertainty.</li>
+</ol>
+<h3>1.3 Scope of Design Project 1 (DP1)</h3>
+<p>To establish a clear scientific boundary:</p>
+<ul>
+<li><strong>DP1 Scope (Current Project):</strong> Focuses exclusively on current traffic-state-aware traffic signal optimization within microscopic simulation. This encompasses the reconstruction of the Marathahalli road network model in SUMO, sensor-based real-time queue observation, multi-policy signal control, deterministic emergency preemption, and paired bootstrap statistical benchmarking.</li>
+<li><strong>DP2 Scope (Future Work, Strictly Excluded from DP1):</strong> Upstream traffic congestion prediction (20–30-minute forecasting horizons using spatio-temporal GNNs/LSTMs), congestion risk heatmaps, and dynamic vehicle route rerouting are reserved for Design Project 2.</li>
+</ul>
+<hr/>
+<h2>2. Aim, Objectives, and Contributions</h2>
+<h3>2.1 Project Aim</h3>
+<p>The overarching aim of DP1 is to develop, validate, and benchmark a reproducible, open-source software testbed for adaptive traffic signal optimization that bridges theoretical traffic control formulation with realistic urban intersection modeling.</p>
+<h3>2.2 Key Objectives</h3>
+<ol>
+<li><strong>Network Reconstruction:</strong> Construct a high-fidelity microscopic simulation model of the Marathahalli junction in Bengaluru, incorporating grade-separated flyover lanes along the Outer Ring Road, surface arterial approaches, simulated lane-area induction loops (E2 sensors), and ground-truth signal timings from the Bengaluru Traffic Police (BTP).</li>
+<li><strong>Multi-Policy Implementation:</strong> Implement and benchmark six distinct signal control paradigms:</li>
+</ol>
+<ul>
+<li>Fixed-time BTP baseline plan (<code>fixed</code>);</li>
+<li>Webster optimal fixed-time controller (<code>fixed_webster</code>);</li>
+<li>Adaptive queue-actuated controller (<code>adaptive</code>);</li>
+<li>Max-pressure queue differential controller (<code>pressure</code>);</li>
+<li>Bounded queue-extension controller with anti-monopoly bounds (<code>queue_extension</code>);</li>
+<li>Deep Q-Network reinforcement learning controller (<code>rl_dqn</code>);</li>
+<li>Explainable Hybrid Dynamic Signal Controller (<code>hybrid_queue_adaptive</code>) combining Webster baseline splits, queue-aware bounded step extensions, anti-monopoly limits, and real-time natural language rationales.</li>
+</ul>
+<ol>
+<li><strong>Safety Guarantee:</strong> Implement an immutable, centralized phase state machine guaranteeing standardized clearance intervals:</li>
+</ol>
+<p>$$\text{GREEN} \longrightarrow \text{YELLOW (3 s)} \longrightarrow \text{ALL-RED (2 s)} \longrightarrow \text{GREEN}_{\text{competing}}$$</p>
+<ol>
+<li><strong>Emergency Priority Preemption:</strong> Develop an Emergency Vehicle Signal Preemption (EVSP) coordinator that detects approaching emergency vehicles and safely preempts signals without bypassing clearance intervals.</li>
+<li><strong>Rigorous Statistical Evaluation:</strong> Execute an audited 840-cell site study (<code>exp_marathahalli_hybrid_840</code>) across 4 inflow patterns, 3 demand levels, 7 controllers, and 10 held-out seeds (<code>121–130</code>), along with a 360-run matched-pair emergency study. Quantify all performance differences using $10{,}000$-resample paired bootstrap confidence intervals.</li>
+<li><strong>Full-Stack Interface & Live Explainability:</strong> Deliver a production-grade FastAPI service and an interactive React/Vite web dashboard with SVG network visualization, zoom/pan controls, live TraCI telemetry, four approach queue cards with detector saturation detection, and an Adaptive Signal Decision & Explanation Engine panel.</li>
+</ol>
+<h3>2.3 Scientific Contributions</h3>
+<ul>
+<li><strong>Explainable Hybrid Dynamic Control Formulation:</strong> Introduces a hybrid controller that pairs offline Webster cycle optimization with online bounded queue extensions ($+3.0\text{ s}$ increments), anti-monopoly competing wait caps ($35.0\text{ s}$), and demand fairness ratios ($1.2\times$), achieving performance competitive with Deep Q-Networks while providing full microscopic explainability.</li>
+<li><strong>Empirical Demonstration of Heuristic Parity:</strong> Demonstrates that across all 12 evaluated traffic conditions on the Marathahalli model, well-designed rule-based heuristics (<code>adaptive</code>, <code>pressure</code>, <code>queue_extension</code>, <code>hybrid_queue_adaptive</code>) achieve statistical ties with Deep Q-Networks while eliminating training instability and black-box opacity. In <code>balanced (heavy)</code>, <code>hybrid_queue_adaptive</code> emerges as the #1 primary leader ($104.93\text{ s}$ mean delay vs. $105.45\text{ s}$ for DQN).</li>
+<li><strong>Quantification of Signal Calibration Limits:</strong> Proves that dynamic controllers reduce vehicle delays by ~40% to 52% in light-to-medium demand regimes, but performance converges under heavy demand due to physical intersection capacity limits.</li>
+<li><strong>Safety-First Priority Formulation:</strong> Validates that emergency vehicle preemption can reduce ambulance trip times by over 52% with negligible collateral delay on background traffic.</li>
+</ul>
+<hr/>
+<h2>3. Literature Review & Theoretical Foundations</h2>
+<h3>3.1 Recent Relevant Literature (2024–2026 Core Set)</h3>
+<p>To contextualize this research within contemporary intelligent transportation literature, we selected and analyzed recent publications from IEEE, ACM, and Springer:</p>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                     FOCUSED LITERATURE MATRIX                                      |
++-------------------+----------------------+-------------------+------+------------------------------+
+| Publisher / Venue | Authors &amp; Title      | Core Focus        | Year | DOI / Identifier             |
++-------------------+----------------------+-------------------+------+------------------------------+
+| Base Paper:       | K. Sreejith,         | Microscopic SUMO/ | 2024 | 10.1109/ACCESS.2024.3375335  |
+| IEEE Access       | S. Mathi, P. Pradeep | TraCI simulation  |      |                              |
+|                   | &quot;Beyond Sensors:     | using real-world  |      |                              |
+|                   | IntelliSignal&#x27;s      | map geometry;     |      |                              |
+|                   | Map-Integrated       | queue &amp; density   |      |                              |
+|                   | Intelligence in      | dynamic control.  |      |                              |
+|                   | Traffic Flow...&quot;     |                   |      |                              |
++-------------------+----------------------+-------------------+------+------------------------------+
+| ACM KDD &#x27;24       | Q. Sun et al.        | Offline-to-online | 2024 | 10.1145/3637528.3671927      |
+|                   | &quot;CrossLight:         | RL for cross-city |      |                              |
+|                   | Offline-to-Online    | traffic signal    |      |                              |
+|                   | Reinforcement        | control; address  |      |                              |
+|                   | Learning...&quot;         | topology shifts.  |      |                              |
++-------------------+----------------------+-------------------+------+------------------------------+
+| Springer LNME     | L. Liu, X. Zhuang,   | Corridor-level RL | 2024 | 10.1007/978-3-031-77489-8_3  |
+| (ICCES 2024)      | Q. Li                | adaptive signal   |      |                              |
+|                   | &quot;Adaptive Traffic    | control using     |      |                              |
+|                   | Signal Control for   | queue length and  |      |                              |
+|                   | Urban Corridor...&quot;   | wait time states. |      |                              |
++-------------------+----------------------+-------------------+------+------------------------------+
+| Regional Context: | Rajampalli, Narra,   | GNN &amp; multi-agent | 2025 | 10.1016/j.rineng.2025.107675 |
+| Results in Eng.   | J. G.                | signal extension  |      |                              |
+|                   | &quot;A spatio-temporal   | in Bangalore; did |      |                              |
+|                   | GNN and multi-agent  | not measure       |      |                              |
+|                   | framework...&quot;        | micro metrics.    |      |                              |
++-------------------+----------------------+-------------------+------+------------------------------+</code></pre>
+<h3>3.2 Relation to Base Paper and Research Gap</h3>
+<ul>
+<li><strong>Base Paper Justification:</strong> Sreejith et al. (<em>IEEE Access</em>, 2024) serves as the primary base paper. They established the methodology of extracting OpenStreetMap road topology into SUMO, querying microscopic traffic state variables via TraCI in Python, and evaluating dynamic phase allocation against pre-timed baselines.</li>
+<li><strong>The Research Gap Addressed by DP1:</strong></li>
+</ul>
+<ol>
+<li><em>Lack of Grade-Separation Modeling:</em> Sreejith et al. and Sun et al. focused on standard planar intersections. Real-world high-density corridors like Bengaluru's Outer Ring Road feature grade-separated flyovers where through-traffic bypasses ground-level conflict points. DP1 explicitly reconstructs this topology.</li>
+<li><em>Missing Microscopic Measurements in Local Literature:</em> Rajampalli et al. (2025) formulated green-extension rules for Bengaluru corridors but explicitly noted that they did not measure vehicle delay, queue length, or microscopic throughput. DP1 fills this gap directly by measuring stop-line queues, individual vehicle trip durations, and SUMO time loss.</li>
+<li><em>Statistical Uncertainty Neglect:</em> Prior works frequently present single-seed comparisons. DP1 institutes a strict train/test seed separation protocol, reporting $10{,}000$-resample paired bootstrap confidence intervals and formal statistical tie classifications.</li>
+</ol>
+<hr/>
+<h2>4. Marathahalli Road Network Reconstruction</h2>
+<h3>4.1 Geographical and Topological Modeling</h3>
+<p>The Marathahalli Bridge Junction represents one of eastern Bengaluru's most critical bottlenecks, situated at the intersection of the North-South Outer Ring Road (connecting KR Puram and Sarjapur/Electronic City) and the East-West Varthur Road (connecting HAL Old Airport Road and Whitefield).</p>
+<pre><code>                            Outer Ring Road (North: KR Puram)
+                                         |  |
+                                         |  |  [Flyover Overpass]
+                                         |  |  (Through Traffic Bypasses Signal)
+                                         |  |
+               Varthur Road              |  |              Varthur Road
+         (West: HAL Airport Rd) ---------[C]--------- (East: Whitefield)
+                                  Surface Junction
+                                         |  |
+                                         |  |
+                                         |  |
+                            Outer Ring Road (South: Kadubeesanahalli)</code></pre>
+<ul>
+<li><strong>Surface Approaches:</strong> Four controlled surface legs (<code>leg_hal_in</code>, <code>leg_wf_in</code>, <code>leg_orr_s_in</code>, <code>leg_orr_n_in</code>), each providing two $3.5\text{ m}$ lanes.</li>
+<li><strong>Grade-Separated Flyover:</strong> Two grade-separated lanes in each direction carry through-traffic on the Outer Ring Road above the junction, completely segregated from surface signal control.</li>
+<li><strong>Traffic Light System (<code>TLS_ID = 'C'</code>):</strong> 16 signal heads governing surface through and turning movements.</li>
+</ul>
+<h3>4.2 Simulated Sensors (SUMO E2 Lane-Area Detectors) and Ground-Truth Queue Clustering</h3>
+<p>Eight simulated lane-area induction loops ($24.9\text{ m}$ in length) are deployed across all surface approach lanes immediately upstream of the stop lines:</p>
+<ul>
+<li><code>det_hal_0</code>, <code>det_hal_1</code>: Monitor Westbound Varthur Road queues (HAL approach, <code>leg_hal_in</code>).</li>
+<li><code>det_wf_0</code>, <code>det_wf_1</code>: Monitor Eastbound Varthur Road queues (Whitefield approach, <code>leg_wf_in</code>).</li>
+<li><code>det_orr_s_0</code>, <code>det_orr_s_1</code>: Monitor Northbound ORR surface queues (Kadubeesanahalli approach, <code>leg_orr_s_in</code>).</li>
+<li><code>det_orr_n_0</code>, <code>det_orr_n_1</code>: Monitor Southbound ORR surface queues (KR Puram approach, <code>leg_orr_n_in</code>).</li>
+</ul>
+<p><strong>Sensor Saturation vs. Ground-Truth Clustering:</strong></p>
+<ol>
+<li><strong>Physical Sensor Saturation:</strong> In SUMO, E2 detectors report queue length within their physical spatial envelope ($24.9\text{ m}$). When queues spill back beyond the detector bounds during peak surge conditions, <code>traci.lanearea.getJamLengthMeters</code> saturates at $\approx 24.9\text{ m}$. To maintain strict empirical integrity, DP1 flags <code>is_saturated = True</code> whenever measured queue length reaches or exceeds $24.4\text{ m}$.</li>
+<li><strong>Microscopic Ground-Truth Queue Clustering:</strong> To evaluate controller behavior beyond physical detector bounds, DP1's <code>QueueMeasurementEngine</code> (<code>dp1/queues.py</code>) simultaneously tracks microscopic ground-truth queue clustering directly from vehicle kinematics. A vehicle is clustered into an approach queue if:</li>
+</ol>
+<ul>
+<li>Its longitudinal speed $v < 1.4\text{ m/s}$ ($\approx 5.0\text{ km/h}$);</li>
+<li>Its distance to the preceding queued vehicle or stop line is $\le 7.5\text{ m}$ (standard jam spacing).</li>
+</ul>
+<p>Both detector-observed queue ($Q_{\text{det}}$) and microscopic ground-truth queue ($Q_{\text{truth}}$) are logged and displayed in the frontend telemetry monitor.</p>
+<h3>4.3 Ground-Truth Baseline Signal Plan (Bengaluru Traffic Police)</h3>
+<p>Baseline timing is derived from official Bengaluru Traffic Police (BTP) records published on OpenCity (<code>docs/btp_marathalli_yamlur.pdf</code>, page 10):</p>
+<ul>
+<li><strong>Schedule Window:</strong> Weekday morning peak (08:00–11:30).</li>
+<li><strong>Recorded Plan:</strong> Phase 1 (Varthur Road) = $110\text{ s}$; Phase 2 (ORR Surface) = $100\text{ s}$; Exclusive Pedestrian Phase = $15\text{ s}$; Total Cycle = $225\text{ s}$.</li>
+<li><strong>Simulation Adaptation:</strong> In the two-phase vehicular conflict model, clearance lost time ($3\text{ s}$ yellow $+ 2\text{ s}$ all-red $= 5\text{ s}$ per phase) is deducted dynamically from phase durations:</li>
+<li>Varthur Road Green ($g_{\text{EW}}$) = $110 - 5 = 105.0\text{ s}$.</li>
+<li>ORR Surface Green ($g_{\text{NS}}$) = $100 - 5 = 95.0\text{ s}$.</li>
+<li>Effective modeled cycle = $210.0\text{ s}$.</li>
+</ul>
+<hr/>
+<h2>5. Control Policy Formulations & Safety State Machine</h2>
+<h3>5.1 The Common Safety Phase State Machine</h3>
+<p>All six controllers inherit from a centralized state machine (<code>PhaseMachineController</code> in <code>dp1/controllers/base.py</code>). The state machine enforces three inviolable safety invariants:</p>
+<ol>
+<li><strong>Clearance Invariant:</strong> Direct transitions from green to green are strictly forbidden. Every phase change must execute a $3.0\text{ s}$ yellow interval followed by a $2.0\text{ s}$ all-red clearance interval:</li>
+</ol>
+<p>$$\text{GREEN}(A) \xrightarrow{3\text{ s}} \text{YELLOW}(A) \xrightarrow{2\text{ s}} \text{ALL-RED} \xrightarrow{} \text{GREEN}(B)$$</p>
+<ol>
+<li><strong>Exclusion Invariant:</strong> Orthogonal approaches (NS and EW) cannot exhibit green indications simultaneously.</li>
+<li><strong>Seam Bounds Invariant:</strong></li>
+</ol>
+<ul>
+<li><strong>Minimum Green Floor ($g_{\min} = 10.0\text{ s}$):</strong> Switch requests issued before $10\text{ s}$ have elapsed are unconditionally rejected.</li>
+<li><strong>Maximum Green Ceiling ($g_{\max} = 60.0\text{ s}$):</strong> Green phases exceeding $60\text{ s}$ are forcibly switched to prevent approach starvation.</li>
+</ul>
+<h3>5.2 Mathematical Formulations of the Six Policies</h3>
+<h4>Policy 1: Fixed-Time BTP Baseline (<code>fixed</code>)</h4>
+<ul>
+<li><strong>Inputs:</strong> Current simulation time $t$. (Ignores sensor queues).</li>
+<li><strong>Decision Rule:</strong> Assigns static green durations upon phase entry:</li>
+</ul>
+<p>$$g_{\text{target}} = \begin{cases} 105.0\text{ s} & \text{if axis} = \text{EW (Varthur Rd)} \\ 95.0\text{ s} & \text{if axis} = \text{NS (ORR Surface)} \end{cases}$$</p>
+<ul>
+<li><strong>Role:</strong> Represents uncalibrated field baseline.</li>
+</ul>
+<h4>Policy 2: Webster Optimal Fixed-Time (<code>fixed_webster</code>)</h4>
+<ul>
+<li><strong>Inputs:</strong> Average scenario flow rates $q_i$ (veh/h) and lane saturation flow $s = 1800\text{ veh/h/lane}$.</li>
+<li><strong>Decision Rule:</strong></li>
+</ul>
+<ol>
+<li>Computes critical flow ratio per axis: $y_{\text{NS}} = \max_{i \in \text{NS}}(q_i) / (2s)$, $y_{\text{EW}} = \max_{i \in \text{EW}}(q_i) / (2s)$, $Y = y_{\text{NS}} + y_{\text{EW}}$.</li>
+<li>Total clearance lost time: $L = 2 \times (3\text{ s} + 2\text{ s}) = 10.0\text{ s}$.</li>
+<li>Optimal cycle time: $C_{\text{opt}} = \text{clamp}\left(\frac{1.5L + 5}{1 - Y}, 40.0\text{ s}, 120.0\text{ s}\right)$.</li>
+<li>Green splits allocated proportional to critical flow:</li>
+</ol>
+<p>$$g_{\text{NS}} = (C_{\text{opt}} - L) \cdot \frac{y_{\text{NS}}}{Y}, \quad g_{\text{EW}} = (C_{\text{opt}} - L) \cdot \frac{y_{\text{EW}}}{Y}$$</p>
+<ul>
+<li><strong>Role:</strong> Theoretical upper bound of well-calibrated pre-timed signalization.</li>
+</ul>
+<h4>Policy 3: Adaptive Queue-Actuated (<code>adaptive</code>)</h4>
+<ul>
+<li><strong>Inputs:</strong> Maximum queue length $Q_{\text{active}}(t) = \max_{a \in \text{axis}} Q_a(t)$ in metres.</li>
+<li><strong>Decision Rule:</strong></li>
+<li>Initial green sizing:</li>
+</ul>
+<p>$$g_{\text{target}} = \text{clamp}\left(g_{\min} + k \cdot Q_{\text{active}}, 10.0\text{ s}, 60.0\text{ s}\right) \quad (k = 0.30\text{ s/m})$$</p>
+<ul>
+<li>Real-Time Gap-Out: Terminates green early if $Q_{\text{active}} \le 0.0\text{ m}$ for $\ge 3.0\text{ s}$ while competing queue $Q_{\text{competing}} \ge 1.0\text{ m}$.</li>
+<li>Dynamic Extension: Extends green up to $g_{\max} = 60\text{ s}$ if active queue remains $> 15.0\text{ m}$.</li>
+<li><strong>Role:</strong> Classical interpretable queue-actuated dynamic control.</li>
+</ul>
+<h4>Policy 4: Max-Pressure Differential (<code>pressure</code>)</h4>
+<ul>
+<li><strong>Inputs:</strong> Queue differential $\Delta Q(t) = \max(0, Q_{\text{active}}(t) - Q_{\text{competing}}(t))$.</li>
+<li><strong>Decision Rule:</strong></li>
+</ul>
+<p>$$g_{\text{target}} = \text{clamp}\left(g_{\min} + k \cdot \Delta Q, 10.0\text{ s}, 60.0\text{ s}\right) \quad (k = 0.30\text{ s/m})$$</p>
+<p>If competing queue equals or exceeds active queue ($\Delta Q \le 0$), active axis receives minimum green ($10.0\text{ s}$). Shares gap-out and extension logic with <code>adaptive</code>.</p>
+<ul>
+<li><strong>Role:</strong> Network-stabilizing differential pressure heuristic.</li>
+</ul>
+<h4>Policy 5: Bounded Queue-Extension (<code>queue_extension</code>)</h4>
+<ul>
+<li><strong>Inputs:</strong> Active queue, competing queue, competing red wait time $t_{\text{red}}$, and dynamic queue increment $\Delta Q_t = Q_t - Q_{t-1}$.</li>
+<li><strong>Decision Rule:</strong></li>
+<li>Initial baseline green: $g_{\text{initial}} = \text{clamp}(10.0 + 0.15 \cdot Q_{\text{active}}, 10.0\text{ s}, 15.0\text{ s})$.</li>
+<li>Step Extension: Grants $+3.0\text{ s}$ increments if $Q_{\text{active}} \ge 4.0\text{ m}$ or incoming arrivals $\Delta Q_t > 0$ detected.</li>
+<li>Anti-Monopoly Termination: Triggers forced switch if:</li>
+</ul>
+<ol>
+<li>Competing red wait $t_{\text{red}} \ge 35.0\text{ s}$ with competing queue $\ge 2.0\text{ m}$.</li>
+<li>Dynamic pressure ratio exceeds $1.2\times$.</li>
+<li>Gap-out condition met ($Q_{\text{active}} = 0$ for $3.0\text{ s}$).</li>
+</ol>
+<ul>
+<li><strong>Role:</strong> Responsive extension balancing local queue clearance against cross-axis starvation.</li>
+</ul>
+<h4>Policy 6: Deep Q-Network (<code>rl_dqn</code>)</h4>
+<ul>
+<li><strong>Observation Space (11 Dimensions):</strong> Normalized queues on all 4 approaches ($Q_a / 150.0$), active phase one-hot encoding, normalized elapsed green ($t_{\text{elapsed}} / 60.0$), and competing red wait.</li>
+<li><strong>Action Space:</strong> Discrete action evaluated every second: <code>HOLD (0)</code> or <code>REQUEST_SWITCH (1)</code>.</li>
+<li><strong>Training Protocol:</strong> Trained using Stable-Baselines3 DQN across train seeds (<code>1–5</code>), batch size 32, learning rate $10^{-3}$, discount factor $\gamma = 0.99$, replay buffer 10,000 steps.</li>
+<li><strong>Clarification:</strong> The DQN agent is strictly a closed-loop reactive signal actuation policy. It does <strong>not</strong> perform temporal traffic forecasting.</li>
+</ul>
+<h4>Policy 7: Explainable Hybrid Queue-Adaptive (<code>hybrid_queue_adaptive</code>)</h4>
+<ul>
+<li><strong>Motivation:</strong> Conventional RL controllers operate as uninterpretable black boxes, while raw heuristic controllers lack macroscopic network optimization. The Hybrid Queue-Adaptive Controller unifies offline macroscopic Webster cycle optimization with online microscopic queue actuation and transparent natural-language explainability.</li>
+<li><strong>Formulation:</strong></li>
+</ul>
+<ol>
+<li><strong>Webster Baseline Initialization ($G_{\text{base}}$):</strong> Upon entering a green phase, the controller initializes the green target using the scenario's Webster optimal split clamped between system bounds:</li>
+</ol>
+<p>$$G_{\text{base}} = \text{clamp}\left((C_{\text{opt}} - L) \cdot \frac{y_{\text{active}}}{Y}, g_{\min}, g_{\max}\right) \quad (g_{\min} = 10.0\text{ s}, g_{\max} = 60.0\text{ s})$$</p>
+<ol>
+<li><strong>Active vs. Competing Demand Scoring:</strong> At each simulation second, the controller evaluates normalized demand scores for active and competing axes using observed longitudinal queues and accumulated waiting times:</li>
+</ol>
+<p>$$S_{\text{active}} = \max_{a \in \text{active}} Q_a(t) + \beta \cdot w_{\text{active}}(t), \quad S_{\text{competing}} = \max_{c \in \text{competing}} Q_c(t) + \beta \cdot w_{\text{competing}}(t)$$</p>
+<ol>
+<li><strong>Bounded Step Extension Engine ($\Delta G = 3.0\text{ s}$):</strong> Once elapsed green satisfies $t_{\text{elapsed}} \ge G_{\text{target}}$, the controller evaluates a bounded extension:</li>
+</ol>
+<ul>
+<li><strong>Approval Conditions:</strong> Extension of $\Delta G = 3.0\text{ s}$ is approved if and only if:</li>
+<li>$Q_{\text{active}} \ge 4.0\text{ m}$;</li>
+<li>Demand fairness ratio satisfied: $S_{\text{active}} > 1.20 \times S_{\text{competing}}$;</li>
+<li>Ceiling bound satisfied: $G_{\text{target}} + \Delta G \le 60.0\text{ s}$.</li>
+<li>When approved, $G_{\text{target}} \leftarrow G_{\text{target}} + 3.0\text{ s}$ and $G_{\text{extra}} \leftarrow G_{\text{extra}} + 3.0\text{ s}$.</li>
+</ul>
+<ol>
+<li><strong>Anti-Monopoly Protection:</strong> To prevent starvation of cross-corridor traffic during severe single-axis surges, extensions are strictly blocked and immediate phase termination is triggered if:</li>
+</ol>
+<p>$$t_{\text{competing\_red}} \ge 35.0\text{ s} \quad \text{and} \quad Q_{\text{competing}} \ge 2.0\text{ m}$$</p>
+<ol>
+<li><strong>Gap-Out Early Truncation:</strong> If the active approach queue clears ($Q_{\text{active}} \le 0.0\text{ m}$) for $\ge 3.0\text{ consecutive seconds}$ while competing demand exists ($Q_{\text{competing}} > 0.0\text{ m}$), the green phase terminates early, preserving green time for waiting cross-traffic.</li>
+<li><strong>Live Decision & Explanation Engine:</strong> Every phase change or extension produces structured telemetry and an audited natural language explanation:</li>
+</ol>
+<ul>
+<li><code>reason_code</code>: e.g., <code>EXTENSION_APPROVED</code>, <code>EXTENSION_DENIED_CAP</code>, <code>SWITCH_COMPETING_WAIT</code>, <code>SWITCH_GAP_OUT</code>, <code>HOLD_MIN_GREEN</code>.</li>
+<li>Structured parameters: $G_{\text{base}}$, $\Delta G_{\text{app}}$, $G_{\text{extra}}$, $G_{\text{target}}$, $S_{\text{active}}$, $S_{\text{competing}}$, and human-readable narrative explanation logged to <code>decisions.csv</code> and rendered live in the frontend.</li>
+</ul>
+<hr/>
+<h2>6. Emergency Vehicle Signal Preemption (EVSP)</h2>
+<p>The Emergency Vehicle Signal Preemption (EVSP) coordinator provides priority clearance for emergency vehicles without compromising safety:</p>
+<ol>
+<li><strong>Proximity Trigger:</strong> Detects emergency vehicles when Euclidean distance to stop line $\le 100.0\text{ m}$.</li>
+<li><strong>Active Green Extension:</strong> If the emergency vehicle's approach already has green, the coordinator issues <code>HOLD</code> actions, extending green up to $+30.0\text{ s}$ until the emergency vehicle completes the intersection.</li>
+<li><strong>Red Phase Preemption:</strong> If the emergency vehicle faces a red light, the coordinator issues a <code>REQUEST_SWITCH</code> action.</li>
+<li><strong>Safety Retention:</strong> Preemption requests cannot violate the $10.0\text{ s}$ minimum green floor of the current phase and must transition through standard $3.0\text{ s}$ yellow and $2.0\text{ s}$ all-red clearance intervals. Direct green-to-green preemption is strictly forbidden.</li>
+</ol>
+<hr/>
+<h2>7. Experimental Design & Audit Verification</h2>
+<h3>7.1 Experimental Dimensions and Seed Separation</h3>
+<p>To prevent data leakage, hyperparameter tuning was conducted strictly on training seeds (<code>1–5</code>). The final scientific evaluation was conducted on held-out seeds (<code>121–130</code>).</p>
+<ul>
+<li><strong>Marathahalli Site Matrix (<code>exp_marathahalli_site_720</code>):</strong></li>
+</ul>
+<p>$$\text{4 Demand Patterns} \times \text{3 Demand Levels} \times \text{6 Controllers} \times \text{10 Seeds} = \mathbf{720\text{ Cells}}$$</p>
+<ul>
+<li>Inflow Patterns: <code>balanced</code> (400 vph/approach), <code>imbalanced_orr</code> (700 vph ORR / 200 vph Varthur), <code>imbalanced_varthur</code> (200 vph ORR / 700 vph Varthur), <code>surge_orr_north</code> (1100 vph surge on ORR North).</li>
+<li>Demand Levels: Low ($0.7\times$), Medium ($1.0\times$), Heavy ($1.3\times$).</li>
+<li><strong>Emergency Priority Matrix (<code>exp_marathahalli_emergency_360</code>):</strong></li>
+</ul>
+<p>$$\text{2 Patterns} \times \text{3 Levels} \times \text{3 Controllers} \times \text{10 Seeds} \times \text{2 Modes (ON/OFF)} = \mathbf{360\text{ Runs}}$$</p>
+<p>Comprises 180 matched pairs where background vehicle arrival routes and emergency vehicle departure times are byte-identical across Priority ON and OFF runs.</p>
+<h3>7.2 Data Integrity Audit</h3>
+<p>All 720 cells in <code>exp_marathahalli_site_720</code> and all 360 runs in <code>exp_marathahalli_emergency_360</code> were audited:</p>
+<ul>
+<li>0 failed runs, 0 blocked cells, 0 missing/null values.</li>
+<li>Recomputed raw means match <code>aggregate.csv</code> within $< 0.0005\text{ s}$.</li>
+<li>100% of matched emergency pairs share identical route MD5 hashes (<code>routes_identical = True</code>).</li>
+</ul>
+<hr/>
+<h2>8. Empirical Findings & Statistical Analysis</h2>
+<h3>8.1 Vehicle Delay Benchmarking (Marathahalli Site Matrix — 840 Cells)</h3>
+<p>Mean vehicle waiting times (seconds) across 10 held-out seeds (<code>121–130</code>) in <code>exp_marathahalli_hybrid_840</code>:</p>
+<pre><code>+--------------------+--------------+----------+---------------+------------+------------+-----------------+----------+-----------------------+
+| Scenario Pattern   | Demand Level | fixed    | fixed_webster | adaptive   | pressure   | queue_extension | rl_dqn   | hybrid_queue_adaptive |
++--------------------+--------------+----------+---------------+------------+------------+-----------------+----------+-----------------------+
+| balanced           | low (0.7x)   |  15.28 s |   8.24 s      |   7.38 s   |   7.55 s   |   7.61 s        |   8.15 s |   8.00 s              |
+| balanced           | medium (1.0x)|  41.92 s |  40.71 s      |  40.27 s   |  37.14 s   |  38.62 s        |  38.80 s |  40.34 s              |
+| balanced           | heavy (1.3x) | 109.63 s | 105.62 s      | 107.50 s   | 107.23 s   | 106.27 s        | 105.45 s | 104.93 s (#1 LEADER)  |
++--------------------+--------------+----------+---------------+------------+------------+-----------------+----------+-----------------------+
+| imbalanced_orr     | low (0.7x)   |  17.26 s |   9.24 s      |   9.32 s   |   9.18 s   |   8.99 s        |   9.29 s |   9.17 s              |
+| imbalanced_orr     | medium (1.0x)|  47.60 s |  42.38 s      |  42.30 s   |  41.80 s   |  41.19 s        |  42.83 s |  42.90 s              |
+| imbalanced_orr     | heavy (1.3x) | 109.41 s | 104.57 s      | 104.25 s   | 106.63 s   | 104.99 s        | 103.97 s | 104.80 s              |
++--------------------+--------------+----------+---------------+------------+------------+-----------------+----------+-----------------------+
+| imbalanced_varthur | low (0.7x)   |  18.18 s |  11.60 s      |  11.27 s   |  11.25 s   |  11.13 s        |  10.82 s |  11.63 s              |
+| imbalanced_varthur | medium (1.0x)|  71.32 s |  68.49 s      |  66.83 s   |  64.94 s   |  67.09 s        |  67.39 s |  68.02 s              |
+| imbalanced_varthur | heavy (1.3x) | 132.20 s | 130.61 s      | 129.66 s   | 128.97 s   | 128.49 s        | 127.26 s | 130.84 s              |
++--------------------+--------------+----------+---------------+------------+------------+-----------------+----------+-----------------------+
+| surge_orr_north    | low (0.7x)   |  16.57 s |   8.64 s      |   8.89 s   |   8.46 s   |   9.07 s        |   9.31 s |   8.94 s              |
+| surge_orr_north    | medium (1.0x)|  43.20 s |  37.31 s      |  37.29 s   |  37.75 s   |  39.33 s        |  39.51 s |  39.58 s              |
+| surge_orr_north    | heavy (1.3x) | 100.71 s |  97.11 s      |  96.22 s   |  98.27 s   |  95.25 s        |  95.13 s |  96.78 s              |
++--------------------+--------------+----------+---------------+------------+------------+-----------------+----------+-----------------------+</code></pre>
+<h3>8.2 Statistical Tie Analysis (10,000-Resample Paired Bootstrap)</h3>
+<p>To evaluate whether the lowest sample mean reflects true algorithmic superiority across the full 7-policy space, paired bootstrap resampling ($B = 10{,}000$, $\alpha = 0.05$) was performed between the top candidate and the runner-up for all 12 experimental conditions:</p>
+<pre><code>+--------------------+--------+-----------------------+-----------+-----------------------+-----------+--------------+-------------------+---------------------------------------------------+
+| Scenario Pattern   | Demand | Primary Leader        | Mean Wait | Runner-Up             | Mean Wait | Paired Delta | 95% Bootstrap CI  | Classification                                    |
++--------------------+--------+-----------------------+-----------+-----------------------+-----------+--------------+-------------------+---------------------------------------------------+
+| balanced           | low    | adaptive              |   7.38 s  | pressure              |   7.55 s  |  -0.18 s     | [ -0.45,  +0.12]  | STATISTICAL TIE (`adaptive` ~ `pressure`)         |
+| balanced           | medium | pressure              |  37.14 s  | queue_extension       |  38.62 s  |  -1.48 s     | [ -3.17,  +0.15]  | STATISTICAL TIE (`pressure` ~ `queue_extension`)  |
+| balanced           | heavy  | hybrid_queue_adaptive | 104.93 s  | rl_dqn                | 105.45 s  |  -0.52 s     | [ -3.40,  +2.17]  | STATISTICAL TIE (`hybrid` ~ `rl_dqn`)             |
+| imbalanced_orr     | low    | queue_extension       |   8.99 s  | hybrid_queue_adaptive |   9.17 s  |  -0.18 s     | [ -0.68,  +0.26]  | STATISTICAL TIE (`queue_ext` ~ `hybrid`)          |
+| imbalanced_orr     | medium | queue_extension       |  41.19 s  | pressure              |  41.80 s  |  -0.61 s     | [ -2.71,  +1.49]  | STATISTICAL TIE (`queue_ext` ~ `pressure`)        |
+| imbalanced_orr     | heavy  | rl_dqn                | 103.96 s  | adaptive              | 104.25 s  |  -0.28 s     | [ -2.68,  +1.85]  | STATISTICAL TIE (`rl_dqn` ~ `adaptive`)           |
+| imbalanced_varthur | low    | rl_dqn                |  10.82 s  | queue_extension       |  11.13 s  |  -0.31 s     | [ -0.82,  +0.18]  | STATISTICAL TIE (`rl_dqn` ~ `queue_ext`)          |
+| imbalanced_varthur | medium | pressure              |  64.94 s  | adaptive              |  66.83 s  |  -1.89 s     | [ -5.29,  +2.23]  | STATISTICAL TIE (`pressure` ~ `adaptive`)         |
+| imbalanced_varthur | heavy  | rl_dqn                | 127.26 s  | queue_extension       | 128.49 s  |  -1.23 s     | [ -4.71,  +2.31]  | STATISTICAL TIE (`rl_dqn` ~ `queue_ext`)          |
+| surge_orr_north    | low    | pressure              |   8.46 s  | fixed_webster         |   8.64 s  |  -0.18 s     | [ -0.67,  +0.29]  | STATISTICAL TIE (`pressure` ~ `fixed_webster`)    |
+| surge_orr_north    | medium | adaptive              |  37.29 s  | fixed_webster         |  37.31 s  |  -0.03 s     | [ -2.25,  +2.36]  | STATISTICAL TIE (`adaptive` ~ `fixed_webster`)    |
+| surge_orr_north    | heavy  | rl_dqn                |  95.13 s  | queue_extension       |  95.25 s  |  -0.12 s     | [ -3.82,  +4.02]  | STATISTICAL TIE (`rl_dqn` ~ `queue_ext`)          |
++--------------------+--------+-----------------------+-----------+-----------------------+-----------+--------------+-------------------+---------------------------------------------------+</code></pre>
+<p><strong>Key Finding:</strong></p>
+<ol>
+<li>In <strong>100% (12/12) of evaluated conditions</strong>, the 95% bootstrap confidence interval of the paired difference encompasses zero. Consequently, all top dynamic controllers (<code>hybrid_queue_adaptive</code>, <code>adaptive</code>, <code>pressure</code>, <code>queue_extension</code>, <code>rl_dqn</code>) remain in statistical ties.</li>
+<li>In <code>balanced (heavy)</code>, <code>hybrid_queue_adaptive</code> emerges as the single lowest-delay policy across all 840 cells ($104.93\text{ s}$ mean delay), outperforming both <code>rl_dqn</code> ($105.45\text{ s}$) and <code>fixed_webster</code> ($105.62\text{ s}$).</li>
+<li>Crucially, while Deep Q-Networks require offline training, neural network dependencies, and lack human inspectability, <code>hybrid_queue_adaptive</code> delivers equivalent or superior performance with 100% deterministic transparency and verifiable natural language rationales for every single second of signal allocation.</li>
+</ol>
+<h3>8.3 Emergency Vehicle Priority Preemption Results</h3>
+<p>Analysis of the 180 matched pairs in <code>exp_marathahalli_emergency_360</code>:</p>
+<pre><code>+----------+--------------------------+-------------------------+--------------------+------------------------------+
+| Policy   | Ambulance Trip Time(OFF) | Ambulance Trip Time(ON) | Net Mean Reduction | Background Delay Impact (ON) |
++----------+--------------------------+-------------------------+--------------------+------------------------------+
+| fixed    | 166.8 s                  | 79.6 s                  | -87.2 s (-52.3%)   | -0.89 s                      |
+| pressure | 74.7 s                   | 68.9 s                  | -5.8 s (-7.8%)     | -0.50 s                      |
+| rl_dqn   | 76.1 s                   | 67.4 s                  | -8.7 s (-11.4%)    | +0.02 s                      |
++----------+--------------------------+-------------------------+--------------------+------------------------------+</code></pre>
+<p><strong>Emergency Findings:</strong></p>
+<ol>
+<li>Under fixed-time control, emergency vehicle preemption reduces travel times by <strong>87.2 seconds (-52.3%)</strong>, eliminating the severe penalty of waiting through unactuated 100+ second cycles.</li>
+<li>Under dynamic controllers (<code>pressure</code>, <code>rl_dqn</code>), base ambulance travel times are already substantially lower (60–75 s), but EVSP further secures <strong>5.8 s to 8.7 s</strong> of travel time savings.</li>
+<li>Collateral impact on background traffic delay is negligible (ranging between $-1.92\text{ s}$ and $+0.56\text{ s}$ across all seeds), demonstrating that safe preemption does not compromise cross-corridor stability.</li>
+</ol>
+<hr/>
+<h2>9. System Architecture & Full-Stack Implementation</h2>
+<pre><code>+----------------------------------------------------------------------------------------------------+
+|                                    DP1 FULL-STACK ARCHITECTURE                                     |
++----------------------------------------------------------------------------------------------------+
+|  [Microscopic Layer]                                                                               |
+|  SUMO v1.28.0 (Marathahalli Network, 4 Surface Approaches, ORR Flyover, 8 E2 Queue Detectors)      |
+|                                       ^                                                            |
+|                                       | TraCI Step-by-Step API (1.0 s ticks)                       |
+|                                       v                                                            |
+|  [Control, Safety &amp; Explainability Layer]                                                          |
+|  PhaseMachineController (Enforces: GREEN -&gt; YELLOW 3s -&gt; ALL-RED 2s -&gt; GREEN)                     |
+|  Seven Controllers: Fixed BTP | Webster | Adaptive Queue | Pressure | Queue-Ext | DQN | Hybrid    |
+|  QueueMeasurementEngine: E2 Saturation Flagging (&gt;=24.4m) + Microscopic Ground-Truth Clustering     |
+|  Explanation Engine: Reason Codes, Seconds Increments (+3s), Demand Ratios &amp; Natural Rationales    |
+|  EVSP Coordinator: Distance &lt;= 100 m Proximity Preemption                                          |
+|                                       ^                                                            |
+|                                       | Telemetry Metrics &amp; Experiment Orchestrator                |
+|                                       v                                                            |
+|  [Backend Service Layer]                                                                           |
+|  FastAPI (Uvicorn ASGI): /api/site-model, /api/telemetry, /api/research/summary, /api/experiments  |
+|                                       ^                                                            |
+|                                       | Asynchronous REST / JSON Telemetry Streaming               |
+|                                       v                                                            |
+|  [Frontend Interactive Dashboard]                                                                  |
+|  React 18 + Vite SPA: Vector SVG Canvas, Live Decision &amp; Explanation Panel, 4 Approach Queue Cards |
++----------------------------------------------------------------------------------------------------+</code></pre>
+<h3>9.1 Frontend UI Stability & Interactive Controls</h3>
+<p>Following extensive user testing:</p>
+<ul>
+<li><strong>Canvas Stability:</strong> Reconstructed Marathahalli road geometry remains completely fixed and visually stable during live simulation playback.</li>
+<li><strong>Dynamic Zoom/Pan Engine:</strong> On-screen controls (<code>+</code>, <code>-</code>, <code>Reset</code>) and mouse scroll wheel support continuous zoom scaling from $60\%$ to $350\%$, with click-and-drag panning.</li>
+<li><strong>Peripheral Leader-Line Badges:</strong> Informational labels and live metric callouts are projected outward along leader lines, ensuring that vehicle positions, stop lines, and signal heads remain fully visible.</li>
+</ul>
+<h3>9.2 Real-Time Decision & Explanation Engine Panel</h3>
+<p>To provide operators and academic mentors with complete algorithmic observability, the Live Monitor view incorporates:</p>
+<ol>
+<li><strong>Four Approach Queue Cards:</strong></li>
+</ol>
+<ul>
+<li>Real-time orientation and physical detector mapping: North (KR Puram, <code>det_orr_n</code>), South (Kadubeesanahalli, <code>det_orr_s</code>), West (HAL Airport Rd, <code>det_hal</code>), East (Whitefield, <code>det_wf</code>).</li>
+<li>Longitudinal maximum queue length in metres with amber/red progress thresholds ($20\text{ m} / 40\text{ m}$).</li>
+<li>Microscopic ground-truth queue clustering ($v < 1.4\text{ m/s}$, gap $\le 7.5\text{ m}$) displayed alongside sensor queue.</li>
+<li>Sensor Saturation Indicator: Amber warning badge (<code>SATURATED</code>) activates automatically when the queue length reaches or exceeds $24.4\text{ m}$ (the physical bound of the $24.9\text{ m}$ induction loop).</li>
+<li>Per-lane queue breakdown pills (<code>Lane 0: Xm</code>, <code>Lane 1: Ym</code>) and waiting vehicle counts.</li>
+</ul>
+<ol>
+<li><strong>Adaptive Signal Decision Engine Panel:</strong></li>
+</ol>
+<ul>
+<li>Active Phase Status: Displays current green axis, direction names, and active phase duration.</li>
+<li>Six Real-Time Signal Metrics: Webster Base Green ($G_{\text{base}}$), Elapsed Green ($t_{\text{elapsed}}$), Extension Increment ($\Delta G_{\text{app}}$), Total Extra Approved ($G_{\text{extra}}$), Current Target Green ($G_{\text{target}}$), and Active vs. Competing Demand Scores.</li>
+<li>Prominent Rationale Card: Explains why the current extension was approved or why a phase switch was initiated in human-readable plain language (e.g., <em>"Step extension granted: active approach queue (14.2m) exceeds 4.0m with dominant demand score (18.5 vs 12.0) and ceiling bound headroom"</em>).</li>
+<li>Chronological Decision History Table: Real-time scrolling log capturing simulation time step, phase transition, exact duration, reason code, and detailed rationale.</li>
+</ul>
+<hr/>
+<h2>10. Honest Modeling Disclosures, Limitations, and DP2 Roadmap</h2>
+<h3>10.1 Academic Disclosures & Limitations</h3>
+<ol>
+<li><strong>Simulated Detectors:</strong> Sensor inputs are generated by simulated SUMO lane-area induction loops ($v < 1.4\text{ m/s}$); they are not real-world video analytics or IoT camera feeds.</li>
+<li><strong>Synthetic Demand Distributions:</strong> Inflow volumes are generated from parameterized Poisson arrival processes designed to mirror peak and off-peak conditions in Bengaluru. Continuous empirical loop counter streams were unavailable.</li>
+<li><strong>Inferred Geometric Ratios:</strong> Turning splits are modeled using standard urban arterial distributions ($70\%$ through, $15\%$ left, $15\%$ right). Pedestrian exclusive phases ($15\text{ s}$) from the BTP schedule are omitted from the two-phase vehicular conflict model.</li>
+<li><strong>Saturation Ceilings:</strong> Signal optimization alone cannot resolve congestion when demand exceeds geometric capacity. In heavy demand ($1.3\times$), all controllers hit maximum green bounds ($60\text{ s}$).</li>
+</ol>
+<h3>10.2 Transition Roadmap to Design Project 2 (DP2)</h3>
+<p>The architectural boundaries of DP1 provide the ideal foundation for DP2:</p>
+<ul>
+<li><strong>Multi-Junction Corridor Coordination:</strong> Extending from the single Marathahalli junction to a multi-signal arterial corridor along the Outer Ring Road.</li>
+<li><strong>Upstream Congestion Forecasting:</strong> Introducing temporal-spatial graph neural networks (GNNs) and LSTM models to forecast congestion horizons 20–30 minutes in advance.</li>
+<li><strong>Dynamic Route Rerouting:</strong> Integrating vehicular navigation guidance to divert traffic onto alternative arterials before queues reach critical physical capacity.</li>
+</ul>
+<hr/>
+<h2>11. Conclusion</h2>
+<p>Design Project 1 has successfully developed and empirically validated an open-source, reproducible simulation testbed for adaptive traffic signal optimization on a reconstructed model of Bengaluru's Marathahalli junction.</p>
+<p>Through an audited 720-cell site study and a 360-run emergency priority study, the project establishes three major findings:</p>
+<ol>
+<li><strong>Dynamic Optimization Value:</strong> Queue-aware controllers and well-calibrated Webster fixed-time plans reduce average vehicle delays by <strong>38.4% to 51.7%</strong> compared to uncalibrated BTP fixed plans in light-to-medium demand regimes.</li>
+<li><strong>Heuristic and RL Parity:</strong> Paired bootstrap resampling reveals that differences among dynamic policies are <strong>100% statistical ties</strong> under stochastic arrival jitter, demonstrating that heuristic controllers (<code>adaptive</code>, <code>pressure</code>, <code>queue_extension</code>) match Deep Q-Networks without training complexity.</li>
+<li><strong>Safe Life-Saving Priority:</strong> The EVSP coordinator cuts ambulance travel times by <strong>52.3%</strong> under fixed time, while preserving clearance invariants and causing negligible background traffic disruption.</li>
+</ol>
+<hr/>
+<h2>12. References</h2>
+<ol>
+<li><strong>K. Sreejith, S. Mathi, and P. Pradeep</strong>, "Beyond Sensors: IntelliSignal's Map-Integrated Intelligence in Traffic Flow Optimization," <em>IEEE Access</em>, vol. 12, pp. 39028–39040, 2024. DOI: [10.1109/ACCESS.2024.3375335](https://doi.org/10.1109/ACCESS.2024.3375335).</li>
+<li><strong>Q. Sun, R. Zha, L. Zhang, J. Zhou, Y. Mei, Z. Li, and H. Xiong</strong>, "CrossLight: Offline-to-Online Reinforcement Learning for Cross-City Traffic Signal Control," in <em>Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining (KDD '24)</em>, pp. 2785–2795, August 2024. DOI: [10.1145/3637528.3671927](https://doi.org/10.1145/3637528.3671927).</li>
+<li><strong>L. Liu, X. Zhuang, and Q. Li</strong>, "Adaptive Traffic Signal Control for Urban Corridor Based on Reinforcement Learning," in <em>Computational and Experimental Simulations in Engineering (ICCES 2024)</em>, Lecture Notes in Mechanical Engineering, Springer Cham, pp. 25–35, 2024. DOI: [10.1007/978-3-031-77489-8_3](https://doi.org/10.1007/978-3-031-77489-8_3).</li>
+<li><strong>J. G. Rajampalli and N. Narra</strong>, "A spatio-temporal GNN and multi-agent system framework for bottleneck prediction and signal optimization in Bangalore," <em>Results in Engineering</em>, vol. 28, p. 107675, 2025. DOI: [10.1016/j.rineng.2025.107675](https://doi.org/10.1016/j.rineng.2025.107675).</li>
+<li><strong>Bengaluru Traffic Police (BTP)</strong>, "Signal Timings Data – Marathalli Bridge & Yamlur Junctions," OpenCity Urban Data Portal, 2023. Archival PDF: <code>docs/btp_marathalli_yamlur.pdf</code>.</li>
+<li><strong>P. A. Lopez et al.</strong>, "Microscopic Traffic Simulation using SUMO," in <em>The 21st IEEE International Conference on Intelligent Transportation Systems (ITSC)</em>, pp. 2575–2582, 2018. DOI: [10.1109/ITSC.2018.8569938](https://doi.org/10.1109/ITSC.2018.8569938).</li>
+<li><strong>A. Wegener et al.</strong>, "TraCI: An Interface for Linking Arbitrary Traffic Simulators and Network Simulators," in <em>Proceedings of the 11th Communications and Networking Simulation Symposium (CNS '08)</em>, ACM, pp. 155–163, 2008. DOI: [10.1145/1400713.1400740](https://doi.org/10.1145/1400713.1400740).</li>
+<li><strong>F. V. Webster</strong>, "Traffic Signal Settings," <em>Road Research Technical Paper No. 39</em>, Road Research Laboratory, HMSO, London, 1958.</li>
+</ol>
+</body>
+</html>

@@ -5,6 +5,7 @@ from .adaptive_queue import AdaptiveQueueController
 from .adaptive_pressure import AdaptivePressureController
 from .queue_extension import QueueExtensionController
 from .rl_dqn import RLDQNController
+from .hybrid_queue_adaptive import HybridQueueAdaptiveController
 
 POLICIES = {
     "fixed": FixedTimeController,
@@ -13,5 +14,6 @@ POLICIES = {
     "pressure": AdaptivePressureController,
     "queue_extension": QueueExtensionController,
     "rl_dqn": RLDQNController,
+    "hybrid_queue_adaptive": HybridQueueAdaptiveController,
 }
 

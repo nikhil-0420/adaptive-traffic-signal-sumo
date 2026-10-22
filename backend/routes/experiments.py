@@ -94,6 +94,7 @@ def list_experiments():
         experiments.append({
             "experiment_id": exp_id,
             "status": status_str,
+            "network": manifest_data.get("network", "synthetic"),
             "preset": manifest_data.get("preset"),
             "total_cells": manifest_data.get("total_cells"),
             "created_at": manifest_data.get("created_at"),
@@ -172,6 +173,7 @@ def launch_experiment(
         jobs=req.jobs,
         emergency_matrix=req.emergency_matrix,
         model_path=req.model_path,
+        network=req.network,
     )
     if not success:
         raise HTTPException(

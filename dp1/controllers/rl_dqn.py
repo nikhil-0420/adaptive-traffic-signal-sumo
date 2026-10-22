@@ -23,9 +23,11 @@ class RLDQNController(PhaseMachineController):
         states,
         model_path: Optional[str] = None,
         cfg: Optional[C.RLConfig] = None,
+        network: str = "synthetic",
         **kwargs,
     ):
         self.rl_cfg = cfg or C.RL
+        self.network = network
         min_g = kwargs.pop("min_green_s", self.rl_cfg.min_green_s)
         max_g = kwargs.pop("max_green_s", self.rl_cfg.max_green_s)
         super().__init__(states, min_green_s=min_g, max_green_s=max_g, **kwargs)
@@ -41,7 +43,13 @@ class RLDQNController(PhaseMachineController):
 
         # 2. Resolve model path
         if model_path is None:
-            resolved_path = self.rl_cfg.models_dir / f"{self.rl_cfg.default_model_name}.zip"
+            if network == "marathahalli":
+                site_path = C.ROOT / "models" / "dqn_marathahalli_site_best.zip"
+                if not site_path.exists():
+                    site_path = self.rl_cfg.models_dir / "dqn_marathahalli_site_best.zip"
+                resolved_path = site_path
+            else:
+                resolved_path = self.rl_cfg.models_dir / f"{self.rl_cfg.default_model_name}.zip"
         else:
             resolved_path = Path(model_path)
             if not resolved_path.exists() and resolved_path.with_suffix(".zip").exists():
@@ -64,6 +72,12 @@ class RLDQNController(PhaseMachineController):
                     raise ValueError(
                         f"Observation schema dimension mismatch in '{meta_path}': "
                         f"model expects obs_dim={meta_obs_dim}, but current schema is {OBS_DIM}."
+                    )
+                meta_net = meta.get("network_name")
+                if meta_net is not None and meta_net != self.network:
+                    raise ValueError(
+                        f"Model '{resolved_path.name}' was trained on network '{meta_net}', "
+                        f"cannot be used for '{self.network}' simulation."
                     )
             except (json.JSONDecodeError, OSError) as e:
                 # If metadata exists but is corrupted, raise error

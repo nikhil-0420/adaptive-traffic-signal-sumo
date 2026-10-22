@@ -35,12 +35,14 @@ class RunLaunchRequest(BaseModel):
     policy: str = Field(..., description="Policy name from allowlist")
     seed: int = Field(1, description="Simulation random seed")
     demand_level: str = Field("medium", description="Demand level: low, medium, heavy")
+    network: str = Field("synthetic", description="Network topology: synthetic or marathahalli")
     emergency_event: bool = Field(False, description="Insert emergency vehicle")
     emergency_priority: bool = Field(False, description="Enable emergency signal priority")
     emergency_approach: str = Field("N", description="Approach for emergency: N, S, E, W")
     emergency_depart: float = Field(300.0, description="Emergency departure time (seconds)")
     model_path: Optional[str] = Field(None, description="Path to trained RL model for rl_dqn")
     gui: bool = Field(False, description="Launch in sumo-gui (local desktop only)")
+    force: bool = Field(False, description="Force cancel and restart if run already active")
 
 
 class RunStatusResponse(BaseModel):
@@ -56,6 +58,7 @@ class RunStatusResponse(BaseModel):
 class RunDetailResponse(BaseModel):
     run_id: str
     status: str
+    network: Optional[str] = "synthetic"
     scenario: Optional[str] = None
     policy: Optional[str] = None
     seed: Optional[int] = None
@@ -76,6 +79,30 @@ class DecisionsResponse(BaseModel):
     decisions: List[Dict[str, Any]]
 
 
+class AdaptiveDecisionSchema(BaseModel):
+    t: float = Field(..., description="Simulation time in seconds")
+    cycle: int = Field(..., description="Signal cycle number")
+    axis: str = Field(..., description="Active axis: NS or EW")
+    proposed_action: Optional[str] = Field(None, description="Proposed action: e.g. EXTEND, HOLD, GAP_OUT, ENTER_GREEN")
+    applied_action: Optional[str] = Field(None, description="Actual applied action: e.g. EXTEND, REQUEST_SWITCH, HOLD, ENTER_GREEN")
+    decision_outcome: Optional[str] = Field(None, description="Decision outcome: e.g. EXTEND_APPROVED, SWITCH_FAIRNESS_WAIT_LIMIT")
+    action: str = Field(..., description="Backwards-compatible applied action (never EXTEND if rejected)")
+    reason: str = Field(..., description="Human-readable decision explanation")
+    reason_code: str = Field(..., description="Deterministic machine-readable reason code")
+    g_base_s: float = Field(..., description="Webster baseline green duration in seconds")
+    delta_g_req_s: float = Field(0.0, description="Requested green increment in seconds")
+    delta_g_app_s: float = Field(0.0, description="Applied green increment in seconds")
+    g_extra_s: float = Field(0.0, description="Accumulated extra green seconds granted so far")
+    target_green_s: float = Field(..., description="Target green duration including accumulated extra")
+    elapsed_s: float = Field(..., description="Green service duration elapsed at evaluation")
+    actual_green_s: Optional[float] = Field(None, description="Total green duration served upon phase termination")
+    q_active_m: float = Field(..., description="Active approach queue in metres")
+    q_competing_m: float = Field(..., description="Competing approach queue in metres")
+    score_active: float = Field(..., description="Calculated demand score for active axis")
+    score_competing: float = Field(..., description="Calculated demand score for competing axis")
+    is_max_green: bool = Field(False, description="Whether max green ceiling was reached")
+
+
 class TelemetryResponse(BaseModel):
     run_id: str
     status: str
@@ -89,11 +116,14 @@ class TelemetryResponse(BaseModel):
     emergency_approaching: bool = False
     emergency_dist_m: Optional[float] = None
     vehicles: Optional[List[Dict[str, Any]]] = None
+    approach_queues: Optional[Dict[str, Any]] = None
+    adaptive_decision: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
 
 class ReplayResponse(BaseModel):
     run_id: str
+    network: Optional[str] = "synthetic"
     scenario: str
     policy: str
     seed: int
@@ -113,6 +143,7 @@ class ReplayResponse(BaseModel):
 
 class ExperimentLaunchRequest(BaseModel):
     preset: str = Field("smoke", description="Preset: full, smoke, custom")
+    network: str = Field("synthetic", description="Network topology: synthetic or marathahalli")
     patterns: Optional[List[str]] = Field(None, description="Scenario patterns")
     levels: Optional[List[str]] = Field(None, description="Demand levels (low, medium, heavy)")
     policies: Optional[List[str]] = Field(None, description="Policies to evaluate")
@@ -122,6 +153,20 @@ class ExperimentLaunchRequest(BaseModel):
     emergency_matrix: bool = Field(False, description="Emergency matrix sub-study")
     model_path: Optional[str] = Field(None, description="RL model path for rl_dqn")
     experiment_id: Optional[str] = Field(None, description="Custom experiment ID (alphanumeric)")
+
+
+class SiteModelResponse(BaseModel):
+    network_id: str
+    name: str
+    location: str
+    description: str
+    grounding_sources: List[Dict[str, str]]
+    grade_separation: Dict[str, Any]
+    surface_junction: Dict[str, Any]
+    provenance_table: List[Dict[str, str]]
+    topology_image_url: str
+    sumo_gui_image_url: str
+    geometry_extents: Optional[Dict[str, Any]] = None
 
 
 class ExperimentStatusResponse(BaseModel):

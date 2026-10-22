@@ -20,6 +20,15 @@ class ApiClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // If caller provided an external abort signal, link it to the local controller
+    if (options.signal) {
+      if (options.signal.aborted) {
+        clearTimeout(timeoutId);
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -30,9 +39,25 @@ class ApiClient {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
+        if (options.signal?.aborted) {
+          throw err;
+        }
         throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`);
       }
       throw err;
+    }
+  }
+
+  async _parseJsonSafe(res) {
+    if (!res || !res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return null;
+    }
+    try {
+      return await res.json();
+    } catch (e) {
+      return null;
     }
   }
 
@@ -108,8 +133,8 @@ class ApiClient {
     // Fallback to snapshot run
     try {
       const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/metrics.json`);
-      if (res.ok) {
-        const metrics = await res.json();
+      const metrics = await this._parseJsonSafe(res);
+      if (metrics) {
         return {
           run_id: runId,
           status: 'completed',
@@ -139,45 +164,93 @@ class ApiClient {
     return { run_id: runId, total_points: 0, points: [] };
   }
 
-  async getDecisions(runId) {
+  async getDecisions(runId, signal = null) {
     if (this.mode === 'api') {
       try {
         const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/decisions` : `/api/runs/${runId}/decisions`;
-        const res = await this._fetchWithTimeout(url);
-        if (res.ok) return await res.json();
-      } catch (e) {}
+        const res = await this._fetchWithTimeout(url, { signal });
+        const data = await this._parseJsonSafe(res);
+        if (data) return data;
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
+    }
+    try {
+      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`, { signal });
+      const data = await this._parseJsonSafe(res);
+      if (data) return data;
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
     }
     return { run_id: runId, total_decisions: 0, decisions: [] };
   }
 
   async getReplay(runId) {
-    if (this.mode === 'api') {
-      try {
-        const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/replay` : `/api/runs/${runId}/replay`;
-        const res = await this._fetchWithTimeout(url, {}, 5000);
-        if (res.ok) return await res.json();
-      } catch (e) {}
+    if (!runId) return null;
+
+    const candidates = [runId];
+    if (runId.includes('_medium_')) {
+      candidates.push(runId.replace('_medium_', '_'));
+    } else {
+      const parts = runId.split('_');
+      if (parts.length >= 3) {
+        const idx = parts.findIndex((p) => ['adaptive', 'fixed', 'pressure', 'rl', 'hybrid'].includes(p));
+        if (idx > 0) {
+          const c = [...parts];
+          c.splice(idx, 0, 'medium');
+          candidates.push(c.join('_'));
+        }
+      }
     }
-    // Fallback to snapshot demo-data
-    try {
-      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/replay.json`, {}, 5000);
-      if (res.ok) return await res.json();
-    } catch (e) {}
+
+    // 1. Try API endpoints
+    if (this.mode === 'api') {
+      for (const cid of candidates) {
+        try {
+          const url = this.baseUrl ? `${this.baseUrl}/api/runs/${cid}/replay` : `/api/runs/${cid}/replay`;
+          const res = await this._fetchWithTimeout(url, {}, 5000);
+          const data = await this._parseJsonSafe(res);
+          if (data && data.frames && data.frames.length > 0) {
+            return data;
+          }
+        } catch (e) {
+          break; // Stop immediately on connection error
+        }
+      }
+    }
+
+    // 2. Try static demo-data files
+    for (const cid of candidates) {
+      try {
+        const res = await this._fetchWithTimeout(`/demo-data/runs/${cid}/replay.json`, {}, 4000);
+        const data = await this._parseJsonSafe(res);
+        if (data && data.frames && data.frames.length > 0) {
+          return data;
+        }
+      } catch (e) {
+        break; // Stop immediately on connection error
+      }
+    }
+
     return null;
   }
 
-  async getTelemetry(runId) {
+  async getTelemetry(runId, signal = null) {
     if (this.mode === 'api') {
-      const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/telemetry` : `/api/runs/${runId}/telemetry`;
-      const res = await this._fetchWithTimeout(url, {}, 3000);
-      if (res.ok) return await res.json();
-      throw new Error(`Telemetry error: ${res.statusText}`);
+      try {
+        const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/telemetry` : `/api/runs/${runId}/telemetry`;
+        const res = await this._fetchWithTimeout(url, { signal }, 3000);
+        const data = await this._parseJsonSafe(res);
+        if (data && data.status) return data;
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
     }
-    // In snapshot mode, synthesize completed telemetry from metrics
+    // Graceful fallback: synthesize completed telemetry from run details or snapshot
     const run = await this.getRun(runId);
     return {
       run_id: runId,
-      status: 'completed',
+      status: run?.status === 'running' ? 'running' : 'completed',
       sim_time_s: run?.metrics?.sim_end_s || 2000.0,
       phase: 'GREEN',
       axis: 'NS',
@@ -190,6 +263,29 @@ class ApiClient {
     };
   }
 
+  async getActiveRuns() {
+    if (this.mode !== 'api') return [];
+    try {
+      const url = this.baseUrl ? `${this.baseUrl}/api/runs/active` : '/api/runs/active';
+      const res = await this._fetchWithTimeout(url, {}, 3000);
+      const data = await this._parseJsonSafe(res);
+      return data?.active_runs || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async stopRun(runId) {
+    if (this.mode !== 'api') return { status: 'stopped' };
+    try {
+      const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/stop` : `/api/runs/${runId}/stop`;
+      const res = await this._fetchWithTimeout(url, { method: 'POST' }, 5000);
+      return (await this._parseJsonSafe(res)) || { status: 'stopped' };
+    } catch (e) {
+      return { status: 'stopped', error: e.message };
+    }
+  }
+
   async launchRun(params) {
     if (this.mode !== 'api') {
       throw new Error(
@@ -197,16 +293,39 @@ class ApiClient {
       );
     }
     const url = this.baseUrl ? `${this.baseUrl}/api/runs` : '/api/runs';
-    const res = await this._fetchWithTimeout(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `Launch failed: ${res.statusText}`);
+    try {
+      const res = await this._fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        let detailMsg = `Launch failed: ${res.statusText}`;
+        let activeRunId = null;
+        if (typeof err.detail === 'string') {
+          detailMsg = err.detail;
+          const match = err.detail.match(/Run '([^']+)' is already running/);
+          if (match) activeRunId = match[1];
+        } else if (err.detail && typeof err.detail === 'object') {
+          detailMsg = err.detail.message || err.detail.detail || detailMsg;
+          activeRunId = err.detail.run_id || null;
+        }
+        const launchErr = new Error(detailMsg);
+        launchErr.status = res.status;
+        launchErr.isConflict = res.status === 409;
+        launchErr.activeRunId = activeRunId || params?.run_id || null;
+        throw launchErr;
+      }
+      return await res.json();
+    } catch (err) {
+      if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('connect ECONNREFUSED'))) {
+        throw new Error(
+          'Cannot connect to DP1 simulation API at http://127.0.0.1:8000. Verify the backend server is running (`python -m backend`).'
+        );
+      }
+      throw err;
     }
-    return await res.json();
   }
 
   async getExperiments() {
@@ -220,9 +339,50 @@ class ApiClient {
     // Fallback to snapshot experiment
     return [
       {
+        experiment_id: 'exp_marathahalli_hybrid_840',
+        status: 'complete',
+        preset: 'hybrid',
+        network: 'marathahalli',
+        total_cells: 840,
+        created_at: '2026-10-20T16:00:00Z',
+      },
+      {
+        experiment_id: 'exp_marathahalli_site_720',
+        status: 'complete',
+        preset: 'full',
+        network: 'marathahalli',
+        total_cells: 720,
+        created_at: '2026-10-14T14:35:00Z',
+      },
+      {
+        experiment_id: 'exp_marathahalli_site',
+        status: 'complete',
+        preset: 'site',
+        network: 'marathahalli',
+        total_cells: 600,
+        created_at: '2026-10-14T06:00:00Z',
+      },
+      {
+        experiment_id: 'exp_marathahalli_emergency_360',
+        status: 'complete',
+        preset: 'emergency',
+        network: 'marathahalli',
+        total_cells: 360,
+        created_at: '2026-10-14T07:30:00Z',
+      },
+      {
+        experiment_id: 'exp_primary_720',
+        status: 'complete',
+        preset: 'full',
+        network: 'synthetic',
+        total_cells: 720,
+        created_at: '2026-10-12T07:00:00Z',
+      },
+      {
         experiment_id: 'exp_smoke_test',
         status: 'complete',
         preset: 'smoke',
+        network: 'synthetic',
         total_cells: 3,
         created_at: '2026-10-12T06:49:49Z',
       },
@@ -314,6 +474,128 @@ class ApiClient {
     const res = await this._fetchWithTimeout(url, { method: 'POST' });
     if (!res.ok) throw new Error('Cancellation failed.');
     return await res.json();
+  }
+
+  async getSiteModel() {
+    if (this.mode === 'api') {
+      try {
+        const url = this.baseUrl ? `${this.baseUrl}/api/site-model` : '/api/site-model';
+        const res = await this._fetchWithTimeout(url);
+        if (res.ok) return await res.json();
+      } catch (e) {}
+    }
+    // Fallback to demo snapshot or bundle default
+    try {
+      const res = await this._fetchWithTimeout('/demo-data/site_model.json');
+      if (res.ok) return await res.json();
+    } catch (e) {}
+
+    return {
+      network_id: 'marathahalli',
+      name: 'Marathahalli Bridge Junction (Varthur Rd / Outer Ring Rd)',
+      location: 'Marathahalli, Bengaluru, Karnataka 560037 (12.9562° N, 77.7011° E)',
+      description:
+        'Geographically grounded SUMO network model of the Marathahalli Bridge intersection. Integrates OpenCity road-width GIS datasets, OSM centerlines, and BTP signal timing adaptations.',
+      grounding_sources: [
+        {
+          name: 'BTP Marathahalli Yamlur Signal Plan',
+          type: 'Traffic Signal Plan (PDF)',
+          detail: 'Bengaluru Traffic Police signal timing structure adapted with 3s yellow and 2s all-red clearance.',
+        },
+        {
+          name: 'OpenCity Bengaluru Road GIS',
+          type: 'Geospatial Centerlines & Widths',
+          detail: 'OpenCity municipal GIS road widths confirming 4-lane Varthur Rd and 6-lane Outer Ring Road.',
+        },
+        {
+          name: 'OpenStreetMap Real-World Alignment',
+          type: 'Physical Street Network',
+          detail: 'Elevation profiles, ramp alignments, and directional service road slip lanes.',
+        },
+      ],
+      grade_separation: {
+        flyover: {
+          name: 'Varthur Road Elevated Flyover',
+          lanes: 4,
+          direction: 'East-West (HAL Airport Rd <-> Whitefield)',
+          function: 'Carries ~70% of through traffic overhead, completely bypassing the surface signal.',
+        },
+        underpass: {
+          name: 'Outer Ring Road Mainline Underpass',
+          lanes: 6,
+          direction: 'North-South (K.R. Puram <-> Kadubeesanahalli / Sarjapur)',
+          function: 'Carries ~70% of through IT corridor traffic beneath, completely bypassing the surface signal.',
+        },
+        surface_level: {
+          name: 'Marathahalli Surface Signalized Junction',
+          tls_id: 'marathahalli_tls',
+          lanes_per_leg: 2,
+          function: 'Controls turning traffic, right-turns, bus transit, and remaining surface through movements.',
+        },
+      },
+      surface_junction: {
+        tls_id: 'marathahalli_tls',
+        control_type: '2-Stage Signal with All-Red Clearance',
+        stages: [
+          { phase: 'NS_GREEN', axis: 'NS', movements: 'ORR South & North surface legs', state_string: 'GGGgrrrrGGGgrrrr' },
+          { phase: 'NS_YELLOW', axis: 'NS', duration_s: 3.0, state_string: 'yyygrrrryyygrrrr' },
+          { phase: 'ALL_RED_1', axis: 'ALL_RED', duration_s: 2.0, state_string: 'rrrrrrrrrrrrrrrr' },
+          { phase: 'EW_GREEN', axis: 'EW', movements: 'Varthur West & East surface legs', state_string: 'rrrrGGGgrrrrGGGg' },
+          { phase: 'EW_YELLOW', axis: 'EW', duration_s: 3.0, state_string: 'rrrryyygrrrryyyg' },
+          { phase: 'ALL_RED_2', axis: 'ALL_RED', duration_s: 2.0, state_string: 'rrrrrrrrrrrrrrrr' },
+        ],
+        detectors: [
+          { id: 'det_hal_0', approach: 'W', lane: 0, length_m: 80.0 },
+          { id: 'det_hal_1', approach: 'W', lane: 1, length_m: 80.0 },
+          { id: 'det_wf_0', approach: 'E', lane: 0, length_m: 80.0 },
+          { id: 'det_wf_1', approach: 'E', lane: 1, length_m: 80.0 },
+          { id: 'det_orr_s_0', approach: 'S', lane: 0, length_m: 80.0 },
+          { id: 'det_orr_s_1', approach: 'S', lane: 1, length_m: 80.0 },
+          { id: 'det_orr_n_0', approach: 'N', lane: 0, length_m: 80.0 },
+          { id: 'det_orr_n_1', approach: 'N', lane: 1, length_m: 80.0 },
+        ],
+      },
+      provenance_table: [
+        {
+          attribute: 'Road Alignment & Centerlines',
+          status: 'Verified',
+          source: 'OpenCity GIS + OSM',
+          notes: 'Exact physical geometries for Varthur Rd, ORR, and 4 service slip roads.',
+        },
+        {
+          attribute: 'Grade Separation (Flyover + Underpass)',
+          status: 'Verified',
+          source: 'Satellite imagery + BDA infrastructure records',
+          notes: '4-lane flyover above, 6-lane mainline below, surface roundabout/signal between.',
+        },
+        {
+          attribute: 'Signal Phase Clearance (Yellow/All-Red)',
+          status: 'Verified',
+          source: 'DP1 Safety Contract & BTP standard clearance',
+          notes: 'Strictly 3s yellow and 2s all-red clearance preserved across all phase changes.',
+        },
+        {
+          attribute: 'Surface Signal Phasing Structure',
+          status: 'Inferred',
+          source: 'BTP Yamlur corridor document adaptation',
+          notes: 'Adapted as 2-stage alternating surface greens without pedestrian exclusive phase.',
+        },
+        {
+          attribute: 'Grade Separation Volume Split',
+          status: 'Inferred',
+          source: 'Standard traffic engineering guidelines (HCM)',
+          notes: '70% through traffic assigned to flyover/underpass; 30% through + 100% turns at surface.',
+        },
+        {
+          attribute: 'Real-Time Traffic Sensor Telemetry',
+          status: 'Unknown (Synthetic Demand)',
+          source: 'SUMO Lane-Area Detectors (E2)',
+          notes: 'Controlled synthetic demand matrices (balanced, imbalanced_orr, imbalanced_varthur, surge).',
+        },
+      ],
+      topology_image_url: '/network/marathahalli/marathahalli_network_topology.png',
+      sumo_gui_image_url: '/network/marathahalli/sumo_gui_render.png',
+    };
   }
 }
 

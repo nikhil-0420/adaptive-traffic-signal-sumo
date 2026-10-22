@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import CORS_ORIGINS
-from .routes import experiments, health, runs
+from .routes import experiments, health, runs, site_model
 
 app = FastAPI(
     title="DP1 Traffic Signal Optimizer API",
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(experiments.router, prefix="/api")
+app.include_router(site_model.router, prefix="/api")
 
 
 @app.get("/")

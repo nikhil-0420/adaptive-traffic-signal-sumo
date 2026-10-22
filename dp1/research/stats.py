@@ -288,11 +288,11 @@ def compute_paired_best_policy_analysis(
                     if is_tie:
                         classification = f"TIE (`{best_pol}` ~ `{runner_up_pol}`)"
                         status = "TIE"
-                        details = f"Paired delta: {d_mean:+.2f}s [{d_lo:+.2f}, {d_hi:+.2f}] includes 0 (p > 0.05)"
+                        details = f"Paired delta: {d_mean:+.2f}s [{d_lo:+.2f}, {d_hi:+.2f}] includes 0 (statistically indistinguishable at 95% CI)"
                     else:
                         classification = f"WINNER (`{best_pol}`)"
                         status = "WINNER"
-                        details = f"Paired delta: {d_mean:+.2f}s [{d_lo:+.2f}, {d_hi:+.2f}] strictly separates (p < 0.05)"
+                        details = f"Paired delta: {d_mean:+.2f}s [{d_lo:+.2f}, {d_hi:+.2f}] strictly excludes 0 (statistically distinguishable at 95% CI)"
 
                     results.append({
                         "pattern": pat,

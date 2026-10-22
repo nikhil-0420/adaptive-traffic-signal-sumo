@@ -12,8 +12,8 @@ from .obs import OBS_DIM, OBS_SCHEMA_VERSION, OBS_FEATURE_NAMES
 
 
 def train_dqn(
-    scenario: str = "imbalanced_ns",
-    seed: int = 1,
+    scenario: Optional[str] = None,
+    seed: Optional[int] = None,
     timesteps: int = 1000,
     out_path: Optional[Path] = None,
     learning_rate: Optional[float] = None,
@@ -22,6 +22,8 @@ def train_dqn(
     rotate_seeds: bool = True,
     eval_freq: Optional[int] = None,
     val_seeds: Optional[tuple] = None,
+    network: str = "synthetic",
+    train_seeds: Optional[tuple] = None,
 ) -> Tuple[Path, Path]:
     """Train a DQN agent on SumoIntersectionEnv and save model checkpoint + metadata.
 
@@ -35,7 +37,9 @@ def train_dqn(
         verbose: Stable-Baselines3 verbosity level (0 = silent).
         rotate_seeds: whether to rotate through train_seeds on episode resets.
         eval_freq: step frequency for validation evaluation and checkpointing.
-        val_seeds: validation seeds for model selection (defaults to RL_VALIDATION_SEEDS 6..10).
+        val_seeds: validation seeds for model selection.
+        network: 'synthetic' or 'marathahalli'.
+        train_seeds: training seed list.
 
     Returns:
         Tuple[Path, Path]: (model_path, metadata_path)
@@ -54,11 +58,31 @@ def train_dqn(
 
     cfg = cfg or C.RL
     lr = learning_rate or cfg.learning_rate
-    validation_seeds = val_seeds or cfg.validation_seeds
+
+    if network == "marathahalli":
+        scenario = scenario or "all"
+        seed = seed if seed is not None else 101
+        training_seeds = train_seeds or (101, 102, 103, 104, 105)
+        validation_seeds = val_seeds or (106, 107, 108, 109, 110)
+        research_seeds = tuple(range(121, 131))
+        eval_seeds = tuple(range(111, 121))
+        scenarios = ("imbalanced_orr", "imbalanced_varthur", "balanced", "surge_orr_north") if scenario == "all" else None
+        eval_scen = "imbalanced_orr" if scenario == "all" else scenario
+        default_target = C.ROOT / "models" / "dqn_marathahalli_site_best.zip"
+    else:
+        scenario = scenario or "imbalanced_ns"
+        seed = seed if seed is not None else 1
+        training_seeds = train_seeds or cfg.train_seeds
+        validation_seeds = val_seeds or cfg.validation_seeds
+        research_seeds = cfg.research_seeds
+        eval_seeds = cfg.eval_seeds
+        scenarios = ("imbalanced_ns", "imbalanced_ew", "balanced", "surge_north") if scenario == "all" else None
+        eval_scen = "imbalanced_ns" if scenario == "all" else scenario
+        default_target = cfg.models_dir / f"{cfg.default_model_name}.zip"
 
     # Resolve output path
     if out_path is None:
-        target_path = cfg.models_dir / f"{cfg.default_model_name}.zip"
+        target_path = default_target
     else:
         target_path = Path(out_path)
         if target_path.suffix != ".zip":
@@ -68,14 +92,13 @@ def train_dqn(
     checkpoints_dir = target_path.parent / "checkpoints"
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scenarios rotation
-    scenarios = ("imbalanced_ns", "imbalanced_ew", "balanced", "surge_north") if scenario == "all" else None
     env = SumoIntersectionEnv(
-        scenario="imbalanced_ns" if scenario == "all" else scenario,
+        scenario="imbalanced_orr" if (network == "marathahalli" and scenario == "all") else ("imbalanced_ns" if scenario == "all" else scenario),
         seed=seed,
         cfg=cfg,
         rotate_seeds=rotate_seeds,
         scenarios=scenarios,
+        network=network,
     )
 
     # Hyperparameters scaled appropriately
@@ -113,7 +136,7 @@ def train_dqn(
         def _on_step(self) -> bool:
             if self.n_calls % self.frequency == 0:
                 step_idx = self.n_calls
-                ckpt_file = checkpoints_dir / f"dqn_step_{step_idx}.zip"
+                ckpt_file = checkpoints_dir / f"dqn_{network}_step_{step_idx}.zip"
                 self.model.save(str(ckpt_file))
                 saved_checkpoints.append((step_idx, ckpt_file))
                 if verbose:
@@ -143,7 +166,6 @@ def train_dqn(
 
     if timesteps >= 5000 and len(saved_checkpoints) > 1:
         from ..runner import run_simulation
-        eval_scen = "imbalanced_ns" if scenario == "all" else scenario
         if verbose:
             print(f"\n--- Post-Training Validation across {len(saved_checkpoints)} Checkpoints ---")
 
@@ -151,13 +173,14 @@ def train_dqn(
             val_waits = []
             val_queues = []
             val_completions = []
-            for vs in validation_seeds[:3]:  # evaluate on representative validation seeds (6..8)
+            for vs in validation_seeds[:3]:  # evaluate on representative validation seeds
                 try:
                     res = run_simulation(
                         eval_scen,
                         "rl_dqn",
                         seed=vs,
-                        policy_kwargs={"model_path": str(ckpt_file)},
+                        policy_kwargs={"model_path": str(ckpt_file), "network": network},
+                        network=network,
                         record_vehicles=False,
                     )
                     val_waits.append(res["avg_wait_s"])
@@ -196,12 +219,13 @@ def train_dqn(
         shutil.copyfile(best_model_file, best_target)
 
     # Save comprehensive metadata alongside checkpoint
-    run_id = f"dqn_{scenario}_s{seed}_{int(time.time())}"
+    run_id = f"dqn_{network}_{scenario}_s{seed}_{int(time.time())}"
     meta_path = target_path.with_name(f"{target_path.stem}.metadata.json")
     metadata = {
         "run_id": run_id,
         "algorithm": "DQN",
         "framework": "stable-baselines3",
+        "network_name": network,
         "scenario": scenario,
         "scenarios_rotated": list(scenarios) if scenarios else [scenario],
         "seed": seed,
@@ -231,10 +255,10 @@ def train_dqn(
             "exploration_fraction": cfg.exploration_fraction,
         },
         "seed_splits": {
-            "train_seeds": list(cfg.train_seeds),
+            "train_seeds": list(training_seeds),
             "validation_seeds": list(validation_seeds),
-            "eval_seeds": list(cfg.eval_seeds),
-            "research_seeds": list(cfg.research_seeds),
+            "eval_seeds": list(eval_seeds),
+            "research_seeds": list(research_seeds),
         },
         "validation_summary": {
             "best_validation_wait_s": round(best_val_wait, 2) if best_val_wait != float("inf") else None,

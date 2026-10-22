@@ -17,4 +17,10 @@ results/*
 !results/.gitkeep
 !sumo/.gitkeep
 *.zip
+scratch/
+detector_out.xml
+network/**/detector_out.xml
+network/**/build/*.xml
+network/**/dist/
+
 

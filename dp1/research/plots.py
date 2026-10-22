@@ -13,6 +13,7 @@ POLICY_COLORS = {
     "adaptive": "#0E7C86",
     "pressure": "#7C3AED",
     "queue_extension": "#059669",
+    "hybrid_queue_adaptive": "#0284C7",
     "rl_dqn": "#2563EB",
 }
 
@@ -178,7 +179,7 @@ def generate_research_plots(
             ax.set_yticklabels(comp_df["cond_label"].values, fontsize=8.5)
             ax.invert_yaxis()
             ax.set_xlabel("Paired Difference in Waiting Time: Leader - Runner-Up (s)\n(Negative values favor Primary Leader)", fontsize=9.5)
-            ax.set_title("Paired Best-Policy Comparison & Statistical Ties (95% Bootstrap CI)\nGreen: Significant Winner (p < 0.05) | Amber: Statistical Tie (p > 0.05)", fontsize=11)
+            ax.set_title("Paired Best-Policy Comparison & Statistical Ties (95% Bootstrap CI)\nGreen: Statistically Distinguishable (95% CI excludes 0) | Amber: Statistical Tie (95% CI includes 0)", fontsize=11)
             ax.grid(axis="x", alpha=0.3)
             ax.legend(loc="lower left", fontsize=8.5)
             fig.tight_layout()

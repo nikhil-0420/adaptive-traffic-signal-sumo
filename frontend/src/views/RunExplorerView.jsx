@@ -11,10 +11,8 @@ export function RunExplorerView() {
   const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Available selectable run IDs
-  const runList = allRuns.length > 0
-    ? allRuns.map((r) => r.run_id || `${r.scenario}_${r.policy}_s${r.seed}`)
-    : ['imbalanced_ns_adaptive_s1', 'imbalanced_ns_fixed_s1', 'balanced_adaptive_s1'];
+  const marathahalliRuns = allRuns.filter((r) => r.network === 'marathahalli');
+  const syntheticRuns = allRuns.filter((r) => r.network !== 'marathahalli');
 
   useEffect(() => {
     let isMounted = true;
@@ -63,11 +61,22 @@ export function RunExplorerView() {
           <select
             value={selectedRunId}
             onChange={(e) => setSelectedRunId(e.target.value)}
-            className="dp1-select text-xs font-mono max-w-[260px]"
+            className="dp1-select text-xs font-mono max-w-[320px]"
           >
-            {runList.map((id) => (
-              <option key={id} value={id}>{id}</option>
-            ))}
+            {marathahalliRuns.length > 0 && (
+              <optgroup label="Marathahalli Bridge Site (Real Road - 720 Runs)">
+                {marathahalliRuns.map((r) => {
+                  const id = r.run_id || `${r.scenario}_${r.policy}_s${r.seed}`;
+                  return <option key={id} value={id}>{id}</option>;
+                })}
+              </optgroup>
+            )}
+            <optgroup label="Synthetic 4-Way Junction (80 Runs)">
+              {syntheticRuns.map((r) => {
+                const id = r.run_id || `${r.scenario}_${r.policy}_s${r.seed}`;
+                return <option key={id} value={id}>{id}</option>;
+              })}
+            </optgroup>
           </select>
 
           <button

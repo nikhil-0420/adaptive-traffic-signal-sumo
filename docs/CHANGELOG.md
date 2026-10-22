@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.2 - Phase 7B: Marathahalli Real-Road Site Network Integration, Site Matrix & Emergency Evaluation
+- Integrated the approved Marathahalli Bridge reconstructed SUMO network (`--network marathahalli`) without altering the synthetic baseline (`--network synthetic`).
+- Executed the full Phase B Site Research Matrix (`exp_marathahalli_site`, 600 runs, 100% complete):
+  - Benchmarked 5 control policies (`fixed`, `fixed_webster`, `adaptive`, `pressure`, `rl_dqn`) across 4 site demand patterns (`balanced`, `imbalanced_orr`, `imbalanced_varthur`, `surge_orr_north`) and 3 demand levels (`low`, `medium`, `heavy`) on held-out seeds 121..130.
+  - Calculated 95% bootstrap percentile confidence intervals ($B=10,000$), paired deltas vs baseline fixed timing, and corridor direction disparity.
+  - Key finding: In `imbalanced_varthur` heavy demand, `rl_dqn` delivered mean delay reduction of -7.32s (95% CI: [-13.16s, -1.90s]); `adaptive` delivered -5.49s (95% CI: [-10.15s, -0.94s]).
+- Executed Marathahalli Site Emergency Matrix (`exp_marathahalli_emergency_360`, 360 runs) evaluating ambulance travel time and background traffic delay impacts.
+- Extended FastAPI Backend:
+  - Added `ALLOWED_NETWORKS = ["synthetic", "marathahalli"]` and Marathahalli demand scenarios to `backend/config.py`.
+  - Added dedicated endpoint `GET /api/site-model` returning 3-tier grade separation details, 16-link phase machine schema, E2 detector telemetry, and provenance matrix.
+  - Extended run launcher and experiment launcher to support `--network`.
+- Extended React + Vite Frontend Dashboard:
+  - Created `SiteModelView.jsx` featuring tabs for Topology Schematic & SUMO GUI renders, 3-Tier Grade Separation breakdown (Elevated Flyover, Grade Mainline, Surface Signal), Phasing Machine & Detectors, and Verification/Provenance Matrix.
+  - Added `Site Model` navigation item to `Navbar.jsx` with active route handling in `App.jsx`.
+  - Added Network Architecture toggles to `LiveMonitorView.jsx` and `ResearchView.jsx` allowing users to switch between Synthetic 4-Way and Marathahalli Bridge Site.
+  - Exported site experiment artifacts (`aggregate.json`, `raw_runs.json`, `matrix_status.json`, `fairness_by_approach.json`, `paired_deltas.json`, `manifest.json`, `report.md`) to `frontend/public/demo-data/experiments/exp_marathahalli_site/` for offline/Vercel demonstration.
+- Added comprehensive unit tests in `tests/test_marathahalli_network.py` verifying `/api/site-model`, site research matrix generator, and emergency configuration.
+- Validated via `pytest -q` (all tests passing green) and frontend `npm test` (7/7 passed) + `npm run build` (production Vite build cleanly generated).
+
 ## v1.1 - Phase P6: Final reproducibility freeze, 5-controller matrix verification, and demo freeze
 - Ran end-to-end verification gate across entire stack:
   - Complete Python test suite: 66/66 passed (`pytest -q`), covering safety invariants, clearance timing, controllers, RL environment, emergency preemption, FastAPI security, and research matrix statistics.
