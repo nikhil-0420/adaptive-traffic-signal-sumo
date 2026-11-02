@@ -56,13 +56,13 @@ export function classifyVehicleType(v) {
   return 'truck';
 }
 
-/** High-contrast vehicle color lookup */
-export function getVehicleColor(v, isDark = true) {
+/** High-contrast vehicle color lookup (with optional colorblind-safe palette) */
+export function getVehicleColor(v, isDark = true, colorblindSafe = false) {
   const isAmbulance = classifyVehicleType(v) === 'ambulance';
   if (isAmbulance) {
     return {
-      body: new THREE.Color('#f43f5e'), // Bright emergency red/rose
-      glow: '#ef4444',
+      body: new THREE.Color(colorblindSafe ? '#dc2626' : '#f43f5e'), // Bright emergency red/rose
+      glow: colorblindSafe ? '#b91c1c' : '#ef4444',
       beacon: '#ffffff',
     };
   }
@@ -71,16 +71,16 @@ export function getVehicleColor(v, isDark = true) {
   if (isQueued) {
     // Queued / stopped vehicle: distinct warm orange/amber
     return {
-      body: new THREE.Color(isDark ? '#f97316' : '#ea580c'),
-      glow: '#f97316',
+      body: new THREE.Color(colorblindSafe ? '#f59e0b' : (isDark ? '#f97316' : '#ea580c')),
+      glow: '#f59e0b',
       beacon: null,
     };
   }
 
   // Moving vehicle: high-contrast cool cyan / sky blue
   return {
-    body: new THREE.Color(isDark ? '#38bdf8' : '#0284c7'),
-    glow: '#38bdf8',
+    body: new THREE.Color(colorblindSafe ? '#0284c7' : (isDark ? '#38bdf8' : '#0284c7')),
+    glow: colorblindSafe ? '#0284c7' : '#38bdf8',
     beacon: null,
   };
 }
@@ -133,7 +133,8 @@ export function updateVehicleInstancedMesh(
   vehicles,
   vehicleScale = 2.0,
   isDark = true,
-  tierYOffset = 0.0
+  tierYOffset = 0.0,
+  colorblindSafe = false
 ) {
   if (!instancedMesh) return;
 
@@ -165,7 +166,7 @@ export function updateVehicleInstancedMesh(
     instancedMesh.setMatrixAt(i, dummyMatrix);
 
     // Set instance color
-    const c = getVehicleColor(v, isDark);
+    const c = getVehicleColor(v, isDark, colorblindSafe);
     instancedMesh.setColorAt(i, c.body);
   }
 

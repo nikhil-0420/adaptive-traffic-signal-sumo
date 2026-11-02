@@ -78,8 +78,8 @@ export const SIGNAL_APPROACH_CONFIG = {
   },
 };
 
-/** Decode signal state string into approach colors */
-export function decodeSignalStateString(stateString) {
+/** Decode signal state string into approach colors (with optional colorblind-safe palette) */
+export function decodeSignalStateString(stateString, colorblindSafe = false) {
   const defaultState = 'rrrrrrrrrrrrrrrr';
   const str = (stateString || defaultState).padEnd(16, 'r');
 
@@ -89,17 +89,17 @@ export function decodeSignalStateString(stateString) {
   for (const [approachKey, cfg] of Object.entries(SIGNAL_APPROACH_CONFIG)) {
     const chars = cfg.links.map((idx) => str[idx] || 'r');
     let colorName = 'RED';
-    let hex = '#ef4444';
+    let hex = colorblindSafe ? '#dc2626' : '#ef4444';
 
     if (chars.some((c) => c === 'G' || c === 'g')) {
       colorName = 'GREEN';
-      hex = '#22c55e';
+      hex = colorblindSafe ? '#0284c7' : '#22c55e'; // Blue for Go in colorblind mode
     } else if (chars.some((c) => c === 'y' || c === 'Y')) {
       colorName = 'YELLOW';
-      hex = '#eab308';
+      hex = colorblindSafe ? '#f59e0b' : '#eab308'; // Amber for Caution
     } else if (isAllRed) {
       colorName = 'ALL_RED';
-      hex = '#dc2626';
+      hex = colorblindSafe ? '#991b1b' : '#dc2626';
     }
 
     result[approachKey] = {
@@ -184,11 +184,45 @@ export const SENSOR_STATUS_STYLES = {
   },
 };
 
+/** Colorblind-safe sensor status styles (Okabe-Ito friendly) */
+export const SENSOR_STATUS_STYLES_COLORBLIND = {
+  CONFIRMED_ZERO: {
+    color: '#0284c7', // Sky blue low-opacity
+    fillOpacity: 0.25,
+    border: '#0369a1',
+    label: 'CONFIRMED ZERO',
+    isWarning: false,
+  },
+  MEASURING: {
+    color: '#38bdf8', // Bright blue
+    fillOpacity: 0.65,
+    border: '#0284c7',
+    label: 'MEASURING',
+    isWarning: false,
+  },
+  SATURATED: {
+    color: '#dc2626', // High-contrast Vermilion
+    pulseColor: '#b91c1c',
+    fillOpacity: 0.85,
+    border: '#ffffff',
+    label: 'SATURATED ⚠',
+    isWarning: true,
+  },
+  OFFLINE: {
+    color: '#475569', // Distinct slate/black
+    fillOpacity: 0.80,
+    border: '#ffffff',
+    label: 'OFFLINE ✖',
+    isWarning: true,
+    isOffline: true,
+  },
+};
+
 /**
  * Determine queue display parameters for an approach.
  * Enforces: OFFLINE is NEVER rendered as zero.
  */
-export function getApproachQueueDisplay(approachKey, approachQueues, queues_m = {}) {
+export function getApproachQueueDisplay(approachKey, approachQueues, queues_m = {}, colorblindSafe = false) {
   const cfg = SIGNAL_APPROACH_CONFIG[approachKey];
   const appData = approachQueues?.[approachKey];
 
@@ -220,7 +254,8 @@ export function getApproachQueueDisplay(approachKey, approachQueues, queues_m = 
     sensorStatus = 'CONFIRMED_ZERO';
   }
 
-  const style = SENSOR_STATUS_STYLES[sensorStatus] || SENSOR_STATUS_STYLES.MEASURING;
+  const stylesDict = colorblindSafe ? SENSOR_STATUS_STYLES_COLORBLIND : SENSOR_STATUS_STYLES;
+  const style = stylesDict[sensorStatus] || stylesDict.MEASURING;
 
   return {
     approach: approachKey,
@@ -234,3 +269,4 @@ export function getApproachQueueDisplay(approachKey, approachQueues, queues_m = 
     isSaturated: sensorStatus === 'SATURATED',
   };
 }
+

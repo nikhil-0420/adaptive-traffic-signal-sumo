@@ -20,11 +20,20 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 export const SUMO_OFFSET_X = 350.0;
 export const SUMO_OFFSET_Y = 350.0;
 
-// Camera Presets for Quick Navigation
+// Camera Presets for Quick Navigation (Phase 6 presets + backward-compatible keys)
 export const CAMERA_PRESETS = {
+  topDown: { position: [0, 160, 0.01], target: [0, 0, 0], name: 'Top-Down' },
+  iso: { position: [75, 65, 85], target: [0, 2, 0], name: 'Iso' },
+  junctionCloseUp: { position: [25, 18, 25], target: [0, 1.5, 0], name: 'Junction close-up' },
+  flyoverSide: { position: [-70, 15, 0], target: [0, 6.8, 0], name: 'Flyover side view' },
+  approachN: { position: [0, 15, -45], target: [0, 2, -18], name: 'Approach N' },
+  approachS: { position: [0, 15, 45], target: [0, 2, 18], name: 'Approach S' },
+  approachE: { position: [45, 15, 0], target: [22, 2, 0], name: 'Approach E' },
+  approachW: { position: [-45, 15, 0], target: [-22, 2, 0], name: 'Approach W' },
+  fitJunction: { position: [50, 45, 60], target: [0, 2, 0], name: 'Fit to junction' },
+  // Backwards-compatible aliases
   isoSW: { position: [75, 65, 85], target: [0, 2, 0], name: 'Iso SW' },
   isoNE: { position: [-75, 65, -85], target: [0, 2, 0], name: 'Iso NE' },
-  topDown: { position: [0, 160, 0.01], target: [0, 0, 0], name: 'Top-Down 3D' },
   flyoverEye: { position: [-60, 12, 10], target: [0, 7, 0], name: 'Flyover Eye-Level' },
 };
 
