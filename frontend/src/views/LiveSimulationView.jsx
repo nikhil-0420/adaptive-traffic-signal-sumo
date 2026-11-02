@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 import { JunctionTwin } from '../components/JunctionTwin';
 import { DecisionTimeline } from '../components/DecisionTimeline';
-import { explainDecision, collapseHolds, getAxisName } from '../utils/explainDecision';
+import { explainDecision, collapseHolds, getAxisName, getDecisionCodeLabel } from '../utils/explainDecision';
 import { SignalHead } from '../components/motion/SignalHead';
 import { CountUp } from '../components/motion/CountUp';
 import { MagneticButton } from '../components/motion/MagneticButton';
@@ -253,27 +253,29 @@ export function LiveSimulationView() {
             deltaG = 12.0;
             setActiveToast({
               id: `toast_${simTime}`,
-              title: 'EVSP Emergency Preemption',
-              text: 'Immediate green corridor extended for priority vehicle on ORR North.',
+              title: getDecisionCodeLabel('PREEMPTION'),
+              text: 'Emergency priority preemption granted: immediate green corridor for priority vehicle on ORR North.',
               type: 'emergency',
             });
           } else if (simTime % 30 === 15) {
             outcome = 'EXTEND_APPROVED';
             action = 'EXTEND';
             deltaG = 3.0;
+            const logReason = `${currentAxis === 'NS' ? 'North–South' : 'East–West'} green extended by 3.0s: active queue ${(isNS ? qN : qE).toFixed(1)}m, competing wait within fairness limit.`;
             setActiveToast({
               id: `toast_${simTime}`,
-              title: '+3.0s Green Extended',
-              text: `Continuous arrivals on ${currentAxis}; opposing queues within fairness bounds.`,
+              title: getDecisionCodeLabel(outcome),
+              text: logReason,
               type: 'green',
             });
           } else if (simTime % 30 === 25) {
             outcome = 'SWITCH_GAP_OUT';
             action = 'GAP_OUT';
+            const logReason = `${currentAxis === 'NS' ? 'North–South' : 'East–West'} queue cleared (0.0m for 3.0s >= gap-out threshold 3.0s) while ${currentAxis === 'NS' ? 'East–West' : 'North–South'} is waiting; gapping out early.`;
             setActiveToast({
               id: `toast_${simTime}`,
-              title: 'Early Gap-Out Terminated',
-              text: `No vehicles detected on stop-line detector for 3s; initiating yellow clearance.`,
+              title: getDecisionCodeLabel(outcome),
+              text: logReason,
               type: 'yellow',
             });
           }

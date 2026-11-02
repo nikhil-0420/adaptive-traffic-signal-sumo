@@ -83,6 +83,9 @@ export function IsometricIntersection({
   onSoloTierChange = null,
   initialViewMode = 'isometric',
   showControls = true,
+  vehicleScale = null,
+  defaultSeeThroughFlyover = true,
+  defaultShowTrails = true,
 }) {
   const { isDark } = useApp() || {};
   const canvasRef = useRef(null);
@@ -97,6 +100,52 @@ export function IsometricIntersection({
   const [viewMode, setViewMode] = useState(initialViewMode); // 'isometric' | 'topdown' | 'approach'
   const [showDetectors, setShowDetectors] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
+
+  // Phase 2 Vehicle Scale Exaggeration: 1.0 (True scale), 2.0 (Default Exaggerate 2x), 3.0 (Max Exaggerate 3x)
+  const [vehicleScaleMultiplier, setVehicleScaleMultiplier] = useState(
+    typeof vehicleScale === 'number' ? vehicleScale : 2.0
+  );
+
+  // Phase 2 See-Through Flyover Deck Toggle (Default: true near junction)
+  const [seeThroughFlyover, setSeeThroughFlyover] = useState(defaultSeeThroughFlyover);
+
+  // Phase 2 Vehicle Movement Trails & Glow Toggle (Default: true)
+  const [showTrails, setShowTrails] = useState(defaultShowTrails);
+
+  // Phase 2 Map Legend Overlay Toggle (Default: true)
+  const [showLegend, setShowLegend] = useState(true);
+
+  // Phase 2 Live Telemetry Buffering (one-tick buffer, never extrapolate past latest tick)
+  const liveHistoryRef = useRef({ prev: null, current: null, lastReceivedAt: Date.now(), intervalMs: 1500 });
+  const [liveTelemetryAgeMs, setLiveTelemetryAgeMs] = useState(0);
+
+  // Vehicle trail histories for fading movement trails: Map<vehicleId, Array<{x, y, t}>>
+  const vehicleTrailsRef = useRef(new Map());
+
+  // Update live telemetry buffer when new live payload arrives
+  useEffect(() => {
+    if (liveTelemetry && isLiveMode) {
+      const now = Date.now();
+      const prev = liveHistoryRef.current.current;
+      const dt = prev ? (now - liveHistoryRef.current.lastReceivedAt) : 1500;
+      liveHistoryRef.current = {
+        prev: prev || liveTelemetry,
+        current: liveTelemetry,
+        lastReceivedAt: now,
+        intervalMs: Math.max(400, Math.min(dt, 4000)),
+      };
+      setLiveTelemetryAgeMs(0);
+    }
+  }, [liveTelemetry, isLiveMode]);
+
+  // Keep live telemetry age ticker updated
+  useEffect(() => {
+    if (!isLiveMode) return;
+    const interval = setInterval(() => {
+      setLiveTelemetryAgeMs(Math.max(0, Date.now() - liveHistoryRef.current.lastReceivedAt));
+    }, 150);
+    return () => clearInterval(interval);
+  }, [isLiveMode]);
 
   // Explode 3-Tier State
   const [internalExploded, setInternalExploded] = useState(false);
@@ -187,31 +236,34 @@ export function IsometricIntersection({
   const activeFrame = useMemo(() => {
     if (isLiveMode && liveTelemetry) {
       return {
-        t: liveTelemetry.sim_time || 0,
-        phase: liveTelemetry.current_phase || 'GREEN',
-        axis: liveTelemetry.active_axis || 'NS',
+        t: liveTelemetry.sim_time || liveTelemetry.sim_time_s || 0,
+        phase: liveTelemetry.current_phase || liveTelemetry.phase || 'GREEN',
+        axis: liveTelemetry.active_axis || liveTelemetry.axis || 'NS',
         tl_state: liveTelemetry.tl_state || 'GGGgrrrrGGGgrrrr',
         queues_m: {
-          N: liveTelemetry.approach_queues?.N?.total_queue_m || 0,
-          S: liveTelemetry.approach_queues?.S?.total_queue_m || 0,
-          E: liveTelemetry.approach_queues?.E?.total_queue_m || 0,
-          W: liveTelemetry.approach_queues?.W?.total_queue_m || 0,
+          N: liveTelemetry.approach_queues?.N?.total_queue_m ?? liveTelemetry.queues_m?.N ?? 0,
+          S: liveTelemetry.approach_queues?.S?.total_queue_m ?? liveTelemetry.queues_m?.S ?? 0,
+          E: liveTelemetry.approach_queues?.E?.total_queue_m ?? liveTelemetry.queues_m?.E ?? 0,
+          W: liveTelemetry.approach_queues?.W?.total_queue_m ?? liveTelemetry.queues_m?.W ?? 0,
         },
         vehicles: liveTelemetry.vehicles || [],
         emergency_priority: Boolean(liveTelemetry.emergency_priority),
         emergency_approaching: Boolean(liveTelemetry.emergency_approaching),
       };
     }
-    if (replayData && replayData.frames.length > 0) {
+    if (replayData && replayData.frames && replayData.frames.length > 0) {
       return replayData.frames[currentFrameIdx] || replayData.frames[0];
     }
     return null;
   }, [isLiveMode, liveTelemetry, replayData, currentFrameIdx]);
 
   const nextFrame = useMemo(() => {
-    if (isLiveMode || !replayData || !replayData.frames) return null;
+    if (isLiveMode) {
+      return liveHistoryRef.current.current || activeFrame;
+    }
+    if (!replayData || !replayData.frames) return null;
     return replayData.frames[currentFrameIdx + 1] || activeFrame;
-  }, [isLiveMode, replayData, currentFrameIdx, activeFrame]);
+  }, [isLiveMode, liveTelemetry, replayData, currentFrameIdx, activeFrame]);
 
   // Notify parent of active frame
   useEffect(() => {
@@ -492,6 +544,7 @@ export function IsometricIntersection({
     const hovered = hoveredVehicleRef.current;
     if (hovered) {
       setSelectedVehicleId(hovered.id);
+      setIsFollowMode(true);
     } else {
       setSelectedVehicleId(null);
       setIsFollowMode(false);
@@ -683,6 +736,348 @@ export function IsometricIntersection({
         ctx.restore();
       }
 
+      // -------------------------------------------------------------
+      // 5. VEHICLE INTERPOLATION & PREPARATION PIPELINE
+      // -------------------------------------------------------------
+      // Telemetry interpolation (one-tick buffer, strictly bounded to [0.0, 1.0])
+      let subFrameProgress = 0.0;
+      let prevVehiclesMap = new Map();
+      let nextVehiclesMap = new Map();
+
+      if (isLiveMode) {
+        const { prev, current, lastReceivedAt, intervalMs } = liveHistoryRef.current;
+        if (prev && current) {
+          const elapsed = Date.now() - lastReceivedAt;
+          subFrameProgress = Math.min(1.0, Math.max(0.0, elapsed / intervalMs));
+          if (prev.vehicles) {
+            prev.vehicles.forEach((v) => prevVehiclesMap.set(v.id, v));
+          }
+          if (current.vehicles) {
+            current.vehicles.forEach((v) => nextVehiclesMap.set(v.id, v));
+          }
+        }
+      } else {
+        subFrameProgress = Math.min(1.0, Math.max(0.0, frameAccumulatorRef.current));
+        if (nextFrame && nextFrame.vehicles) {
+          nextFrame.vehicles.forEach((v) => nextVehiclesMap.set(v.id, v));
+        }
+      }
+
+      const currentVehicles = activeFrame?.vehicles || [];
+
+      // Camera tracking if Follow Mode is active
+      if (isFollowMode && selectedVehicleId) {
+        const followed = currentVehicles.find((v) => v.id === selectedVehicleId);
+        if (followed) {
+          const pt = worldToScreen(followed.x, followed.y, 0, 'surface');
+          const targetPanX = panRef.current.x + (w / 2 - pt.x) * 0.1;
+          const targetPanY = panRef.current.y + (h / 2 - pt.y) * 0.1;
+          panRef.current = { x: targetPanX, y: targetPanY };
+        }
+      }
+
+      // Vehicle scale multiplier & minimum on-screen sizing clamp (min 8px length, 4px width)
+      const minVehiclePx = 8.0;
+      const scaleMult = vehicleScaleMultiplier || 2.0;
+
+      const preparedVehicles = [];
+      let closestHovered = null;
+      let minHoverDist = 22;
+
+      currentVehicles.forEach((veh) => {
+        const v1 = isLiveMode ? (prevVehiclesMap.get(veh.id) || veh) : veh;
+        const v2 = nextVehiclesMap.get(veh.id) || v1;
+
+        // Smooth position and shortest-angle heading interpolation
+        const interpX = v1.x + (v2.x - v1.x) * subFrameProgress;
+        const interpY = v1.y + (v2.y - v1.y) * subFrameProgress;
+        let da = ((v2.a - v1.a + 540) % 360) - 180;
+        const interpA = (v1.a + da * subFrameProgress + 360) % 360;
+        const interpS = v1.s + (v2.s - v1.s) * subFrameProgress;
+
+        // Tier classification: check explicit elevation z, tier field, or robust geometric bounds
+        let vehTier = 'surface';
+        let vehZ = 0.0;
+        if (veh.z !== undefined && veh.z !== null) {
+          const zNum = Number(veh.z);
+          vehZ = zNum;
+          if (zNum >= 5.0) vehTier = 'flyover';
+          else if (zNum < -1.0) vehTier = 'underpass';
+          else vehTier = 'surface';
+        } else if (veh.tier) {
+          vehTier = veh.tier;
+          vehZ = vehTier === 'flyover' ? 7.0 : (vehTier === 'underpass' ? -4.0 : 0.0);
+        } else {
+          const isEastWest = Math.abs(interpA - 90) < 35 || Math.abs(interpA - 270) < 35;
+          const isNorthSouth = Math.abs(interpA - 0) < 35 || Math.abs(interpA - 180) < 35;
+          if (Math.abs(interpY - 350) <= 7.5 && isEastWest && interpX >= 170 && interpX <= 530) {
+            vehTier = 'flyover';
+            vehZ = 7.0;
+          } else if (Math.abs(interpX - 350) <= 7.5 && isNorthSouth && interpY >= 170 && interpY <= 530 && interpS > 8.0) {
+            vehTier = 'underpass';
+            vehZ = -4.0;
+          }
+        }
+
+        const opacity = getTierOpacity(vehTier);
+        if (opacity <= 0.01) return;
+
+        const screenPt = worldToScreen(interpX, interpY, vehZ, vehTier);
+        const headingAngle = sumoAngleToScreen(interpA);
+        const vType = getVehicleType(veh);
+        const spec = VEHICLE_SPECS[vType] || VEHICLE_SPECS.car;
+
+        // Sizing with exaggeration control & minimum on-screen visibility floor
+        const baseLen = spec.len * baseScale * scaleMult;
+        const baseWid = spec.wid * baseScale * scaleMult;
+        const vehLen = Math.max(minVehiclePx, baseLen);
+        const vehWid = Math.max(minVehiclePx * (spec.wid / spec.len), baseWid);
+
+        // Queued detection: speed < 0.8 m/s or explicit queued flag / delay
+        const isQueued = interpS < 0.8 || Boolean(veh.queued) || Boolean(veh.w > 1);
+
+        // Movement trail recording
+        if (showTrails) {
+          let tr = vehicleTrailsRef.current.get(veh.id);
+          if (!tr) {
+            tr = [];
+            vehicleTrailsRef.current.set(veh.id, tr);
+          }
+          const lastPt = tr[tr.length - 1];
+          if (!lastPt || Math.hypot(screenPt.x - lastPt.x, screenPt.y - lastPt.y) > 2) {
+            tr.push({ x: screenPt.x, y: screenPt.y, t: Date.now() });
+            if (tr.length > 5) tr.shift();
+          }
+        }
+
+        // Hover detection
+        const mPos = mousePosRef.current;
+        const mouseDist = Math.hypot(mPos.x - screenPt.x, mPos.y - screenPt.y);
+        if (mouseDist < minHoverDist) {
+          minHoverDist = mouseDist;
+          closestHovered = {
+            id: veh.id,
+            type: vType,
+            typeName: spec.name,
+            speed_mps: interpS,
+            speed_kmh: interpS * 3.6,
+            wait_s: veh.w || 0,
+            screenX: screenPt.x,
+            screenY: screenPt.y,
+            tier: vehTier,
+            isQueued,
+            lane_id: veh.lane_id || (vehTier === 'flyover' ? 'flyover_e2w' : (vehTier === 'underpass' ? 'orr_underpass' : 'surface_tls')),
+          };
+        }
+
+        preparedVehicles.push({
+          v1,
+          v2,
+          interpX,
+          interpY,
+          interpA,
+          interpS,
+          vehTier,
+          vehZ,
+          opacity,
+          screenPt,
+          headingAngle,
+          vType,
+          spec,
+          vehLen,
+          vehWid,
+          isQueued,
+        });
+      });
+
+      // Hover update for state
+      hoveredVehicleRef.current = closestHovered;
+      setHoveredVehicle((prev) => {
+        if (!prev && !closestHovered) return null;
+        if (prev && closestHovered && prev.id === closestHovered.id) {
+          if (
+            Math.abs(prev.screenX - closestHovered.screenX) < 1 &&
+            Math.abs(prev.screenY - closestHovered.screenY) < 1 &&
+            prev.speed_kmh === closestHovered.speed_kmh &&
+            prev.isQueued === closestHovered.isQueued
+          ) {
+            return prev;
+          }
+        }
+        return closestHovered;
+      });
+
+      // Partition vehicles by tier for physical depth layering
+      const underpassVehicles = [];
+      const surfaceVehicles = [];
+      const flyoverVehicles = [];
+      preparedVehicles.forEach((item) => {
+        if (item.vehTier === 'underpass') underpassVehicles.push(item);
+        else if (item.vehTier === 'flyover') flyoverVehicles.push(item);
+        else surfaceVehicles.push(item);
+      });
+
+      // Unified Single Vehicle Renderer
+      const drawSingleVehicle = (item) => {
+        const { v1, v2, interpS, vType, spec, vehLen, vehWid, opacity, screenPt, headingAngle, isQueued } = item;
+
+        // Fading movement trails
+        if (showTrails && interpS > 1.0) {
+          const tr = vehicleTrailsRef.current.get(v1.id);
+          if (tr && tr.length >= 2) {
+            ctx.save();
+            for (let i = 0; i < tr.length - 1; i++) {
+              const pA = tr[i];
+              const pB = tr[i + 1];
+              const alpha = ((i + 1) / tr.length) * 0.35 * opacity;
+              ctx.strokeStyle = isDark ? `rgba(56, 189, 248, ${alpha})` : `rgba(2, 132, 199, ${alpha})`;
+              ctx.lineWidth = Math.max(1.5, vehWid * 0.4);
+              ctx.lineCap = 'round';
+              ctx.beginPath();
+              ctx.moveTo(pA.x, pA.y);
+              ctx.lineTo(pB.x, pB.y);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
+
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.translate(screenPt.x, screenPt.y);
+        ctx.rotate(headingAngle);
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.beginPath();
+        drawSafeRoundRect(ctx, -vehLen / 2 + 1, -vehWid / 2 + 1, vehLen, vehWid, spec.radius);
+        ctx.fill();
+
+        // High-contrast color hierarchy:
+        // Moving: Sky Blue family (#38BDF8 / #00E5FF)
+        // Queued / Stopped: Distinct warm amber (#F59E0B / #D97706)
+        // Ambulance: Pure White (#FFFFFF) with pulsing halo
+        let bodyColor;
+        if (vType === 'ambulance') {
+          bodyColor = '#FFFFFF';
+        } else if (isQueued) {
+          bodyColor = isDark ? '#F59E0B' : '#D97706';
+        } else {
+          bodyColor = isDark ? '#38BDF8' : '#0284C7';
+          if (vType === 'bus') bodyColor = isDark ? '#00E5FF' : '#0891B2';
+          else if (vType === 'truck') bodyColor = isDark ? '#7DD3FC' : '#0369A1';
+          else if (vType === 'auto' || vType === 'motorcycle') bodyColor = isDark ? '#2DD4BF' : '#0D9488';
+        }
+
+        // Ambulance Pulsing Halo
+        if (vType === 'ambulance') {
+          const pulsePhase = (Date.now() % 1000) / 1000;
+          const haloRadius = Math.max(vehLen, vehWid) * (0.8 + 0.3 * Math.sin(pulsePhase * Math.PI * 2));
+          const haloAlpha = 0.55 * (1 - Math.sin(pulsePhase * Math.PI * 2) * 0.3);
+          ctx.save();
+          ctx.strokeStyle = `rgba(239, 68, 68, ${haloAlpha})`;
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(0, 0, haloRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = `rgba(239, 68, 68, ${haloAlpha * 0.25})`;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Vehicle Body Fill
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        drawSafeRoundRect(ctx, -vehLen / 2, -vehWid / 2, vehLen, vehWid, spec.radius);
+        ctx.fill();
+
+        // Thin light outline (dark outline in light theme) so vehicles never blend into dark asphalt
+        ctx.strokeStyle = isDark ? '#FFFFFF' : '#0F172A';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        // Heading arrow on vehicle roof
+        ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.9)';
+        ctx.beginPath();
+        const arrowFront = vehLen * 0.28;
+        const arrowBack = vehLen * 0.08;
+        const arrowHalfW = Math.max(1.2, vehWid * 0.25);
+        ctx.moveTo(arrowFront, 0);
+        ctx.lineTo(arrowBack, -arrowHalfW);
+        ctx.lineTo(arrowBack, arrowHalfW);
+        ctx.closePath();
+        ctx.fill();
+
+        // Windscreen & Roof Detail
+        if (vType === 'ambulance') {
+          ctx.fillStyle = '#EF4444';
+          const crossSize = Math.min(vehLen * 0.3, vehWid * 0.7);
+          ctx.fillRect(-crossSize / 2, -crossSize / 6, crossSize, crossSize / 3);
+          ctx.fillRect(-crossSize / 6, -crossSize / 2, crossSize / 3, crossSize);
+          const strobe = Math.floor(Date.now() / 120) % 2 === 0;
+          ctx.fillStyle = strobe ? '#EF4444' : '#00E5FF';
+          ctx.shadowColor = strobe ? '#EF4444' : '#00E5FF';
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.fillStyle = isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(255, 255, 255, 0.6)';
+          ctx.fillRect(vehLen * 0.06, -vehWid * 0.32, vehLen * 0.16, vehWid * 0.64);
+          ctx.fillRect(-vehLen * 0.28, -vehWid * 0.32, vehLen * 0.12, vehWid * 0.64);
+        }
+
+        // Brake Lights (Illuminated when queued or decelerating)
+        const isBraking = isQueued || interpS < 0.8 || (v2.s < v1.s - 0.2);
+        ctx.fillStyle = isBraking ? '#FF2E2E' : 'rgba(214, 69, 61, 0.35)';
+        if (isBraking) {
+          ctx.shadowColor = '#FF2E2E';
+          ctx.shadowBlur = 6;
+        }
+        ctx.beginPath();
+        ctx.arc(-vehLen / 2 + 0.5, -vehWid * 0.32, 1.2, 0, Math.PI * 2);
+        ctx.arc(-vehLen / 2 + 0.5, vehWid * 0.32, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Headlight glow & forward light cones (when moving)
+        if (interpS > 1.0) {
+          ctx.fillStyle = isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 235, 120, 0.18)';
+          ctx.beginPath();
+          ctx.moveTo(vehLen / 2, -vehWid * 0.32);
+          ctx.lineTo(vehLen / 2 + 18, -vehWid * 0.95);
+          ctx.lineTo(vehLen / 2 + 18, vehWid * 0.95);
+          ctx.lineTo(vehLen / 2, vehWid * 0.32);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.fillStyle = '#FFF8E7';
+          ctx.beginPath();
+          ctx.arc(vehLen / 2 - 0.5, -vehWid * 0.32, 1.2, 0, Math.PI * 2);
+          ctx.arc(vehLen / 2 - 0.5, vehWid * 0.32, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Selection reticle / tracking circle
+        if (selectedVehicleId === v1.id) {
+          ctx.strokeStyle = '#F59E0B';
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(0, 0, Math.max(vehLen, vehWid) * 0.75, 0, Math.PI * 2);
+          ctx.stroke();
+
+          const r = Math.max(vehLen, vehWid) * 0.9;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.restore();
+      };
+
       // 5. DRAW ROADWAYS BY TIER (Underpass -> Surface -> Flyover)
       const drawRoadRibbon = (shape, widthM, tier, zVal, isMedian = false) => {
         if (!shape || shape.length < 2) return;
@@ -745,6 +1140,9 @@ export function IsometricIntersection({
         });
         ctx.restore();
       }
+
+      // Draw Underpass Vehicles (rendered in underpass trench)
+      underpassVehicles.forEach(drawSingleVehicle);
 
       // 5.2 TIER 2: SURFACE ROADWAYS & CONFLICT AREA
       if (getTierOpacity('surface') > 0.01) {
@@ -810,36 +1208,55 @@ export function IsometricIntersection({
           }
         });
 
-        // E2 Detectors Translucent Zones & Stopped Vehicle Stack Agreement
+        // E2 Detectors Translucent Zones & Status-Aware Color Coding
         if (showDetectors) {
           const queues = activeFrame?.queues_m || { N: 0, S: 0, E: 0, W: 0 };
           marathahalliGeom.detectors.forEach((det) => {
             if (det.shape && det.shape.length >= 2) {
               const qVal = queues[det.approach] || 0;
-              const fillRatio = Math.min(1.0, Math.max(0.05, qVal / 25.0));
+              const isOffline = det.sensor_status === 'OFFLINE' || det.data_valid === false;
+              const isSaturated = qVal >= 24.0 || det.is_saturated;
+              const isZero = qVal === 0.0;
+
+              let strokeColor, fillColor;
+              if (isOffline) {
+                strokeColor = '#64748B'; // Hatched slate grey
+                fillColor = 'rgba(100, 116, 139, 0.25)';
+              } else if (isSaturated) {
+                strokeColor = '#EF4444'; // Saturated alert red
+                fillColor = 'rgba(239, 68, 68, 0.45)';
+              } else if (isZero) {
+                strokeColor = '#10B981'; // Confirmed zero emerald
+                fillColor = 'rgba(16, 185, 129, 0.25)';
+              } else {
+                strokeColor = '#FFB020'; // Measuring amber
+                fillColor = 'rgba(255, 176, 32, 0.35)';
+              }
+
               const p1 = worldToScreen(det.shape[0][0], det.shape[0][1], 0.0, 'surface');
               const p2 = worldToScreen(det.shape[1][0], det.shape[1][1], 0.0, 'surface');
 
               ctx.save();
-              // Translucent strip
-              ctx.strokeStyle = qVal > 5 ? 'rgba(239, 68, 68, 0.55)' : 'rgba(255, 176, 32, 0.35)';
-              ctx.lineWidth = 3.2 * baseScale;
+              ctx.strokeStyle = fillColor;
+              ctx.lineWidth = 4.0 * baseScale;
               ctx.lineCap = 'butt';
               ctx.beginPath();
               ctx.moveTo(p1.x, p1.y);
               ctx.lineTo(p2.x, p2.y);
               ctx.stroke();
 
-              // Active Queue Fill
+              ctx.strokeStyle = strokeColor;
+              if (isOffline) {
+                ctx.setLineDash([4 * zoom, 4 * zoom]);
+              }
+              ctx.lineWidth = 2.0 * baseScale;
+              const fillRatio = Math.min(1.0, Math.max(0.06, qVal / 24.9));
               const qFillX = p1.x + (p2.x - p1.x) * fillRatio;
               const qFillY = p1.y + (p2.y - p1.y) * fillRatio;
-              ctx.strokeStyle = qVal > 15 ? signalRed : '#FFB020';
-              ctx.lineWidth = 3.0 * baseScale;
               ctx.beginPath();
               ctx.moveTo(p1.x, p1.y);
               ctx.lineTo(qFillX, qFillY);
               ctx.stroke();
-
               ctx.restore();
             }
           });
@@ -898,10 +1315,16 @@ export function IsometricIntersection({
         ctx.restore();
       }
 
+      // Draw Surface Vehicles (rendered directly on surface roadways and below flyover deck)
+      surfaceVehicles.forEach(drawSingleVehicle);
+
       // 5.3 TIER 1: ELEVATED FLYOVER OVERPASS
       if (getTierOpacity('flyover') > 0.01) {
         ctx.save();
-        ctx.globalAlpha = getTierOpacity('flyover');
+        const flyoverOpacity = getTierOpacity('flyover');
+        // When seeThroughFlyover is enabled, ghost the deck ribbons (alpha 0.35x) so vehicles below are clearly visible
+        const deckAlpha = seeThroughFlyover ? (0.35 * flyoverOpacity) : flyoverOpacity;
+        ctx.globalAlpha = deckAlpha;
 
         const flyoverLanes = marathahalliGeom.lanes.filter((l) => l.tier === 'flyover');
 
@@ -974,218 +1397,8 @@ export function IsometricIntersection({
         ctx.restore();
       }
 
-      // 6. RENDER VEHICLES WITH REAL SUMO VTYPES & VISIBILITY SCALING
-      const currentVehicles = activeFrame?.vehicles || [];
-      const nextVehiclesMap = new Map();
-      if (nextFrame && nextFrame.vehicles) {
-        nextFrame.vehicles.forEach((v) => nextVehiclesMap.set(v.id, v));
-      }
-
-      // Interpolation progress between frame t and t+1
-      const subFrameProgress = Math.min(1.0, Math.max(0.0, frameAccumulatorRef.current));
-
-      // Compute camera tracking if Follow Mode is on (smooth panRef update without re-render thrashing)
-      if (isFollowMode && selectedVehicleId) {
-        const followed = currentVehicles.find((v) => v.id === selectedVehicleId);
-        if (followed) {
-          const pt = worldToScreen(followed.x, followed.y, 0, 'surface');
-          const targetPanX = panRef.current.x + (w / 2 - pt.x) * 0.1;
-          const targetPanY = panRef.current.y + (h / 2 - pt.y) * 0.1;
-          panRef.current = { x: targetPanX, y: targetPanY };
-        }
-      }
-
-      // Visibility factor: car length >= 12.5px at 100% zoom, easing to 1.0x at 350%
-      const minLengthPxAt100 = 13.0;
-      const nominalCarPx = 4.8 * baseScale * Math.min(currentZoom, 1.0);
-      const rawVisFactor = Math.max(1.0, minLengthPxAt100 / nominalCarPx);
-      const easeT = Math.min(1.0, Math.max(0.0, (currentZoom - 1.0) / 2.5));
-      const visFactor = rawVisFactor * (1.0 - easeT) + 1.0 * easeT;
-
-      let closestHovered = null;
-      let minHoverDist = 18;
-
-      currentVehicles.forEach((v1) => {
-        const v2 = nextVehiclesMap.get(v1.id) || v1;
-
-        // Smooth position and shortest-angle heading interpolation
-        const interpX = v1.x + (v2.x - v1.x) * subFrameProgress;
-        const interpY = v1.y + (v2.y - v1.y) * subFrameProgress;
-        let da = ((v2.a - v1.a + 540) % 360) - 180;
-        const interpA = (v1.a + da * subFrameProgress + 360) % 360;
-        const interpS = v1.s + (v2.s - v1.s) * subFrameProgress;
-
-        // Determine vehicle tier & altitude
-        let vehTier = 'surface';
-        let vehZ = 0.0;
-        const isEastWest = Math.abs(interpA - 90) < 35 || Math.abs(interpA - 270) < 35;
-        const isNorthSouth = Math.abs(interpA - 0) < 35 || Math.abs(interpA - 180) < 35;
-
-        if (Math.abs(interpY - 350) <= 7.5 && isEastWest && interpX >= 170 && interpX <= 530) {
-          vehTier = 'flyover';
-          vehZ = 7.0;
-        } else if (Math.abs(interpX - 350) <= 7.5 && isNorthSouth && interpY >= 170 && interpY <= 530 && interpS > 8.0) {
-          vehTier = 'underpass';
-          vehZ = -4.0;
-        }
-
-        const opacity = getTierOpacity(vehTier);
-        if (opacity <= 0.01) return;
-
-        const screenPt = worldToScreen(interpX, interpY, vehZ, vehTier);
-        const headingAngle = sumoAngleToScreen(interpA);
-        const vType = getVehicleType(v1);
-        const spec = VEHICLE_SPECS[vType] || VEHICLE_SPECS.car;
-
-        const vehLen = spec.len * baseScale * visFactor;
-        const vehWid = spec.wid * baseScale * visFactor;
-
-        // Check hover detection using mousePosRef
-        const mPos = mousePosRef.current;
-        const mouseDist = Math.hypot(mPos.x - screenPt.x, mPos.y - screenPt.y);
-        if (mouseDist < minHoverDist) {
-          minHoverDist = mouseDist;
-          closestHovered = {
-            id: v1.id,
-            type: vType,
-            typeName: spec.name,
-            speed_mps: interpS,
-            speed_kmh: interpS * 3.6,
-            wait_s: v1.w || 0,
-            screenX: screenPt.x,
-            screenY: screenPt.y,
-            tier: vehTier,
-          };
-        }
-
-        ctx.save();
-        ctx.globalAlpha = opacity;
-        ctx.translate(screenPt.x, screenPt.y);
-        ctx.rotate(headingAngle);
-
-        // Ground shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.beginPath();
-        drawSafeRoundRect(ctx, -vehLen / 2 + 1, -vehWid / 2 + 1, vehLen, vehWid, spec.radius);
-        ctx.fill();
-
-        // Distinct saturated palette based on vehicle type
-        let bodyColor = '#FFB020'; // Phasora amber default
-        if (vType === 'ambulance') {
-          bodyColor = '#FFFFFF';
-        } else if (vType === 'bus') {
-          bodyColor = '#0F6B7A'; // Petrol BMTC
-        } else if (vType === 'truck') {
-          bodyColor = '#E06A3B'; // Terracotta
-        } else if (vType === 'auto') {
-          bodyColor = '#2FA866'; // Green auto body
-        } else if (vType === 'motorcycle') {
-          bodyColor = '#4FB3C2'; // Bright teal
-        } else {
-          // Passenger cars deterministic variety
-          const hash = (v1.id || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-          const carPaints = ['#FFB020', '#4FB3C2', '#E2E8F0', '#3B82F6', '#D97706', '#94A3B8'];
-          bodyColor = carPaints[hash % carPaints.length];
-        }
-
-        // Vehicle Body
-        ctx.fillStyle = bodyColor;
-        ctx.strokeStyle = '#0C1316';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        drawSafeRoundRect(ctx, -vehLen / 2, -vehWid / 2, vehLen, vehWid, spec.radius);
-        ctx.fill();
-        ctx.stroke();
-
-        // Windscreen & Roof Detail
-        if (vType === 'ambulance') {
-          // Red cross livery
-          ctx.fillStyle = '#D6453D';
-          ctx.fillRect(-vehLen * 0.25, -vehWid / 2, vehLen * 0.5, vehWid);
-          // Alternating Red/Blue Strobe Siren
-          const strobe = Math.floor(Date.now() / 120) % 2 === 0;
-          ctx.fillStyle = strobe ? '#D6453D' : '#00D2FF';
-          ctx.shadowColor = strobe ? '#D6453D' : '#00D2FF';
-          ctx.shadowBlur = 12;
-          ctx.beginPath();
-          ctx.arc(0, 0, 2.5 * visFactor, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        } else if (vType === 'bus') {
-          // Front and rear panoramic glass
-          ctx.fillStyle = '#0C1316';
-          ctx.fillRect(vehLen * 0.25, -vehWid * 0.35, vehLen * 0.15, vehWid * 0.7);
-          ctx.fillRect(-vehLen * 0.38, -vehWid * 0.35, vehLen * 0.1, vehWid * 0.7);
-        } else if (vType === 'auto') {
-          // Yellow front roof canopy
-          ctx.fillStyle = '#FFB020';
-          ctx.fillRect(-vehLen * 0.3, -vehWid * 0.4, vehLen * 0.6, vehWid * 0.8);
-        } else {
-          // Car windscreen and rear glass
-          ctx.fillStyle = '#0C1316';
-          ctx.fillRect(vehLen * 0.08, -vehWid * 0.35, vehLen * 0.18, vehWid * 0.7);
-          ctx.fillRect(-vehLen * 0.28, -vehWid * 0.35, vehLen * 0.12, vehWid * 0.7);
-        }
-
-        // Brake Lights (Illuminated when stopped or decelerating)
-        const isBraking = interpS < 0.8 || (v2.s < v1.s - 0.2);
-        ctx.fillStyle = isBraking ? '#FF2E2E' : 'rgba(214, 69, 61, 0.4)';
-        if (isBraking) {
-          ctx.shadowColor = '#FF2E2E';
-          ctx.shadowBlur = 6;
-        }
-        ctx.beginPath();
-        ctx.arc(-vehLen / 2 + 0.5, -vehWid * 0.35, 1.2, 0, Math.PI * 2);
-        ctx.arc(-vehLen / 2 + 0.5, vehWid * 0.35, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Headlights (Lit in dark theme)
-        if (isDark) {
-          ctx.fillStyle = '#FFF8E7';
-          ctx.beginPath();
-          ctx.arc(vehLen / 2 - 0.5, -vehWid * 0.35, 1.2, 0, Math.PI * 2);
-          ctx.arc(vehLen / 2 - 0.5, vehWid * 0.35, 1.2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Forward light cones
-          ctx.fillStyle = 'rgba(255, 248, 231, 0.06)';
-          ctx.beginPath();
-          ctx.moveTo(vehLen / 2, -vehWid * 0.35);
-          ctx.lineTo(vehLen / 2 + 14 * visFactor, -vehWid * 0.9);
-          ctx.lineTo(vehLen / 2 + 14 * visFactor, vehWid * 0.9);
-          ctx.lineTo(vehLen / 2, vehWid * 0.35);
-          ctx.closePath();
-          ctx.fill();
-        }
-
-        // Selection ring
-        if (selectedVehicleId === v1.id) {
-          ctx.strokeStyle = '#FFB020';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, vehLen * 0.7, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        ctx.restore();
-      });
-
-      hoveredVehicleRef.current = closestHovered;
-      // Only trigger React state update if hover target changed (prevents 60fps re-render loop)
-      setHoveredVehicle((prev) => {
-        if (!prev && !closestHovered) return null;
-        if (prev && closestHovered && prev.id === closestHovered.id) {
-          if (
-            Math.abs(prev.screenX - closestHovered.screenX) < 1 &&
-            Math.abs(prev.screenY - closestHovered.screenY) < 1 &&
-            prev.speed_kmh === closestHovered.speed_kmh
-          ) {
-            return prev;
-          }
-        }
-        return closestHovered;
-      });
+      // Draw Flyover Vehicles (rendered on top of elevated flyover deck)
+      flyoverVehicles.forEach(drawSingleVehicle);
 
       // 7. TIER 3D FLOATING LABELS (When Exploded)
       if (ep > 0.4 && isIso) {
@@ -1317,7 +1530,15 @@ export function IsometricIntersection({
     showLabels,
     selectedVehicleId,
     isFollowMode,
+    vehicleScaleMultiplier,
+    seeThroughFlyover,
+    showTrails,
   ]);
+
+  const totalVehiclesCount = activeFrame?.vehicles?.length || 0;
+  const queuedVehiclesCount = (activeFrame?.vehicles || []).filter(
+    (v) => (v.s !== undefined ? v.s < 0.1 : (v.speed !== undefined ? v.speed < 0.1 : false)) || (v.w > 0)
+  ).length;
 
   return (
     <div
@@ -1344,30 +1565,94 @@ export function IsometricIntersection({
         </div>
 
         <div className="px-2.5 py-1 rounded-full bg-[#0C1316]/80 border border-white/10 text-[11px] font-mono text-[#AEB8BA] hidden sm:flex items-center gap-1.5 shadow-md">
-          <span>{activeFrame?.vehicles?.length || 0} active vehs</span>
+          <span className="font-semibold text-white">
+            {totalVehiclesCount} vehs in network ({queuedVehiclesCount} queued)
+          </span>
           <span>•</span>
           <span>{viewMode.toUpperCase()}</span>
+          {isLiveMode && liveTelemetryAgeMs !== null && (
+            <>
+              <span>•</span>
+              <span className="text-[#38BDF8]">
+                Age: {(liveTelemetryAgeMs / 1000).toFixed(1)}s
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* 3. Top-Right: Camera Presets & Explode Action */}
+      {/* 3. Top-Right: Camera Presets & Visibility Controls */}
       {showControls && (
-        <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+        <div className="absolute top-3 right-3 flex flex-wrap items-center gap-2 z-20 justify-end max-w-[calc(100%-250px)]">
+          {/* Exaggerate Vehicles Control (1x True, 2x Default, 3x Max) */}
+          <div className="flex items-center bg-[#0C1316]/90 border border-white/15 rounded-full p-0.5 shadow-md backdrop-blur-md">
+            <span className="text-[10px] font-mono text-[#AEB8BA] px-2 hidden md:inline">Scale:</span>
+            {[
+              { label: '1x True', val: 1.0 },
+              { label: '2x (Def)', val: 2.0 },
+              { label: '3x Max', val: 3.0 },
+            ].map((sc) => (
+              <button
+                key={sc.val}
+                type="button"
+                onClick={() => setVehicleScaleMultiplier(sc.val)}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold transition-colors ${
+                  vehicleScaleMultiplier === sc.val
+                    ? 'bg-[#38BDF8] text-[#0C1316] font-bold shadow-sm'
+                    : 'text-[#AEB8BA] hover:text-white'
+                }`}
+                title={`Scale vehicles by ${sc.label}`}
+              >
+                {sc.label}
+              </button>
+            ))}
+          </div>
+
+          {/* See-Through Flyover Toggle */}
+          <button
+            type="button"
+            onClick={() => setSeeThroughFlyover((prev) => !prev)}
+            className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold flex items-center gap-1 transition-all shadow-md backdrop-blur-md ${
+              seeThroughFlyover
+                ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/50'
+                : 'bg-[#0C1316]/90 text-[#AEB8BA] hover:bg-[#1A2327] border border-white/15'
+            }`}
+            title="Ghost elevated flyover deck so surface traffic beneath is visible"
+          >
+            <Eye size={12} />
+            <span className="hidden sm:inline">See-Through</span>
+          </button>
+
+          {/* Trails Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowTrails((prev) => !prev)}
+            className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold flex items-center gap-1 transition-all shadow-md backdrop-blur-md ${
+              showTrails
+                ? 'bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/50'
+                : 'bg-[#0C1316]/90 text-[#AEB8BA] hover:bg-[#1A2327] border border-white/15'
+            }`}
+            title="Toggle vehicle motion trails & headlight illumination"
+          >
+            <Activity size={12} />
+            <span className="hidden sm:inline">Trails</span>
+          </button>
+
           {/* Explode 3-Tier Toggle Button */}
           <button
             type="button"
             onClick={toggleExplode}
-            className={`px-3 py-1.5 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-md backdrop-blur-md ${
+            className={`px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-md backdrop-blur-md ${
               isExploded
                 ? 'bg-[#FFB020] text-[#0C1316] ring-2 ring-[#FFB020]/40'
                 : 'bg-[#0C1316]/90 text-[#F3EDE0] hover:bg-[#1A2327] border border-white/15'
             }`}
           >
             <Layers size={13} />
-            <span>{isExploded ? 'Collapse View' : 'Explode 3-Tier View'}</span>
+            <span>{isExploded ? 'Collapse' : '3-Tier'}</span>
           </button>
 
-          {/* View Mode Dropdown */}
+          {/* View Mode Toggle */}
           <div className="flex items-center bg-[#0C1316]/90 border border-white/15 rounded-full p-0.5 shadow-md">
             <button
               type="button"
@@ -1376,7 +1661,7 @@ export function IsometricIntersection({
                 viewMode === 'isometric' ? 'bg-[#1A2327] text-[#FFB020]' : 'text-[#AEB8BA] hover:text-white'
               }`}
             >
-              2.5D Iso
+              2.5D
             </button>
             <button
               type="button"
@@ -1388,6 +1673,20 @@ export function IsometricIntersection({
               Top-Down
             </button>
           </div>
+
+          {/* Legend Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowLegend((prev) => !prev)}
+            className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold flex items-center gap-1 transition-all shadow-md backdrop-blur-md ${
+              showLegend
+                ? 'bg-[#FFB020]/20 text-[#FFB020] border border-[#FFB020]/50'
+                : 'bg-[#0C1316]/90 text-[#AEB8BA] hover:bg-[#1A2327] border border-white/15'
+            }`}
+            title="Toggle Map Visual Legend"
+          >
+            <span>Legend</span>
+          </button>
         </div>
       )}
 
@@ -1448,26 +1747,76 @@ export function IsometricIntersection({
         </div>
       )}
 
+      {/* Map Legend Overlay */}
+      {showLegend && (
+        <div className="absolute bottom-12 left-3 z-20 bg-[#0C1316]/95 border border-white/15 rounded-xl p-2.5 shadow-xl backdrop-blur-md text-[11px] font-mono space-y-2 pointer-events-auto max-w-[210px]">
+          <div className="flex items-center justify-between border-b border-white/10 pb-1">
+            <span className="font-bold text-[#F3EDE0]">MAP LEGEND</span>
+            <button
+              type="button"
+              onClick={() => setShowLegend(false)}
+              className="text-[#AEB8BA] hover:text-white"
+            >
+              <X size={12} />
+            </button>
+          </div>
+          <div className="space-y-1 text-[10px]">
+            <div className="text-[#AEB8BA] uppercase font-bold text-[9px]">Vehicles (High Contrast)</div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-2 rounded-sm bg-[#38BDF8] border border-white/40" />
+              <span>Moving Vehicle</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-2 rounded-sm bg-[#F59E0B] border border-white/40" />
+              <span>Queued / Stopped</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-2 rounded-sm bg-[#FFFFFF] border border-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+              <span>Ambulance (Pulsing)</span>
+            </div>
+          </div>
+          <div className="pt-1 border-t border-white/10 space-y-1 text-[10px]">
+            <div className="text-[#AEB8BA] uppercase font-bold text-[9px]">E2 Detectors (Sensors)</div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-1.5 rounded-sm bg-[#10B981]" />
+              <span>CONFIRMED_ZERO (Clear)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-1.5 rounded-sm bg-[#FFB020]" />
+              <span>MEASURING (Active Queue)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-1.5 rounded-sm bg-[#EF4444]" />
+              <span>SATURATED (Full Span)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-1.5 rounded-sm bg-slate-500 border border-dashed border-slate-300" />
+              <span>OFFLINE (Fallback)</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 6. Vehicle Detail Hover / Click Card */}
       {(hoveredVehicle || (selectedVehicleId && activeFrame)) && (
         <div
-          className="absolute z-30 pointer-events-auto bg-[#0C1316]/95 border border-[#FFB020]/40 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs font-mono space-y-2 min-w-[200px]"
+          className="absolute z-30 pointer-events-auto bg-[#0C1316]/95 border border-[#38BDF8]/50 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs font-mono space-y-2 min-w-[220px]"
           style={{
             left: Math.min(
-              (containerRef.current?.clientWidth || 400) - 220,
-              Math.max(10, (hoveredVehicle?.screenX || 100) + 12)
+              (containerRef.current?.clientWidth || 400) - 240,
+              Math.max(10, (hoveredVehicle?.screenX || 100) + 14)
             ),
             top: Math.min(
-              (containerRef.current?.clientHeight || 400) - 150,
+              (containerRef.current?.clientHeight || 400) - 180,
               Math.max(10, (hoveredVehicle?.screenY || 100) - 20)
             ),
           }}
         >
           <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-            <span className="font-bold text-[#FFB020]">
+            <span className="font-bold text-[#38BDF8]">
               {hoveredVehicle?.id || selectedVehicleId}
             </span>
-            <span className="text-[10px] text-[#AEB8BA] uppercase">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[#F3EDE0] uppercase font-bold">
               {hoveredVehicle?.typeName || 'Vehicle'}
             </span>
           </div>
@@ -1478,29 +1827,53 @@ export function IsometricIntersection({
               <span className="font-bold text-white">
                 {(hoveredVehicle?.speed_kmh || 0).toFixed(1)} km/h
               </span>
-            </div>
-            <div>
-              <span className="text-[#AEB8BA] block text-[9px] uppercase">Wait Time</span>
-              <span className="font-bold text-white">
-                {(hoveredVehicle?.wait_s || 0).toFixed(1)} s
+              <span className="text-[10px] text-[#AEB8BA] block">
+                ({(hoveredVehicle?.speed_mps || 0).toFixed(1)} m/s)
               </span>
             </div>
+            <div>
+              <span className="text-[#AEB8BA] block text-[9px] uppercase">Waiting Time</span>
+              <span className={`font-bold ${(hoveredVehicle?.wait_s || 0) > 0 ? 'text-[#F59E0B]' : 'text-white'}`}>
+                {(hoveredVehicle?.wait_s || 0).toFixed(1)} s
+              </span>
+              <span className="text-[10px] block text-[#AEB8BA]">
+                {hoveredVehicle?.isQueued ? 'QUEUED' : 'MOVING'}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-1.5 border-t border-white/10 flex items-center justify-between text-[10px]">
+            <span className="text-[#AEB8BA]">
+              Tier: <strong className="text-white uppercase">{hoveredVehicle?.tier || 'Surface'}</strong>
+            </span>
+            {hoveredVehicle?.lane_id && (
+              <span className="text-[#AEB8BA] truncate max-w-[110px]" title={hoveredVehicle.lane_id}>
+                Lane: <strong className="text-white">{hoveredVehicle.lane_id}</strong>
+              </span>
+            )}
           </div>
 
           <div className="pt-1 border-t border-white/10 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setIsFollowMode((prev) => !prev)}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-colors ${
-                isFollowMode ? 'bg-[#FFB020] text-[#0C1316]' : 'bg-white/10 text-white hover:bg-white/20'
+              className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-colors ${
+                isFollowMode ? 'bg-[#38BDF8] text-[#0C1316]' : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
-              <LocateFixed size={10} />
-              <span>{isFollowMode ? 'Following' : 'Follow'}</span>
+              <LocateFixed size={11} />
+              <span>{isFollowMode ? 'Following' : 'Follow Camera'}</span>
             </button>
-            <span className="text-[10px] text-[#4FB3C2] uppercase">
-              {hoveredVehicle?.tier || 'Surface'}
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedVehicleId(null);
+                setIsFollowMode(false);
+              }}
+              className="text-[#AEB8BA] hover:text-white text-[10px]"
+            >
+              Deselect
+            </button>
           </div>
         </div>
       )}

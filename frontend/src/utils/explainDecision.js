@@ -35,6 +35,30 @@ export function formatMeters(m) {
   return `${val.toFixed(1)} m`;
 }
 
+export const DECISION_CODE_LABELS = {
+  SWITCH_GAP_OUT: 'Early Gap-Out Terminated',
+  EXTEND_APPROVED: 'Green Extension Approved',
+  HOLD_CLEARING: 'Holding Green for Clearance',
+  HOLD_MIN_GREEN: 'Holding for Minimum Green',
+  REJECTED_MIN_GREEN: 'Switch Refused (Min Green)',
+  SWITCH_MAX_GREEN: 'Maximum Green Ceiling Reached',
+  SWITCH_FAIRNESS: 'Fairness Wait Limit Reached',
+  SWITCH_FAIRNESS_WAIT_LIMIT: 'Fairness Wait Limit Reached',
+  SWITCH_PRESSURE: 'Pressure Switch Triggered',
+  PREEMPTION: 'Emergency Preemption Granted',
+  EMERGENCY_PREEMPT: 'Emergency Preemption Granted',
+  EMERGENCY_PREEMPTION: 'Emergency Preemption Granted',
+  CHOSE_GREEN: 'Cycle Allocation Set',
+  CYCLE_ALLOCATION: 'Cycle Allocation Set',
+  HOLD_NO_DEMAND: 'Holding Green (No Competing Queue)',
+  SWITCH_QUEUE_RATIO: 'Queue Ratio Switch Triggered',
+};
+
+export function getDecisionCodeLabel(code) {
+  if (!code) return 'Decision Evaluated';
+  return DECISION_CODE_LABELS[code] || String(code);
+}
+
 /**
  * Turns structured decision fields into plain, human-friendly text.
  * @param {Object} d Structured decision record
@@ -50,6 +74,30 @@ export function explainDecision(d) {
       outcome: 'PENDING',
       rawCode: 'NONE',
       deltaS: 'n/a'
+    };
+  }
+
+  // If a real logged reason exists directly from the controller, display it faithfully without inventing text:
+  if (d.reason) {
+    const rawCode = d.decision_outcome || d.reason_code || d.action || 'UNKNOWN';
+    return {
+      headline: getDecisionCodeLabel(rawCode),
+      prose: d.reason,
+      codeLabel: getDecisionCodeLabel(rawCode),
+      type: rawCode.includes('EXTEND')
+        ? 'extend'
+        : rawCode.includes('GAP_OUT')
+        ? 'gap_out'
+        : rawCode.includes('EMERGENCY')
+        ? 'emergency'
+        : rawCode.includes('HOLD')
+        ? 'hold'
+        : 'neutral',
+      outcome: rawCode,
+      rawCode,
+      deltaS: d.delta_g_app_s ?? 'n/a',
+      targetS: d.target_green_s ?? d.actual_green_s ?? 15,
+      maxS: 60,
     };
   }
 
