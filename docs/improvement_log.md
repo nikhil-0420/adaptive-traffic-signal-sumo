@@ -105,5 +105,36 @@
   - Decision Increments: Requested (`Req: +<delta_g_req_s>s`) and applied (`App: +<delta_g_app_s>s`) increments displayed in separate sub-badges.
   - Tests: 48/48 frontend unit tests passed (100% green).
 
+## 2026-11-02: Phase 6 - Camera Controls, Labels, Performance, and QA Polish
+- **Git Commit Baseline**: `c817e7e` (tagged `dp1-phase5`)
+- **Tag**: `dp1-phase6`
+- **Changes**:
+  - Camera presets (Top-Down, Iso, Junction Close-up, Flyover Side View, Approach Views N/S/E/W).
+  - Orbit controls boundary clamping, follow-vehicle click interaction, zoom percentage sync.
+  - UI labels: replaced synthetic text with "Live simulation view" and live TraCI connection status pill.
+  - Colorblind palettes (Default, Deuteranopia, Tritanopia, Monochromatic) persisted in localStorage.
+  - WebGL context recovery and graceful 2.5D fallback handling.
+- **Validation**: 48/48 frontend tests passed, 115/115 pytest tests passed.
 
-
+## 2026-11-02: Phase 7 - Research Baseline Tag and Diagnostics
+- **Git Commit Baseline**: `097f8ec` (tagged `dp1-pre-improvement`)
+- **Tag**: `dp1-phase7`
+- **Reports**: [`docs/diagnostics_report.md`](./diagnostics_report.md), [`docs/phase7_report.md`](./phase7_report.md)
+- **Artifacts**:
+  - `results/research/exp_diag_dev_101_110/`: 240 evaluation runs (10 dev seeds 101–110, 4 patterns, 3 levels, 2 policies).
+  - `scripts/diagnostics/`: 9 diagnostic scripts (`d1_d2_saturation.py` to `d10_gap_out.py`).
+  - `results/research/d7_ground_truth_summary.csv`: ground-truth queue correlations ($r = 0.939 - 0.981$).
+- **Key Findings & Evidence**:
+  - D1/D2: Saturation rate is negligible (<0.026% in low/medium, <0.32% in heavy).
+  - D3: Hybrid switches 191.4 times/hr in balanced-low (mean green 14.45s) vs Webster's 181.2 (15.00s).
+  - D4: 51.6% of extensions in `imbalanced_orr_heavy` approved without opposing queue pressure.
+  - D5: Zero unfinished vehicles across all 240 runs (100% completion rate); wait metrics are unbiased.
+  - D6: Webster is confirmed to be an oracle baseline with exact prior knowledge of scenario arrival rates.
+  - D7: Detectors correlate strongly with ground truth ($r \ge 0.939$, MAE $\le 0.52$m).
+  - D8: Physical edge headroom is only 6.6m–9.2m before hitting upstream merge junctions.
+  - D9: Hybrid consistently beats Webster in `surge_orr_north` (up to -6.86s p95 wait) and `balanced_heavy` (-31.21s p95 wait).
+  - D10: Gap-out is already active in the controller (36.54% of decisions).
+- **Decision Table Outcome**:
+  - R2 (Comparative Extension) and R3 (Queue-Aware Demand Fairness): **JUSTIFIED** $\rightarrow$ Proceed to Phase 8.
+  - R1 (Gap-Out + HOLD Default), R4 (Webster-Seeded Base Green), and R5 (Longer Detectors): **NOT JUSTIFIED** $\rightarrow$ Rejected.
+- **Quality Gates**: 115/115 pytest green, 48/48 npm test green. Zero controller code modified.
