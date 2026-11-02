@@ -290,25 +290,166 @@ Per the project integrity rules:
 
 ---
 
-## Decision Table: Improvement Ladder (R1 – R5) & Audit Concerns
+## Phase 7B: Diagnostic Gaps and Deep Reconciliations
 
-Based on the quantitative diagnostic evidence gathered from D1–D10, the proposed improvement candidates are evaluated:
+### 1. Hybrid Base Green Inputs & Live Controller Information Audit
 
-| Item | Proposed Improvement / Concern | Status | Diagnostic Evidence & Rationale |
-| :--- | :--- | :---: | :--- |
-| **R1** | **Gap-Out + HOLD Default** | **NOT JUSTIFIED** | D10 proves gap-out is already fully implemented (`SWITCH_GAP_OUT` represents 36.54% of decisions). D3 shows hybrid already switches 191 times/hr in low demand vs Webster's 181. Adding another gap-out trigger would increase chatter rather than reduce it. |
-| **R2** | **Comparative Extension** | **JUSTIFIED** | D4 reveals that in `imbalanced_orr_heavy`, **51.6% of approved extensions** occurred when opposing queue pressure was $< 5.0$\,m, causing wasteful extensions. Requiring $q_{\text{active}} \ge q_{\text{comp}} + \Delta$ directly targets this inefficiency. Proceed to Phase 8. |
-| **R3** | **Queue-Aware Fairness** | **JUSTIFIED** | D4 shows 327 `SWITCH_DEMAND_FAIRNESS` switches. In heavy conditions, fairness preempts green even when opposing demand is light or clearing. Adding queue thresholds before forcing fairness switches prevents premature phase chopping. Proceed to Phase 8. |
-| **R4** | **Webster-Seeded Base Green** | **NOT JUSTIFIED** | Inspection of `dp1/controllers/hybrid_queue_adaptive.py` confirms base green is already seeded by Webster via `site_webster_plan()` in `baseline_green_s`. Redundant implementation. |
-| **R5** | **Longer Detectors** | **NOT JUSTIFIED** | D1/D2 demonstrate saturation rates are $< 0.32\%$ overall, and D8 confirms available physical edge headroom before upstream junctions is only 6.6m–9.2m. Physical extension yields negligible sensor gain and breaks geometry boundaries. |
-| **Audit 1** | **Webster-Oracle Concern** | **CONFIRMED (YES)** | D6 confirms Webster uses exact global future scenario flow rates and hard-coded 0.35 surface split. It is an oracle baseline, not a realistic field controller. |
-| **Audit 2** | **Unfinished-Vehicle Bias** | **REFUTED (NO)** | D5 proves 100.0% vehicle completion rate (0 unfinished vehicles across 240 runs) due to the 3600s horizon. The metric parser does not bias wait-time comparisons. |
+- **Exact Code Quote 1: `dp1/controllers/hybrid_queue_adaptive.py` (lines 41–54)**:
+  ```python
+  # 1. Establish Webster-derived baseline green plan
+  if plan is not None:
+      self.baseline_plan = plan
+  elif network == "marathahalli" or scenario in ("imbalanced_orr", "imbalanced_varthur", "surge_orr_north"):
+      from ..site_scenarios import site_webster_plan
+      self.baseline_plan = site_webster_plan(scenario, demand_level=demand_level)
+  else:
+      self.baseline_plan = C.webster_plan(scenario, demand_level=demand_level)
+
+  # Baseline targets clamped to [min_green, max_green]
+  self.baseline_green_s = {
+      "NS": max(self.cfg.min_green_s, min(self.cfg.max_green_s, self.baseline_plan.green_ns_s)),
+      "EW": max(self.cfg.min_green_s, min(self.cfg.max_green_s, self.baseline_plan.green_ew_s)),
+  }
+  ```
+- **Exact Code Quote 2: `dp1/site_scenarios.py` (lines 257–275)**:
+  ```python
+  def site_webster_plan(
+      scenario: str,
+      timing: Optional[C.SignalTiming] = None,
+      cfg: Optional[C.WebsterConfig] = None,
+      demand_level: str = C.DEFAULT_DEMAND_LEVEL,
+  ) -> C.FixedTimeConfig:
+      scens = get_site_scenarios(demand_level=demand_level)
+      if scenario not in scens:
+          raise KeyError(f"Unknown site scenario: {scenario}")
+      prof = scens[scenario]
+      timing = timing or C.TIMING
+      cfg = cfg or C.WEBSTER
+      duration = float(C.SIM.demand_duration_s)
+
+      avg_flows = {}
+      for a in SITE_APPROACHES:
+          segments = prof[a]
+          total_veh = sum((t1 - t0) * (vph / 3600.0) for t0, t1, vph in segments)
+          avg_flows[a] = total_veh * (3600.0 / duration)
+      ...
+  ```
+- **Does the hybrid have information a live controller would lack?**
+  **YES**. The hybrid controller accepts the exact test `scenario` name (e.g. `"imbalanced_orr"`, `"surge_orr_north"`) and `demand_level` (`"low"`, `"medium"`, `"heavy"`) at initialization. Through `site_webster_plan`, it accesses `SITE_DEMAND_PATTERNS` directly, extracting the exact ground-truth vehicle generation rates over the entire 1,800\,s horizon, along with the exact modelled surface traffic split factor ($0.35$). A real-world physical controller installed at an intersection has zero prior knowledge of scenario labels, demand multipliers, or future surge arrival rates; seeding the base green with an offline scenario-oracle leaks global future demand into the adaptive controller.
 
 ---
 
-## Phase 8 Execution Roadmap
+### 2. Approved Extensions & Fairness Switches on Dev Seeds 101–110
 
-Proceed with the validated, justified improvements only:
-1. **R2: Comparative Extension Condition**: Only approve green extensions if the active approach queue exceeds the competing approach queue by a tunable margin ($q_{\text{active}} - q_{\text{comp}} \ge \Delta_q$).
-2. **R3: Queue-Aware Demand Fairness**: Require the opposing queue to meet a minimum physical threshold before triggering a demand fairness phase switch.
-3. **Reject R1, R4, and R5** to avoid churn, redundant code, and invalid geometry modifications.
+- **Source Code**: `scripts/diagnostics/phase7b_gaps.py`
+- **Data Source**: `decisions.csv` across all 120 hybrid runs in `results/research/exp_diag_dev_101_110/`.
+- **Approved Extension Audit ($N = 969$ approved extensions)**:
+  - Extensions where competing score > active score (`score_competing > score_active`): **82 events** (**8.46%**).
+  - Mean competing red wait at the moment extension was approved: **23.42s** (min: 15.0s, max: 57.0s).
+  - Mean competing red wait at the next phase switch (controller internal elapsed green): **34.91s** (min: 18.0s, max: 60.0s).
+  - Mean competing red wait at the next phase switch (+5s yellow/all-red clearance): **39.91s**.
+- **Fairness Switch Audit ($N = 417$ total fairness switches)**:
+  - `SWITCH_DEMAND_FAIRNESS`: **327 switches**.
+    - Competing queue $< 5.0$\,m: **0 switches** (**0.00%**).
+    - Competing queue $< 10.0$\,m: **24 switches** (**7.34%**).
+    - Competing queue range: min = $5.0$\,m, mean = $20.4$\,m, max = $24.7$\,m.
+  - `SWITCH_FAIRNESS_WAIT_LIMIT`: **90 switches**.
+    - Competing queue $< 5.0$\,m: **0 switches** (**0.00%**).
+    - Competing queue $< 10.0$\,m: **43 switches** (**47.78%**).
+    - Competing queue range: min = $5.0$\,m, mean = $9.2$\,m, max = $20.1$\,m.
+- **Interpretation**: Both fairness rules in code (`hybrid_queue_adaptive.py` lines 227 & 239) enforce an explicit guard `comp_q >= c.min_competing_queue_m` ($5.0$\,m). Consequently, exactly **0.00%** of fairness switches occur when competing queue is strictly $< 5.0$\,m. However, for `SWITCH_FAIRNESS_WAIT_LIMIT` (30s red wait cap), **47.78%** trigger when the opposing queue is very light ($< 10.0$\,m, $\le 1$ car), unnecessarily chopping an active heavy green corridor.
+
+---
+
+### 3. Reconciling D1 vs D7: Saturation Fraction & Lead Vehicle Setback
+
+- **Source Code**: `scripts/diagnostics/phase7b_gaps.py`, `scripts/diagnostics/d7_ground_truth.py`.
+- **Per-Cell Saturation Comparison**:
+  1. **`imbalanced_orr_heavy` (South Approach)**:
+     - D1 Saturation Rate (rule: $q \ge 24.4$\,m): Dev seed 101 = **0.95%** (20 / 2,101 s); 10-seed mean = **0.18%**.
+     - D7 Ground Truth Rate (rule: $\text{GT} > 24.9$\,m): Dev seed 101 = **17.6%**.
+  2. **`surge_orr_north_heavy` (North Approach)**:
+     - D1 Saturation Rate (rule: $q \ge 24.4$\,m): Dev seed 101 = **0.00%** (0 / 2,105 s); 10-seed mean = **0.33%**.
+     - D7 Ground Truth Rate (rule: $\text{GT} > 24.9$\,m): Dev seed 101 = **9.8%**.
+- **Root-Cause Reconciliation**:
+  - The detector saturation rule in `dp1/queues.py` (line 152) was defined as:
+    $$\text{sat\_threshold} = \text{det\_len} - 0.5 = 24.9 - 0.5 = 24.4\,\text{m}$$
+  - In SUMO, an E2 lane-area detector (`traci.lanearea.getJamLengthMeters`) measures jam length strictly between the front of the lead queued vehicle and the back of the trailing vehicle *within the detector geometry*.
+  - When vehicles halt before a red light, the lead vehicle stops $\sim 0.9$\,m to $1.0$\,m behind the detector end line (due to car-following headway and stopline margins).
+  - Even when the queue backs up 30\,m to 34\,m (spilling far beyond the upstream end of the 24.9m detector), the maximum jam length the detector can physically report is bounded by $24.9 - 0.9 = \mathbf{24.00\,\text{m}}$.
+  - Inspecting time-series value distributions:
+    - In `imbalanced_orr_heavy_s101`, `q_S == 24.00m` occurs **271 times** ($12.9\%$ of the run). With $q \ge 24.0$\,m, the detector is packed **13.85%** of the time.
+    - In `surge_orr_north_heavy_s101`, `q_N == 24.00m` occurs **293 times** ($13.92\%$ of the run). With $q \ge 24.0$\,m, the detector is packed **13.92%** of the time.
+  - Because $24.00\,\text{m} < 24.40\,\text{m}$, the status was labeled `MEASURING` instead of `SATURATED`.
+  - **Conclusion**: The detector was physically jammed for $13.8\% - 13.9\%$ of the simulation time, aligning closely with D7's ground-truth exceedance ($9.8\% - 17.6\%$). The apparent discrepancy was an artifact of the $24.4$\,m threshold ignoring lead-vehicle stopline setback.
+
+---
+
+### 4. Max Queue Source and Ground-Truth Queue Logging Proposal
+
+- **Current Source of `max_queue_m`**:
+  - In `dp1/metrics.py` (lines 90, 107), `max_queue_m` is computed from `series`:
+    $$\text{max\_queue\_m} = \max(\text{q\_matrix})$$
+  - In `dp1/runner.py` (lines 215–230), `series` records `q_{a}` from `q = queues_to_legacy_dict(app_queues)`, which uses `ApproachQueueInfo.longitudinal_queue_m`.
+  - `longitudinal_queue_m` is strictly the E2 detector measurement (`traci.lanearea.getJamLengthMeters`).
+  - **Verdict**: `max_queue_m` currently uses **DETECTOR QUEUE**, not ground truth. It is physically clipped at $\approx 24.0$\,m – $24.9$\,m.
+- **Evaluation-Only Ground-Truth Queue Logging Proposal**:
+  - `QueueMeasurementEngine.measure_all(t)` already computes `ground_truth_queue_m` per approach using non-invasive vehicle position and speed queries.
+  - **Implementation**:
+    1. In `dp1/runner.py` (line 230), record ground truth alongside detector queue in `series_rec`:
+       ```python
+       **{f"gt_q_{a}": round(app_queues[a].ground_truth_queue_m, 2) for a in C.APPROACHES}
+       ```
+    2. In `dp1/metrics.py`, expose `gt_max_queue_m = float(gt_q_matrix.max())` and `gt_avg_queue_m = float(gt_q_matrix.mean())` while preserving `max_queue_m` for backwards compatibility.
+    3. Controller inputs remain strictly isolated: `ctl.step(t, q)` continues to receive `q` (detector queue).
+  - **Determinism Proof**:
+    - Add a regression test (`tests/test_evaluation_gt_queue_determinism.py`) executing seed 101 on `balanced_medium` with and without ground truth logging; assert `decisions.csv` and controller telemetry are **100% byte-identical** (SHA256 verified).
+
+---
+
+### 5. Balanced-Low: Hybrid vs Adaptive Green Length and Min Green
+
+- **Source Code**: `scripts/diagnostics/phase7b_gaps.py`
+- **Data Source**: Completed green phases across all seeds ($N = 989$ hybrid phases, $N = 1,108$ adaptive phases):
+
+| Metric | Fixed Webster (dev seeds 101–110) | Hybrid Queue Adaptive (dev seeds 101–110) | Pure Adaptive (site seeds 121–130) |
+| :--- | :---: | :---: | :---: |
+| **Mean Green Length** | 14.99 s | **13.89 s** | **11.84 s** |
+| **Median Green Length** | 15.00 s | **13.00 s** | **12.00 s** |
+| **Minimum Green Length** | 14.00 s | **13.00 s** | **9.00 s** |
+| **Maximum Green Length** | 15.00 s | 18.00 s | 18.00 s |
+| **P10 Green Length** | 15.00 s | 13.00 s | 10.00 s |
+| **P90 Green Length** | 15.00 s | 15.00 s | 13.00 s |
+| **Phases $\le 10.0$\,s (%)** | **0.00%** | **0.00%** | **23.56%** |
+
+- **Key Takeaways**:
+  1. **Mean Green**: Hybrid holds green **+2.05s longer** than pure adaptive (13.89s vs 11.84s).
+  2. **Minimum Green**: Hybrid never terminates green earlier than **13.0s** (10.0s minimum floor + 3.0s gap-out timer), whereas pure adaptive regularly collapses to **9.0s – 10.0s** (23.56% of phases).
+  3. **Stability**: Hybrid green lengths are tightly centered between 13.0s and 15.0s, eliminating the rapid short-greening that degrades pure adaptive in low demand.
+
+---
+
+## Updated Decision Table: Improvement Ladder (R1 – R5)
+
+Based on Phase 7 and Phase 7B evidence:
+
+| Item | Proposed Improvement / Concern | Status | Diagnostic Evidence & Justification |
+| :--- | :--- | :---: | :--- |
+| **R1** | **Gap-Out + HOLD Default** | **NOT JUSTIFIED** | D10 confirms gap-out is already active in 36.54% of decisions. Phase 7B (Item 5) proves hybrid already enforces a 13.0s min green and holds greens longer than adaptive (13.89s vs 11.84s). Adding another gap-out trigger would increase chatter. |
+| **R2** | **Comparative Extension** | **JUSTIFIED** | D4 and Phase 7B (Item 2) show that in `imbalanced_orr_heavy`, 51.6% of approved extensions occur when competing queue pressure is $< 5.0$\,m, and 8.46% occur even when competing demand score exceeds active score. Conditioning extensions on $q_{\text{active}} \ge q_{\text{comp}} + \Delta_q$ directly resolves this flaw. **Proceed to Phase 8**. |
+| **R3** | **Queue-Aware Demand Fairness** | **JUSTIFIED** | Phase 7B (Item 2) confirms that while hard guard $q_{\text{comp}} \ge 5$\,m prevents switches at 0m, **47.78% of wait-limit fairness switches** occur when the opposing queue is very light ($< 10$\,m, $\le 1$ car), unnecessarily preempting heavy flow. Raising the competing queue threshold before triggering wait-limit fairness preserves heavy servicing. **Proceed to Phase 8**. |
+| **R4** | **De-Oracle the Base Green** | **JUSTIFIED** | Phase 7B (Item 1) proves hybrid's base green is seeded via `site_webster_plan`, which extracts exact ground-truth scenario tables (`SITE_DEMAND_PATTERNS`) and demand multipliers. A live controller does not possess this information. Replacing this oracle plan with an empirical un-oracled baseline (e.g. fixed 15s/15s or online arrival estimation) is essential for research validity. **Proceed to Phase 8**. |
+| **R5** | **Longer Detectors** | **NOT JUSTIFIED** | D8 proves available physical edge headroom before upstream merge junctions is only 6.6m–9.2m ($\sim 1$ vehicle). Physical extension is geometrically unviable on Marathahalli surface legs. |
+| **Audit 1** | **Webster-Oracle Concern** | **CONFIRMED (YES)** | Confirmed in D6 and Phase 7B (Item 1). Webster uses global future scenario flow rates. |
+| **Audit 2** | **Unfinished-Vehicle Bias** | **REFUTED (NO)** | Confirmed in D5. 100.0% completion rate (0 unfinished vehicles across 240 runs). |
+
+---
+
+## Phase 8 Execution Plan
+
+Proceed to Phase 8 with the three justified improvements:
+1. **R2: Comparative Extension Condition**: Only grant extensions when $q_{\text{active}} - q_{\text{comp}} \ge \Delta_q$.
+2. **R3: Queue-Aware Demand Fairness**: Raise the queue threshold for `SWITCH_FAIRNESS_WAIT_LIMIT` to avoid chopping active greens for single vehicles.
+3. **R4: De-Oracle the Base Green**: Decouple hybrid from `site_webster_plan(scenario, demand_level)` so it operates without oracle knowledge of scenario profiles.
+4. **Reject R1 and R5**.
+

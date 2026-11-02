@@ -135,6 +135,17 @@
   - D9: Hybrid consistently beats Webster in `surge_orr_north` (up to -6.86s p95 wait) and `balanced_heavy` (-31.21s p95 wait).
   - D10: Gap-out is already active in the controller (36.54% of decisions).
 - **Decision Table Outcome**:
-  - R2 (Comparative Extension) and R3 (Queue-Aware Demand Fairness): **JUSTIFIED** $\rightarrow$ Proceed to Phase 8.
-  - R1 (Gap-Out + HOLD Default), R4 (Webster-Seeded Base Green), and R5 (Longer Detectors): **NOT JUSTIFIED** $\rightarrow$ Rejected.
+  - R2 (Comparative Extension), R3 (Queue-Aware Demand Fairness), and R4 (De-Oracle Base Green): **JUSTIFIED** $\rightarrow$ Proceed to Phase 8.
+  - R1 (Gap-Out + HOLD Default) and R5 (Longer Detectors): **NOT JUSTIFIED** $\rightarrow$ Rejected.
 - **Quality Gates**: 115/115 pytest green, 48/48 npm test green. Zero controller code modified.
+
+## 2026-11-02: Phase 7B - Diagnostic Gaps and Deep Reconciliations
+- **Tag**: `dp1-phase7b`
+- **Script**: `scripts/diagnostics/phase7b_gaps.py`
+- **Key Findings**:
+  - Item 1: Base green inputs confirmed to be an oracle (`site_webster_plan` accesses `SITE_DEMAND_PATTERNS` directly by scenario name/demand level). Live controller lacks this info.
+  - Item 2: Approved extensions: 8.46% occur when competing score > active score; mean competing wait at next switch is 34.91s (39.91s including clearance). Fairness switches: 0.00% have competing queue < 5m (guarded by code), but 47.78% of wait-limit switches occur with < 10m queue.
+  - Item 3: D1 vs D7 reconciled: detector `det_q` values clip at 24.00m due to lead-vehicle stopline setback (~0.9m). Using 24.0m threshold shows detector is packed 13.85% (ORR South) and 13.92% (Surge North), matching ground-truth exceedance (17.6% and 9.8%).
+  - Item 4: `max_queue_m` uses detector queue. Evaluation-only ground-truth logging proposed with byte-identical regression test.
+  - Item 5: In balanced-low, hybrid mean green is 13.89s (min 13.0s) vs pure adaptive 11.84s (min 9.0s, 23.56% <= 10s).
+  - Item 6: R4 updated to "De-oracle the base green" (JUSTIFIED).
