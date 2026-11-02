@@ -172,7 +172,7 @@ def _run_once(
     kwargs = dict(policy_kwargs or {})
     kwargs["network"] = network
     kwargs["tls_id"] = tls_id
-    if policy == "fixed_webster":
+    if policy in ("fixed_webster", "hybrid_queue_adaptive"):
         if "scenario" not in kwargs:
             kwargs["scenario"] = scenario
         if "demand_level" not in kwargs:
@@ -202,6 +202,10 @@ def _run_once(
         "approach_queues": None,
         "adaptive_decision": None,
     })
+    closure_cfg = getattr(C, "LANE_CLOSURE", None)
+    is_closure_scenario = (scenario == "lane_closure" and network == "marathahalli")
+    lane_closed = False
+    lane_reopened = False
     try:
         t = 0.0
         init_queues = q_engine.measure_all(t)
@@ -210,6 +214,14 @@ def _run_once(
         ctl.apply()
         sim_time_cap = max_sim_time_s or C.SIM.max_sim_time_s
         while t < sim_time_cap:
+            if is_closure_scenario and closure_cfg:
+                if closure_cfg.start_s <= t < closure_cfg.end_s and not lane_closed:
+                    traci.lane.setDisallowed(closure_cfg.lane_id, ["all"])
+                    lane_closed = True
+                elif t >= closure_cfg.end_s and lane_closed and not lane_reopened:
+                    traci.lane.setDisallowed(closure_cfg.lane_id, [])
+                    lane_reopened = True
+                    lane_closed = False
             traci.simulationStep()
             t = traci.simulation.getTime()
             app_queues = q_engine.measure_all(t)

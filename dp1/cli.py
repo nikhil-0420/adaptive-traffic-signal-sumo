@@ -12,7 +12,7 @@ def main():
     b.add_argument("--network", default="synthetic", choices=["synthetic", "marathahalli"], help="network topology (default: synthetic)")
 
     r = sub.add_parser("run", help="run one simulation")
-    r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()) + ["imbalanced_orr", "imbalanced_varthur", "surge_orr_north"])
+    r.add_argument("--scenario", default="imbalanced_ns", choices=list(C.scenarios()) + list(C.SITE_DEMAND_PATTERNS.keys()))
     r.add_argument("--policy", default="adaptive", choices=["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "hybrid_queue_adaptive", "rl_dqn"])
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--gui", action="store_true", help="watch it in sumo-gui")

@@ -50,33 +50,8 @@ SITE_ROUTES = {
     "S_E_surface": "orr_s_in ramp_orr_s_in leg_orr_s_in leg_wf_out ramp_wf_out wf_out",
 }
 
-# Base hourly rates for 1800s simulation window (vph)
-SITE_DEMAND_PATTERNS = {
-    "balanced": {
-        "W": [(0, 1800, 650)],
-        "E": [(0, 1800, 650)],
-        "N": [(0, 1800, 650)],
-        "S": [(0, 1800, 650)],
-    },
-    "imbalanced_orr": {
-        "W": [(0, 1800, 400)],
-        "E": [(0, 1800, 400)],
-        "N": [(0, 1800, 1050)],
-        "S": [(0, 1800, 1050)],
-    },
-    "imbalanced_varthur": {
-        "W": [(0, 1800, 1050)],
-        "E": [(0, 1800, 1050)],
-        "N": [(0, 1800, 400)],
-        "S": [(0, 1800, 400)],
-    },
-    "surge_orr_north": {
-        "W": [(0, 1800, 500)],
-        "E": [(0, 1800, 500)],
-        "N": [(0, 400, 600), (400, 1000, 1500), (1000, 1800, 600)],
-        "S": [(0, 1800, 650)],
-    },
-}
+# Base hourly rates for 1800s simulation window (vph) sourced from central config
+SITE_DEMAND_PATTERNS = C.SITE_DEMAND_PATTERNS
 
 DEMAND_MULTIPLIERS = {
     "low": 0.70,
@@ -233,9 +208,10 @@ def build_site_routes(
 
     lines.append('</routes>')
     xml_text = "\n".join(lines) + "\n"
-    route_path.write_text(xml_text, encoding="utf-8")
+    encoded_xml = xml_text.encode("utf-8")
+    route_path.write_bytes(encoded_xml)
 
-    route_hash = hashlib.sha256(xml_text.encode("utf-8")).hexdigest()
+    route_hash = hashlib.sha256(encoded_xml).hexdigest()
 
     manifest_path = route_path.with_name(f"{route_path.name}.manifest.json")
     manifest = {

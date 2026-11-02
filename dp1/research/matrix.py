@@ -58,6 +58,9 @@ class ResearchMatrix:
 
 
 SITE_PATTERNS = ("balanced", "imbalanced_orr", "imbalanced_varthur", "surge_orr_north")
+SITE_PATTERNS_STATIONARY = SITE_PATTERNS
+SITE_PATTERNS_NON_STATIONARY = getattr(C, "SITE_PATTERNS_NON_STATIONARY", ("ramp_peak", "surge_shift", "lane_closure"))
+SITE_PATTERNS_ALL = getattr(C, "SITE_PATTERNS_ALL", SITE_PATTERNS + SITE_PATTERNS_NON_STATIONARY)
 SITE_POLICIES_LEGACY = ("fixed", "fixed_webster", "adaptive", "pressure", "rl_dqn")
 SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
 HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "hybrid_queue_adaptive", "rl_dqn")
