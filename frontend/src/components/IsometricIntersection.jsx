@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import {
   Play,
   Pause,
@@ -21,6 +21,13 @@ import {
 import { api } from '../api/client';
 import { useApp } from '../context/AppContext';
 import marathahalliGeom from '../data/marathahalli_geometry.json';
+
+import { isWebGLAvailable } from '../utils/network3dGeometry';
+
+export { isWebGLAvailable };
+
+// Lazy-load Phase 4 3D Scene chunk to keep main bundle small
+const Network3DScene = React.lazy(() => import('./Network3DScene'));
 
 // Deterministic vehicle type classification when not explicitly set
 const VEHICLE_TYPES = ['car', 'motorcycle', 'auto', 'bus', 'truck'];
@@ -97,7 +104,21 @@ export function IsometricIntersection({
   const [isPlaying, setIsPlaying] = useState(!isLiveMode);
   const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5, 1, 2, 5, 10
-  const [viewMode, setViewMode] = useState(initialViewMode); // 'isometric' | 'topdown' | 'approach'
+  const [viewMode, setViewMode] = useState(initialViewMode); // 'isometric' | 'topdown' | '3d'
+  const [webglNotice, setWebglNotice] = useState(null);
+
+  const handleSetViewMode = useCallback((mode) => {
+    if (mode === '3d') {
+      if (!isWebGLAvailable()) {
+        setWebglNotice('WebGL is unavailable in this environment. Falling back to 2.5D view.');
+        setViewMode('isometric');
+        return;
+      }
+    }
+    setWebglNotice(null);
+    setViewMode(mode);
+  }, []);
+
   const [showDetectors, setShowDetectors] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
 
@@ -571,6 +592,7 @@ export function IsometricIntersection({
 
   // MAIN CANVAS RENDER LOOP (60 FPS)
   useEffect(() => {
+    if (viewMode === '3d') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -1546,7 +1568,7 @@ export function IsometricIntersection({
       className={`relative w-full overflow-hidden select-none bg-[#0D1417] text-[#F3EDE0] ${className}`}
       style={{ height: height || 480 }}
     >
-      {/* 1. Canvas Viewport */}
+      {/* 1. Canvas Viewport (2.5D Iso / Top-Down) */}
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
@@ -1554,8 +1576,47 @@ export function IsometricIntersection({
         onMouseUp={handleMouseUp}
         onDoubleClick={handleDoubleClick}
         onClick={handleCanvasClick}
-        className="w-full h-full block cursor-grab active:cursor-grabbing"
+        style={{ display: viewMode === '3d' ? 'none' : 'block' }}
+        className="w-full h-full cursor-grab active:cursor-grabbing"
       />
+
+      {/* 1b. 3D WebGL Viewport (Lazy-Loaded chunk with Suspense fallback) */}
+      {viewMode === '3d' && (
+        <div className="absolute inset-0 z-0">
+          <Suspense
+            fallback={
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0C1316] text-[#AEB8BA] font-mono">
+                <div className="w-8 h-8 border-2 border-[#FFB020] border-t-transparent rounded-full animate-spin mb-3" />
+                <span className="text-sm">Loading 3D Road Scene...</span>
+              </div>
+            }
+          >
+            <Network3DScene
+              isDark={isDark}
+              seeThroughFlyover={seeThroughFlyover}
+              isExploded={isExploded}
+              onExplodeToggle={toggleExplode}
+              onSeeThroughToggle={() => setSeeThroughFlyover((prev) => !prev)}
+              showControls={showControls}
+              className="w-full h-full"
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {/* WebGL Fallback Notification Banner */}
+      {webglNotice && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-amber-500/95 text-black px-4 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg backdrop-blur-md z-30 flex items-center gap-2">
+          <span>{webglNotice}</span>
+          <button
+            type="button"
+            onClick={() => setWebglNotice(null)}
+            className="font-bold hover:opacity-75 px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* 2. Top-Left: Mode Label & Status Badge */}
       <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 pointer-events-none z-20">
@@ -1652,11 +1713,11 @@ export function IsometricIntersection({
             <span>{isExploded ? 'Collapse' : '3-Tier'}</span>
           </button>
 
-          {/* View Mode Toggle */}
+          {/* View Mode Toggle: 2.5D Iso, Top-Down, 3D */}
           <div className="flex items-center bg-[#0C1316]/90 border border-white/15 rounded-full p-0.5 shadow-md">
             <button
               type="button"
-              onClick={() => setViewMode('isometric')}
+              onClick={() => handleSetViewMode('isometric')}
               className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold transition-colors ${
                 viewMode === 'isometric' ? 'bg-[#1A2327] text-[#FFB020]' : 'text-[#AEB8BA] hover:text-white'
               }`}
@@ -1665,12 +1726,21 @@ export function IsometricIntersection({
             </button>
             <button
               type="button"
-              onClick={() => setViewMode('topdown')}
+              onClick={() => handleSetViewMode('topdown')}
               className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold transition-colors ${
                 viewMode === 'topdown' ? 'bg-[#1A2327] text-[#FFB020]' : 'text-[#AEB8BA] hover:text-white'
               }`}
             >
               Top-Down
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetViewMode('3d')}
+              className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold transition-colors ${
+                viewMode === '3d' ? 'bg-[#1A2327] text-[#FFB020]' : 'text-[#AEB8BA] hover:text-white'
+              }`}
+            >
+              3D
             </button>
           </div>
 

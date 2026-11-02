@@ -67,3 +67,21 @@
   - File Size: 0.244 MB (< 3.0 MB target, lossless tolerance = 0.0m)
   - Tests: 19/19 pytest passed, 35/35 npm test passed
 
+## 2026-11-02: Phase 4 - 3D Scene for Road Topology
+- **Git Commit Baseline**: `600c281` (tagged `dp1-phase3`)
+- **Key Packages**: `three@0.160.0`, `@react-three/fiber@8.17.10`, `@react-three/drei@9.121.5`
+- **Frontend Changes**:
+  - `frontend/src/utils/network3dGeometry.js`: 3D road ribbons, markings, junction surfaces, deck thickness, barriers, pillars, and geometry merger.
+  - `frontend/src/components/Network3DScene.jsx`: Three.js / R3F Canvas with 4 camera presets, lighting, explode view, transparency, and area labels.
+  - `frontend/src/components/IsometricIntersection.jsx`: Added "3D" view toggle, lazy-loaded via `React.lazy` + `Suspense`, with WebGL availability fallback guard.
+  - `frontend/test/network3dScene.test.js`: Added 6 automated tests (transforms, 8-mesh snapshot, pillar collision audit, presets, WebGL lifecycle, availability guard).
+  - `frontend/scripts/generate_3d_snapshots.js`: Script rendering vector snapshots for the 4 camera angles in Dark and Light themes into `docs/artifacts/phase4/`.
+- **Validation & Metrics**:
+  - Static Mesh Count: Exactly 8 merged categories (optimal draw-call performance).
+  - Pillar Clearance Audit: 9 grid stations evaluated; 6 portal piers clear surface traffic (>10m); 3 centerline piers (X = -5, 0, +5m) conflict with ORR mainline and surface legs (up to 2.40m intrusion) and are reported in the UI audit modal.
+  - Bundle Size: 3D Scene chunk isolated into `dist/assets/Network3DScene-BRcBKEPO.js` (172 kB uncompressed, 55 kB gzipped).
+  - Area Labels: Marked "(approximate)".
+  - Footer Disclaimer: *"Modelled elevation; synthetic demand. Never present geometry as surveyed."*
+  - Tests: 41/41 npm tests passed (100% green), 113/113 pytest tests passed (100% green).
+
+
