@@ -84,4 +84,26 @@
   - Footer Disclaimer: *"Modelled elevation; synthetic demand. Never present geometry as surveyed."*
   - Tests: 41/41 npm tests passed (100% green), 113/113 pytest tests passed (100% green).
 
+## 2026-11-02: Phase 5 - Vehicles, Signals and Queues in 3D
+- **Git Commit Baseline**: `d95fdfc` (tagged `dp1-phase4`)
+- **Tag**: `dp1-phase5`
+- **Report**: [`docs/phase5_report.md`](./phase5_report.md)
+- **Artifacts**:
+  - `dp1/runner.py`, `dp1/replay.py`: read-only `traci.vehicle.getPosition3D()` telemetry extraction.
+  - `backend/schemas.py`: `VehicleTelemetryItem` with `z: float = 0.0`.
+  - `tests/test_phase5_telemetry_regression.py`: mandatory determinism regression test.
+  - `frontend/src/utils/vehicle3dMesh.js`: InstancedMesh management for 5 vehicle classes, high-contrast colors, single-tick buffer interpolation without extrapolation.
+  - `frontend/src/utils/signalAndQueue3d.js`: stop line configurations, SUMO 16-char `tl_state` decoder, signal timer logic (countdown vs elapsed), queue volume bar geometry, and non-zero OFFLINE safety enforcement.
+  - `frontend/src/components/Network3DScene.jsx`: integrated 3D vehicles, signal heads with active bulbs, queue volume bars, floating metrics badges, and 3D decision callouts.
+  - `frontend/test/vehiclesSignalsQueues3d.test.js`: 7 automated tests verifying instance counts, signal colors, timer logic, OFFLINE non-zero guard, labelling, and interpolation.
+  - `docs/artifacts/phase5/`: vector verification snapshots at $t=1$s (Live), $t=30$s (Replay), and $t=60$s (Snapshot).
+- **Validation & Metrics**:
+  - Determinism Proof: Baseline vs post-change `decisions.csv` (SHA256: `4E6410651B7468C992A59BE4FED946C96C45D20F657B3F77B504FD6EBE354B67`) and `timeseries.csv` (SHA256: `895BAD0226BF6BFD00A84EBFCD19982FB3C3C73BEA6218F4773ECD829B73F95F`) are 100% byte-identical.
+  - Metrics Isolation: Elevation `z` is excluded from all metrics files; zero changes to controller, queue, or metrics code.
+  - Multi-tier Elevation: Flyover vehicles sit on the bridge deck at $z \approx 6.83$\,m; surface vehicles sit at $z = 0.00$\,m.
+  - Non-Zero OFFLINE Sensor Safety: OFFLINE status is strictly guarded against rendering as 0m; displays a full-detector-span ($24.9$\,m) hatched block with `OFFLINE (FALLBACK)` warning badge.
+  - Decision Increments: Requested (`Req: +<delta_g_req_s>s`) and applied (`App: +<delta_g_app_s>s`) increments displayed in separate sub-badges.
+  - Tests: 48/48 frontend unit tests passed (100% green).
+
+
 

@@ -1599,6 +1599,20 @@ export function IsometricIntersection({
               onSeeThroughToggle={() => setSeeThroughFlyover((prev) => !prev)}
               showControls={showControls}
               className="w-full h-full"
+              activeFrame={activeFrame}
+              prevFrame={isLiveMode ? liveHistoryRef.current?.prev : (replayData?.frames?.[currentFrameIdx - 1] || null)}
+              interpolationAlpha={frameAccumulatorRef.current}
+              vehicleScale={vehicleScaleMultiplier}
+              onVehicleScaleChange={setVehicleScaleMultiplier}
+              trafficLightState={activeFrame?.tl_state || activeFrame?.traffic_light_state || liveTelemetry?.traffic_light_state || 'rrrrGGGgrrrrGGGg'}
+              activePhase={activeFrame?.phase || liveTelemetry?.phase || 'GREEN'}
+              approachQueues={liveTelemetry?.approach_queues || null}
+              queues_m={activeFrame?.queues_m || liveTelemetry?.queues_m || {}}
+              adaptiveDecision={liveTelemetry?.adaptive_decision || null}
+              simTime={activeFrame?.t || 0}
+              isLiveMode={isLiveMode}
+              runId={runId}
+              modeLabel={modeLabel || (isLiveMode ? 'Live simulation' : (replayData ? 'Replay' : 'Snapshot'))}
             />
           </Suspense>
         </div>

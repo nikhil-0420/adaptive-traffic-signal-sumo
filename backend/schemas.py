@@ -103,6 +103,17 @@ class AdaptiveDecisionSchema(BaseModel):
     is_max_green: bool = Field(False, description="Whether max green ceiling was reached")
 
 
+class VehicleTelemetryItem(BaseModel):
+    id: str = Field(..., description="Vehicle unique identifier")
+    x: float = Field(..., description="SUMO X coordinate (east-west metres)")
+    y: float = Field(..., description="SUMO Y coordinate (north-south metres)")
+    z: float = Field(0.0, description="SUMO Z coordinate (elevation metres)")
+    a: float = Field(..., description="Vehicle heading angle in degrees")
+    s: float = Field(..., description="Vehicle speed in m/s")
+    w: Optional[float] = Field(None, description="Accumulated waiting time in seconds")
+    em: bool = Field(False, description="Emergency vehicle flag")
+
+
 class TelemetryResponse(BaseModel):
     run_id: str
     status: str
@@ -115,7 +126,7 @@ class TelemetryResponse(BaseModel):
     is_stale: bool
     emergency_approaching: bool = False
     emergency_dist_m: Optional[float] = None
-    vehicles: Optional[List[Dict[str, Any]]] = None
+    vehicles: Optional[List[VehicleTelemetryItem]] = None
     approach_queues: Optional[Dict[str, Any]] = None
     adaptive_decision: Optional[Dict[str, Any]] = None
     error: Optional[str] = None

@@ -240,7 +240,7 @@ def _run_once(
             if record_vehicles:
                 v_ids = traci.vehicle.getIDList()
                 for vid in v_ids:
-                    pos = traci.vehicle.getPosition(vid)
+                    pos = traci.vehicle.getPosition3D(vid)
                     angle = traci.vehicle.getAngle(vid)
                     speed = traci.vehicle.getSpeed(vid)
                     is_em = bool(emergency_event and (vid == em_cfg.vehicle_id or "ambulance" in vid))
@@ -248,6 +248,7 @@ def _run_once(
                         "id": vid,
                         "x": round(pos[0], 1),
                         "y": round(pos[1], 1),
+                        "z": round(pos[2], 2),
                         "a": round(angle, 1),
                         "s": round(speed, 1),
                         "em": is_em,

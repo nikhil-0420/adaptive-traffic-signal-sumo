@@ -243,12 +243,20 @@ def test_telemetry_atomic_and_staleness(tmp_path):
 
         # 2. Stale telemetry (updated 10 seconds ago)
         telem_data["updated_at"] = now - 10.0
+        telem_data["vehicles"] = [
+            {"id": "v_surface", "x": 100.0, "y": 200.0, "z": 0.0, "a": 90.0, "s": 12.0, "em": False},
+            {"id": "v_flyover", "x": 350.0, "y": 350.0, "z": 7.0, "a": 90.0, "s": 15.0, "em": False},
+        ]
         with open(telem_file, "w", encoding="utf-8") as f:
             json.dump(telem_data, f)
 
         resp_stale = client.get("/api/runs/test_api_telem_s88/telemetry")
         assert resp_stale.status_code == 200
-        assert resp_stale.json()["is_stale"] is True
+        data_stale = resp_stale.json()
+        assert data_stale["is_stale"] is True
+        assert len(data_stale["vehicles"]) == 2
+        assert data_stale["vehicles"][0]["z"] == 0.0
+        assert data_stale["vehicles"][1]["z"] == 7.0
 
     finally:
         for p in test_run_dir.glob("*"):

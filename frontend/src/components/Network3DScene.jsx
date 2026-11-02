@@ -1,16 +1,24 @@
 /**
- * Network3DScene.jsx - 3D Road Topology Scene using Three.js & @react-three/fiber
+ * Network3DScene.jsx - 3D Road Topology, Vehicles, Signals & Queues Scene
  *
- * Implements Phase 4:
+ * Implements Phase 4 & Phase 5:
  * - Full 3D road ribbons with width and elevation (surface, flyover deck, underpass mainline)
  * - Crisp lane markings (solid edges, dashed lane dividers, stop lines)
  * - Flyover deck with thickness, barriers, and support pillars with clearance reporting
- * - Ground plane with subtle 10m/50m coordinate grid
- * - Area labels marked "(approximate)"
- * - See-through flyover deck opacity toggle (35% alpha)
- * - Explode 3-Tier View in 3D with vertical tier separation and floating badges
- * - Soft hemisphere light + directional light (shadow-free, legible in dark and light themes)
- * - Performance: merged static geometry, dpr capped at 2, frameloop="demand"
+ * - Low-Poly Vehicles using InstancedMesh (car, bus, truck, two_wheeler, ambulance)
+ * - One-tick buffer interpolation (no extrapolation, clamped at alpha = 1.0)
+ * - Vehicle exaggeration control (1x true scale, 2x default, 3x max)
+ * - High-contrast color scheme (moving = cool blue, queued = warm orange, ambulance = rose/white)
+ * - Flyover vehicles sit on the elevated deck (+6.8m)
+ * - 3D Signal heads at stop lines derived from actual SUMO signal state strings (never client timers)
+ * - Distinct yellow and all-red clearance signals
+ * - Countdown only if target green provided; otherwise elapsed time
+ * - 3D Translucent Queue Bars over the 24.9m detector spans
+ * - Queue sensor statuses: CONFIRMED_ZERO, MEASURING, SATURATED warning, OFFLINE (never zero)
+ * - Decision callout displaying logged reason with separate requested vs applied increments
+ * - Dynamic mode labelling: "Live simulation" vs "Replay" vs "Snapshot"
+ * - Soft hemisphere light + directional light (shadow-free, dark and light theme palettes)
+ * - Performance: merged static geometry (8 meshes), dpr capped at 2, frameloop="demand"
  * - Footer disclaimer: "Modelled elevation; synthetic demand. Never present geometry as surveyed."
  */
 
@@ -18,7 +26,19 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { compileNetwork3DGeometries, CAMERA_PRESETS } from '../utils/network3dGeometry';
+import { compileNetwork3DGeometries, CAMERA_PRESETS } from '../utils/network3dGeometry.js';
+import {
+  createLowPolyVehicleGeometry,
+  classifyVehicleType,
+  interpolateVehicle,
+  updateVehicleInstancedMesh,
+} from '../utils/vehicle3dMesh.js';
+import {
+  SIGNAL_APPROACH_CONFIG,
+  decodeSignalStateString,
+  computeSignalTimer,
+  getApproachQueueDisplay,
+} from '../utils/signalAndQueue3d.js';
 
 export { CAMERA_PRESETS };
 
@@ -51,7 +71,7 @@ function CameraRig({ preset, onResetComplete }) {
   );
 }
 
-/** 3D Meshes group containing road network layers */
+/** 3D Meshes group containing static road network layers */
 function RoadNetworkMeshes({
   geometries,
   isDark = true,
@@ -62,17 +82,14 @@ function RoadNetworkMeshes({
 }) {
   const { invalidate } = useThree();
 
-  // Invalidate on prop changes so frameloop="demand" re-renders
   useEffect(() => {
     invalidate();
   }, [isDark, seeThroughFlyover, isExploded, showPillars, showLabels, invalidate]);
 
-  // Explode offsets
   const flyoverYOffset = isExploded ? 25.0 : 0.0;
   const underpassYOffset = isExploded ? -18.0 : 0.0;
   const surfaceYOffset = 0.0;
 
-  // Theme palettes
   const colors = useMemo(() => {
     if (isDark) {
       return {
@@ -100,9 +117,9 @@ function RoadNetworkMeshes({
       dashLine: '#F1F5F9',
       stopLine: '#FFFFFF',
       barriers: '#64748B',
-      deckSlab: '#3B4856',
-      pillars: '#94A3B8',
-      ground: '#F1F5F9',
+      deckSlab: '#475569',
+      pillars: '#475569',
+      ground: '#E5E9EC',
       gridMajor: '#CBD5E1',
       gridMinor: '#E2E8F0',
     };
@@ -114,8 +131,8 @@ function RoadNetworkMeshes({
   return (
     <group>
       {/* 1. Ground Plane with subtle grid */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
-        <planeGeometry args={[750, 750]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
+        <planeGeometry args={[1000, 1000]} />
         <meshBasicMaterial color={colors.ground} />
       </mesh>
       <gridHelper
@@ -123,7 +140,7 @@ function RoadNetworkMeshes({
         position={[0, -0.03, 0]}
       />
 
-      {/* 2. Underpass Mainline Group (shifts down when exploded) */}
+      {/* 2. Underpass Mainline Group */}
       <group position={[0, underpassYOffset, 0]}>
         {geometries.underpassRoads && (
           <mesh geometry={geometries.underpassRoads}>
@@ -172,7 +189,7 @@ function RoadNetworkMeshes({
         )}
       </group>
 
-      {/* 4. Flyover Deck & Elevated Ramps Group (shifts up when exploded) */}
+      {/* 4. Flyover Deck & Elevated Ramps Group */}
       <group position={[0, flyoverYOffset, 0]}>
         {geometries.flyoverRoads && (
           <mesh geometry={geometries.flyoverRoads}>
@@ -218,7 +235,7 @@ function RoadNetworkMeshes({
         )}
       </group>
 
-      {/* 5. Lane Markings (elevated slightly above pavement) */}
+      {/* 5. Lane Markings */}
       <group position={[0, isExploded ? surfaceYOffset : 0, 0]}>
         {geometries.markings && (
           <mesh geometry={geometries.markings}>
@@ -227,7 +244,7 @@ function RoadNetworkMeshes({
         )}
       </group>
 
-      {/* 6. Support Pillars (Ground to underside of flyover deck) */}
+      {/* 6. Support Pillars */}
       {showPillars && geometries.pillars && (
         <group position={[0, 0, 0]}>
           <mesh geometry={geometries.pillars}>
@@ -245,42 +262,36 @@ function RoadNetworkMeshes({
       {/* 7. Area Location Labels marked "(approximate)" */}
       {showLabels && (
         <group>
-          {/* Marathahalli Bridge Center Overpass */}
           <Html position={[0, flyoverYOffset + 8.5, 0]} center distanceFactor={130}>
             <div className="px-2 py-0.5 rounded bg-black/80 border border-amber-500/40 text-amber-300 text-[11px] font-sans font-medium tracking-tight shadow backdrop-blur-sm pointer-events-none select-none whitespace-nowrap">
               Marathahalli Bridge Overpass <span className="text-[9px] opacity-75">(approximate)</span>
             </div>
           </Html>
 
-          {/* Varthur Road Arterial East */}
           <Html position={[110, 2.0, 15]} center distanceFactor={140}>
             <div className="px-2 py-0.5 rounded bg-black/75 border border-white/20 text-slate-200 text-[10px] font-sans font-medium pointer-events-none select-none whitespace-nowrap">
               Varthur Road (To Whitefield) <span className="text-[9px] opacity-75">(approximate)</span>
             </div>
           </Html>
 
-          {/* Varthur Road Arterial West */}
           <Html position={[-110, 2.0, 15]} center distanceFactor={140}>
             <div className="px-2 py-0.5 rounded bg-black/75 border border-white/20 text-slate-200 text-[10px] font-sans font-medium pointer-events-none select-none whitespace-nowrap">
               HAL Old Airport Road <span className="text-[9px] opacity-75">(approximate)</span>
             </div>
           </Html>
 
-          {/* Outer Ring Road (ORR) North */}
           <Html position={[15, 2.0, -110]} center distanceFactor={140}>
             <div className="px-2 py-0.5 rounded bg-black/75 border border-white/20 text-slate-200 text-[10px] font-sans font-medium pointer-events-none select-none whitespace-nowrap">
               Outer Ring Road (To KR Puram) <span className="text-[9px] opacity-75">(approximate)</span>
             </div>
           </Html>
 
-          {/* Outer Ring Road (ORR) South */}
           <Html position={[15, 2.0, 110]} center distanceFactor={140}>
             <div className="px-2 py-0.5 rounded bg-black/75 border border-white/20 text-slate-200 text-[10px] font-sans font-medium pointer-events-none select-none whitespace-nowrap">
               Outer Ring Road (To Bellandur) <span className="text-[9px] opacity-75">(approximate)</span>
             </div>
           </Html>
 
-          {/* Controlled Surface Junction Node */}
           <Html position={[0, 1.8, 18]} center distanceFactor={120}>
             <div className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[10px] font-mono font-semibold pointer-events-none select-none whitespace-nowrap flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -290,6 +301,308 @@ function RoadNetworkMeshes({
         </group>
       )}
     </group>
+  );
+}
+
+/** 3D Vehicles Layer using InstancedMesh for 5 types */
+function Vehicles3DLayer({
+  vehicles = [],
+  prevVehicles = [],
+  interpolationAlpha = 1.0,
+  vehicleScale = 2.0,
+  isDark = true,
+  isExploded = false,
+}) {
+  const { invalidate } = useThree();
+  const carMeshRef = useRef();
+  const busMeshRef = useRef();
+  const truckMeshRef = useRef();
+  const twoWheelerMeshRef = useRef();
+  const ambulanceMeshRef = useRef();
+
+  const vehicleGeoms = useMemo(
+    () => ({
+      car: createLowPolyVehicleGeometry('car'),
+      bus: createLowPolyVehicleGeometry('bus'),
+      truck: createLowPolyVehicleGeometry('truck'),
+      two_wheeler: createLowPolyVehicleGeometry('two_wheeler'),
+      ambulance: createLowPolyVehicleGeometry('ambulance'),
+    }),
+    []
+  );
+
+  const prevMap = useMemo(() => {
+    const m = new Map();
+    for (const v of prevVehicles) {
+      if (v && v.id) m.set(v.id, v);
+    }
+    return m;
+  }, [prevVehicles]);
+
+  useEffect(() => {
+    const buckets = {
+      car: [],
+      bus: [],
+      truck: [],
+      two_wheeler: [],
+      ambulance: [],
+    };
+
+    for (const v of vehicles) {
+      if (!v) continue;
+      const prevV = prevMap.get(v.id);
+      const interpolated = prevV ? interpolateVehicle(prevV, v, interpolationAlpha) : v;
+      const type = classifyVehicleType(interpolated);
+      if (buckets[type]) {
+        buckets[type].push(interpolated);
+      } else {
+        buckets.car.push(interpolated);
+      }
+    }
+
+    const tierY = isExploded ? 25.0 : 0.0;
+    updateVehicleInstancedMesh(carMeshRef.current, buckets.car, vehicleScale, isDark, tierY);
+    updateVehicleInstancedMesh(busMeshRef.current, buckets.bus, vehicleScale, isDark, tierY);
+    updateVehicleInstancedMesh(truckMeshRef.current, buckets.truck, vehicleScale, isDark, tierY);
+    updateVehicleInstancedMesh(twoWheelerMeshRef.current, buckets.two_wheeler, vehicleScale, isDark, tierY);
+    updateVehicleInstancedMesh(ambulanceMeshRef.current, buckets.ambulance, vehicleScale, isDark, tierY);
+
+    invalidate();
+  }, [vehicles, prevMap, interpolationAlpha, vehicleScale, isDark, isExploded, invalidate]);
+
+  return (
+    <group>
+      <instancedMesh ref={carMeshRef} args={[vehicleGeoms.car, null, 600]}>
+        <meshStandardMaterial roughness={0.35} metalness={0.2} />
+      </instancedMesh>
+      <instancedMesh ref={busMeshRef} args={[vehicleGeoms.bus, null, 200]}>
+        <meshStandardMaterial roughness={0.4} metalness={0.2} />
+      </instancedMesh>
+      <instancedMesh ref={truckMeshRef} args={[vehicleGeoms.truck, null, 200]}>
+        <meshStandardMaterial roughness={0.5} metalness={0.2} />
+      </instancedMesh>
+      <instancedMesh ref={twoWheelerMeshRef} args={[vehicleGeoms.two_wheeler, null, 400]}>
+        <meshStandardMaterial roughness={0.35} metalness={0.1} />
+      </instancedMesh>
+      <instancedMesh ref={ambulanceMeshRef} args={[vehicleGeoms.ambulance, null, 50]}>
+        <meshStandardMaterial roughness={0.2} metalness={0.4} emissive="#ef4444" emissiveIntensity={0.6} />
+      </instancedMesh>
+    </group>
+  );
+}
+
+/** 3D Traffic Signals Layer */
+function TrafficSignals3DLayer({
+  trafficLightState = 'rrrrGGGgrrrrGGGg',
+  adaptiveDecision = null,
+  activePhase = 'GREEN',
+  simTime = 0,
+}) {
+  const decoded = useMemo(() => decodeSignalStateString(trafficLightState), [trafficLightState]);
+  const timer = useMemo(
+    () => computeSignalTimer(adaptiveDecision, activePhase, simTime),
+    [adaptiveDecision, activePhase, simTime]
+  );
+
+  return (
+    <group>
+      {Object.entries(SIGNAL_APPROACH_CONFIG).map(([appKey, cfg]) => {
+        const appState = decoded.approaches[appKey] || { colorName: 'RED', hex: '#ef4444' };
+        const isGreen = appState.colorName === 'GREEN';
+        const isYellow = appState.colorName === 'YELLOW';
+        const isRed = appState.colorName === 'RED' || appState.colorName === 'ALL_RED';
+        const isAllRed = decoded.isAllRed;
+
+        const [px, , pz] = cfg.signalHeadPos;
+
+        return (
+          <group key={appKey} position={[px, 0, pz]} rotation={[0, cfg.rotationY, 0]}>
+            {/* Pole */}
+            <mesh position={[0, 2.25, 0]}>
+              <cylinderGeometry args={[0.08, 0.1, 4.5, 12]} />
+              <meshStandardMaterial color="#334155" metalness={0.6} roughness={0.3} />
+            </mesh>
+
+            {/* Signal Head Housing */}
+            <group position={[0, 4.2, 0.2]}>
+              <mesh>
+                <boxGeometry args={[0.6, 1.5, 0.35]} />
+                <meshStandardMaterial color="#0f172a" roughness={0.6} metalness={0.2} />
+              </mesh>
+
+              {/* Red Bulb */}
+              <mesh position={[0, 0.45, 0.18]}>
+                <sphereGeometry args={[0.16, 16, 16]} />
+                <meshStandardMaterial
+                  color={isRed ? (isAllRed ? '#dc2626' : '#ef4444') : '#3f1414'}
+                  emissive={isRed ? '#ef4444' : '#000000'}
+                  emissiveIntensity={isRed ? 2.5 : 0.05}
+                  roughness={0.2}
+                />
+              </mesh>
+
+              {/* Yellow Bulb */}
+              <mesh position={[0, 0.0, 0.18]}>
+                <sphereGeometry args={[0.16, 16, 16]} />
+                <meshStandardMaterial
+                  color={isYellow ? '#eab308' : '#3a2e0a'}
+                  emissive={isYellow ? '#eab308' : '#000000'}
+                  emissiveIntensity={isYellow ? 2.5 : 0.05}
+                  roughness={0.2}
+                />
+              </mesh>
+
+              {/* Green Bulb */}
+              <mesh position={[0, -0.45, 0.18]}>
+                <sphereGeometry args={[0.16, 16, 16]} />
+                <meshStandardMaterial
+                  color={isGreen ? '#22c55e' : '#0a2e14'}
+                  emissive={isGreen ? '#22c55e' : '#000000'}
+                  emissiveIntensity={isGreen ? 2.5 : 0.05}
+                  roughness={0.2}
+                />
+              </mesh>
+
+              {/* Floating Head Tag */}
+              <Html position={[0, 1.1, 0]} center distanceFactor={85}>
+                <div
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold shadow-lg backdrop-blur-md whitespace-nowrap flex items-center gap-1.5 ${
+                    isGreen
+                      ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/60'
+                      : isYellow
+                      ? 'bg-amber-950/90 text-amber-300 border border-amber-500/60'
+                      : 'bg-rose-950/90 text-rose-300 border border-rose-500/60'
+                  }`}
+                >
+                  <span>
+                    {appKey} ({cfg.phaseGroup})
+                  </span>
+                  <span className="opacity-40">|</span>
+                  <span className="font-extrabold">{timer.text}</span>
+                  {isAllRed && <span className="text-red-400 font-extrabold">[ALL-RED]</span>}
+                </div>
+              </Html>
+            </group>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** 3D Translucent Queue Bars Layer */
+function QueueBars3DLayer({ approachQueues = null, queues_m = {} }) {
+  return (
+    <group>
+      {Object.entries(SIGNAL_APPROACH_CONFIG).map(([appKey, cfg]) => {
+        const display = getApproachQueueDisplay(appKey, approachQueues, queues_m);
+        const { renderQueueM, queue_m, vehCount, style, isOffline, isSaturated } = display;
+
+        const halfLen = Math.max(0.5, renderQueueM) / 2;
+        let posX = cfg.stopLinePos[0];
+        let posZ = cfg.stopLinePos[2];
+        let barWidth = cfg.width;
+        let barLength = Math.max(0.5, renderQueueM);
+
+        if (cfg.axisDir[2] !== 0) {
+          posZ = cfg.stopLinePos[2] - cfg.axisDir[2] * halfLen;
+        } else {
+          posX = cfg.stopLinePos[0] - cfg.axisDir[0] * halfLen;
+          const tmp = barWidth;
+          barWidth = barLength;
+          barLength = tmp;
+        }
+
+        const labelPos = [
+          cfg.stopLinePos[0] - cfg.axisDir[0] * 12.0,
+          2.0,
+          cfg.stopLinePos[2] - cfg.axisDir[2] * 12.0,
+        ];
+
+        return (
+          <group key={appKey}>
+            {/* Translucent 3D Volume Bar */}
+            <mesh position={[posX, 0.4, posZ]}>
+              <boxGeometry args={[barWidth, 0.8, barLength]} />
+              <meshStandardMaterial
+                color={style.color}
+                transparent
+                opacity={style.fillOpacity}
+                roughness={0.3}
+                metalness={0.1}
+                wireframe={isOffline}
+              />
+            </mesh>
+
+            {/* Approach Metric Floating Label */}
+            <Html position={labelPos} center distanceFactor={100}>
+              <div
+                className={`px-2 py-1 rounded shadow-lg backdrop-blur-md text-[11px] font-mono pointer-events-none select-none border whitespace-nowrap ${
+                  isOffline
+                    ? 'bg-slate-900/90 text-slate-300 border-slate-500/60'
+                    : isSaturated
+                    ? 'bg-amber-950/95 text-amber-300 border-amber-500/80 animate-pulse'
+                    : 'bg-black/85 text-white border-white/20'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold">
+                  <span>
+                    {appKey}: {queue_m.toFixed(1)}m
+                  </span>
+                  <span className="opacity-40">|</span>
+                  <span className="text-slate-300">{vehCount} vehs</span>
+                </div>
+                <div
+                  className={`text-[9px] uppercase tracking-wider font-semibold ${
+                    isOffline ? 'text-amber-400' : isSaturated ? 'text-rose-400' : 'text-cyan-400'
+                  }`}
+                >
+                  {style.label}
+                </div>
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** 3D Decision Event Callout floating above marathahalli_tls */
+function DecisionCallout3D({ decision }) {
+  if (!decision) return null;
+
+  return (
+    <Html position={[0, 16.0, 18.0]} center distanceFactor={110}>
+      <div className="px-3.5 py-2.5 rounded-xl bg-[#0C1316]/95 border border-amber-500/60 shadow-2xl backdrop-blur-xl text-xs font-mono max-w-sm pointer-events-none select-none text-slate-200">
+        <div className="flex items-center justify-between gap-3 pb-1 border-b border-white/15 mb-1.5">
+          <span className="font-bold text-amber-300 flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>
+              {decision.axis || 'SIGNAL'}: {decision.action || decision.decision_outcome || 'DECISION'}
+            </span>
+          </span>
+          <span className="text-[10px] text-slate-400">t={decision.t ?? 0}s</span>
+        </div>
+
+        <p className="text-[11px] text-slate-200 mb-2 leading-tight">
+          {decision.reason || 'Phase extension evaluated'}
+        </p>
+
+        {/* Separated Requested vs Applied Increments */}
+        <div className="flex items-center gap-2 pt-1 border-t border-white/10 text-[10px]">
+          <span className="px-1.5 py-0.5 rounded bg-blue-950/80 border border-blue-500/40 text-blue-300">
+            Req: +{decision.delta_g_req_s ?? 0}s
+          </span>
+          <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-bold">
+            App: +{decision.delta_g_app_s ?? 0}s
+          </span>
+          {decision.target_green_s !== undefined && (
+            <span className="text-slate-400 ml-auto">Target: {decision.target_green_s}s</span>
+          )}
+        </div>
+      </div>
+    </Html>
   );
 }
 
@@ -304,6 +617,21 @@ export default function Network3DScene({
   onSeeThroughToggle = null,
   showControls = true,
   className = '',
+  // Phase 5 additions:
+  activeFrame = null,
+  prevFrame = null,
+  interpolationAlpha = 1.0,
+  vehicleScale = 2.0,
+  onVehicleScaleChange = null,
+  trafficLightState = 'rrrrGGGgrrrrGGGg',
+  activePhase = 'GREEN',
+  approachQueues = null,
+  queues_m = {},
+  adaptiveDecision = null,
+  simTime = 0,
+  isLiveMode = false,
+  runId = null,
+  modeLabel = null,
 }) {
   const [networkData, setNetworkData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -339,11 +667,18 @@ export default function Network3DScene({
     };
   }, []);
 
-  // Compile geometries once data is loaded
   const geometries = useMemo(() => {
     if (!networkData) return null;
     return compileNetwork3DGeometries(networkData);
   }, [networkData]);
+
+  // Derived labelling: "Live simulation" vs "Replay" vs "Snapshot"
+  const resolvedLabel = useMemo(() => {
+    if (modeLabel) return modeLabel;
+    if (isLiveMode) return 'Live simulation';
+    if (runId) return 'Replay';
+    return 'Snapshot';
+  }, [modeLabel, isLiveMode, runId]);
 
   if (loading) {
     return (
@@ -358,50 +693,39 @@ export default function Network3DScene({
     return (
       <div className="w-full h-full min-h-[480px] flex flex-col items-center justify-center bg-[#0C1316] text-rose-400 font-mono p-6">
         <div className="text-base font-bold mb-1">Failed to load 3D Scene</div>
-        <div className="text-xs text-slate-400 mb-4">{loadError || 'Geometry compilation failed'}</div>
-        <div className="text-xs text-[#AEB8BA]">
-          Confirm that <code>frontend/public/network3d.json</code> was generated by <code>scripts/export_network3d.py</code>.
-        </div>
+        <div className="text-xs text-[#AEB8BA]">{loadError || 'Missing geometry compilation.'}</div>
       </div>
     );
   }
 
   const { pillarAudit } = geometries;
+  const currentVehicles = activeFrame?.vehicles || [];
+  const previousVehicles = prevFrame?.vehicles || [];
 
   return (
-    <div className={`relative w-full h-full select-none overflow-hidden ${className}`}>
-      {/* 3D Canvas */}
+    <div className={`relative w-full h-full overflow-hidden select-none ${className}`}>
+      {/* Three.js R3F Canvas */}
       <Canvas
         frameloop="demand"
-        dpr={Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 2)}
-        camera={{ position: activePreset.position, fov: 45, near: 0.5, far: 2000 }}
-        gl={{
-          antialias: true,
-          powerPreference: 'high-performance',
-          alpha: false,
-          preserveDrawingBuffer: true,
-        }}
-        onCreated={({ gl }) => {
-          gl.setClearColor(isDark ? '#0B0F13' : '#F1F5F9', 1);
-        }}
+        dpr={Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, 2)}
+        camera={{ position: activePreset.position, fov: 45, near: 0.5, far: 1000 }}
+        className="w-full h-full"
       >
-        {/* Lighting: Soft hemisphere light + single directional light (no heavy shadows) */}
-        <hemisphereLight
-          skyColor={isDark ? '#E2E8F0' : '#FFFFFF'}
-          groundColor={isDark ? '#1E293B' : '#CBD5E1'}
-          intensity={isDark ? 0.75 : 0.85}
-        />
-        <directionalLight
-          position={[100, 150, 80]}
-          intensity={isDark ? 0.9 : 0.95}
-          castShadow={false}
-        />
-        <ambientLight intensity={isDark ? 0.25 : 0.35} />
+        <color attach="background" args={[isDark ? '#090D16' : '#F1F5F9']} />
 
-        {/* Camera Controller */}
+        {/* Soft shadow-free lighting */}
+        <ambientLight intensity={0.45} />
+        <hemisphereLight
+          skyColor={isDark ? '#94A3B8' : '#FFFFFF'}
+          groundColor={isDark ? '#1E293B' : '#CBD5E1'}
+          intensity={0.9}
+        />
+        <directionalLight position={[80, 140, 60]} intensity={0.85} castShadow={false} />
+
+        {/* Interactive Camera Controller */}
         <CameraRig preset={activePreset} />
 
-        {/* Merged Road Network Meshes */}
+        {/* 1. Road ribbons, markings, deck slab and support pillars */}
         <RoadNetworkMeshes
           geometries={geometries}
           isDark={isDark}
@@ -410,42 +734,121 @@ export default function Network3DScene({
           showPillars={showPillars}
           showLabels={showLabels}
         />
+
+        {/* 2. Phase 5 Vehicles Layer (InstancedMesh) */}
+        <Vehicles3DLayer
+          vehicles={currentVehicles}
+          prevVehicles={previousVehicles}
+          interpolationAlpha={interpolationAlpha}
+          vehicleScale={vehicleScale}
+          isDark={isDark}
+          isExploded={isExploded}
+        />
+
+        {/* 3. Phase 5 Traffic Signals Layer */}
+        <TrafficSignals3DLayer
+          trafficLightState={trafficLightState}
+          adaptiveDecision={adaptiveDecision}
+          activePhase={activePhase}
+          simTime={simTime}
+        />
+
+        {/* 4. Phase 5 Queue Bars Layer */}
+        <QueueBars3DLayer approachQueues={approachQueues} queues_m={queues_m} />
+
+        {/* 5. Phase 5 Decision Event Callout */}
+        <DecisionCallout3D decision={adaptiveDecision} />
       </Canvas>
 
-      {/* 3D Overlay Toolbar (Top-Right Camera Presets) */}
+      {/* Top Floating Control Bar */}
       {showControls && (
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
-          <div className="flex items-center bg-[#0C1316]/90 border border-white/15 rounded-full p-0.5 shadow-lg backdrop-blur-md">
-            {Object.entries(CAMERA_PRESETS).map(([key, preset]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActivePreset(preset)}
-                className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold transition-colors ${
-                  activePreset.name === preset.name
-                    ? 'bg-[#1A2327] text-[#FFB020] border border-[#FFB020]/30'
-                    : 'text-[#AEB8BA] hover:text-white'
+        <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-20">
+          {/* Left: Mode Pill & Camera Angle Selectors */}
+          <div className="pointer-events-auto flex items-center gap-2 bg-[#0C1316]/90 border border-white/15 rounded-full p-1.5 shadow-xl backdrop-blur-md">
+            {/* Mode Indicator */}
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 text-xs font-mono font-bold tracking-wide">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  resolvedLabel.includes('Live')
+                    ? 'bg-emerald-400 animate-pulse'
+                    : resolvedLabel.includes('Replay')
+                    ? 'bg-blue-400'
+                    : 'bg-slate-400'
                 }`}
+              />
+              <span
+                className={
+                  resolvedLabel.includes('Live')
+                    ? 'text-emerald-300'
+                    : resolvedLabel.includes('Replay')
+                    ? 'text-blue-300'
+                    : 'text-slate-300'
+                }
               >
-                {preset.name}
-              </button>
-            ))}
+                {resolvedLabel}
+              </span>
+            </div>
+
+            <div className="h-4 w-px bg-white/20" />
+
+            {/* Camera Presets */}
+            <div className="flex items-center gap-1">
+              {Object.entries(CAMERA_PRESETS).map(([key, preset]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActivePreset(preset)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all ${
+                    activePreset.name === preset.name
+                      ? 'bg-[#FFB020] text-black font-bold shadow-md'
+                      : 'text-[#AEB8BA] hover:text-white hover:bg-white/10'
+                  }`}
+                  title={`Switch to ${preset.name} camera perspective`}
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Pillars Audit Button */}
-          <button
-            type="button"
-            onClick={() => setShowPillarReport((prev) => !prev)}
-            className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold transition-all shadow-md backdrop-blur-md flex items-center gap-1 ${
-              showPillarReport
-                ? 'bg-[#FFB020]/20 text-[#FFB020] border border-[#FFB020]/50'
-                : 'bg-[#0C1316]/90 text-[#AEB8BA] hover:bg-[#1A2327] border border-white/15'
-            }`}
-            title="Inspect Bridge Support Pillars Surface Clearance Audit"
-          >
-            <span>Pillars Audit</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-          </button>
+          {/* Right: Exaggeration & Pillar Audit Badge */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {/* Vehicle Exaggeration Scale */}
+            <div className="flex items-center gap-1 bg-[#0C1316]/90 border border-white/15 rounded-full p-1 shadow-lg backdrop-blur-md">
+              <span className="text-[10px] font-mono text-slate-400 px-2">SCALE:</span>
+              {[1.0, 2.0, 3.0].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onVehicleScaleChange && onVehicleScaleChange(s)}
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold transition-colors ${
+                    Math.abs(vehicleScale - s) < 0.1
+                      ? 'bg-[#FFB020] text-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {s}x
+                </button>
+              ))}
+            </div>
+
+            {pillarAudit && (
+              <button
+                type="button"
+                onClick={() => setShowPillarReport((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold flex items-center gap-1.5 shadow-lg backdrop-blur-md transition-colors ${
+                  showPillarReport
+                    ? 'bg-amber-500 text-black font-bold'
+                    : 'bg-[#0C1316]/90 text-amber-300 border border-amber-500/40 hover:bg-amber-500/20'
+                }`}
+              >
+                <span>Pillars: {pillarAudit.clearPillars.length} Clear</span>
+                <span className="text-[10px] text-rose-400 font-bold">
+                  ({pillarAudit.intersectingPillars.length} Conflicts)
+                </span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -453,7 +856,7 @@ export default function Network3DScene({
       <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-20">
         {/* Left: Elevation & Provenance Tooltip */}
         <div className="pointer-events-auto flex items-center gap-2 bg-[#0C1316]/90 border border-white/15 rounded-lg px-3 py-1.5 shadow-lg backdrop-blur-md text-xs font-mono">
-          <span className="text-[#FFB020] font-bold">3D SCENE</span>
+          <span className="text-[#FFB020] font-bold">3D TWIN</span>
           <span className="text-white/20">|</span>
           <span className="text-[#AEB8BA] text-[11px]">
             Modelled elevation (+7m deck / 0m surface / -4m underpass); synthetic demand.
@@ -507,7 +910,7 @@ export default function Network3DScene({
         </div>
       </div>
 
-      {/* Pillar Surface Lane Intersection Modal / Inspector */}
+      {/* Pillar Surface Lane Intersection Modal */}
       {showPillarReport && (
         <div className="absolute top-14 right-3 w-96 max-w-[calc(100vw-24px)] bg-[#0C1316]/95 border border-amber-500/30 rounded-xl p-4 shadow-2xl backdrop-blur-xl z-30 text-xs font-mono">
           <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-3">
@@ -545,12 +948,12 @@ export default function Network3DScene({
             {pillarAudit.intersectingPillars.map((p, idx) => (
               <div key={idx} className="p-2 rounded bg-black/40 border border-rose-500/20 text-[10px]">
                 <div className="flex justify-between text-rose-300 font-semibold mb-0.5">
-                  <span>Station X = {p.threeX}m (Z = 0m)</span>
+                  <span>
+                    Station X = {p.threeX}m (Z = 0m)
+                  </span>
                   <span>Deck {p.deckElevation}m</span>
                 </div>
-                <div className="text-slate-400">
-                  Collides with {p.conflicts.length} surface lane(s):
-                </div>
+                <div className="text-slate-400">Collides with {p.conflicts.length} surface lane(s):</div>
                 <ul className="list-disc list-inside text-rose-200/90 pl-1 mt-0.5 space-y-0.5">
                   {p.conflicts.map((c, cIdx) => (
                     <li key={cIdx}>
