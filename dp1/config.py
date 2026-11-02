@@ -101,6 +101,45 @@ class HybridQueueAdaptiveConfig:
 
 
 @dataclass(frozen=True)
+class WebsterMeasuredConfig:
+    """Settings for measured Webster baseline (flows measured in warm-up, then fixed)."""
+    warmup_s: float = 300.0              # Approved 5-minute warm-up window
+    sat_flow_per_lane_vph: float = 1800.0
+    min_cycle_s: float = 40.0
+    max_cycle_s: float = 120.0
+    min_green_s: float = 10.0
+
+
+@dataclass(frozen=True)
+class WebsterRecalcConfig:
+    """Settings for periodically recalculated Webster baseline (sliding window)."""
+    recalc_interval_s: float = 300.0     # Approved 5-minute recalculation interval (N)
+    window_s: float = 300.0              # Approved 5-minute sliding measurement window (W)
+    sat_flow_per_lane_vph: float = 1800.0
+    min_cycle_s: float = 40.0
+    max_cycle_s: float = 120.0
+    min_green_s: float = 10.0
+
+
+@dataclass(frozen=True)
+class FixedMatchedCycleConfig:
+    """Settings for fixed plan matching Webster's cycle length with BTP split ratio."""
+    btp_split_ratio_ew: float = 0.525    # 105 / 200 = 52.5% Varthur (EW)
+    btp_split_ratio_ns: float = 0.475    # 95 / 200 = 47.5% ORR (NS)
+    min_green_s: float = 10.0
+
+
+@dataclass(frozen=True)
+class SumoActuatedConfig:
+    """Settings for SUMO built-in actuated traffic signal logic with detectors."""
+    min_green_s: float = 10.0            # SUMO minDur: minimum green duration
+    max_green_s: float = 60.0            # SUMO maxDur: maximum green duration
+    max_gap_s: float = 3.0               # SUMO max-gap: vehicle time headway before gap-out
+    detector_gap_s: float = 3.0          # SUMO detector-gap
+
+
+
+@dataclass(frozen=True)
 class ActionConfig:
     """Action seam configuration for external / RL controllers."""
     min_green_s: float = 10.0
@@ -201,6 +240,10 @@ ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
 HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig()
+WEBSTER_MEASURED = WebsterMeasuredConfig()
+WEBSTER_RECALC = WebsterRecalcConfig()
+FIXED_MATCHED_CYCLE = FixedMatchedCycleConfig()
+SUMO_ACTUATED = SumoActuatedConfig()
 ACTION = ActionConfig()
 RL = RLConfig()
 SIM = SimConfig()
@@ -208,6 +251,12 @@ SIM = SimConfig()
 # Evaluation policy rosters
 STANDARD_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
 HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive")
+BASELINE_POLICIES = ("fixed", "fixed_webster", "webster_measured", "webster_recalc", "fixed_matched_cycle", "sumo_actuated")
+ALL_POLICIES = (
+    "fixed", "fixed_webster", "adaptive", "pressure", "queue_extension",
+    "rl_dqn", "hybrid_queue_adaptive", "webster_measured", "webster_recalc",
+    "fixed_matched_cycle", "sumo_actuated", "webster_oracle",
+)
 
 # Demand levels and multipliers (P3)
 DEMAND_LEVELS = {

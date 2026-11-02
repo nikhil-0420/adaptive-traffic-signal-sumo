@@ -38,7 +38,7 @@ RESEARCH_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_SCENARIOS = list(C.scenarios()) + list(C.SITE_DEMAND_PATTERNS.keys())
 ALLOWED_NETWORKS = ["synthetic", "marathahalli"]
-ALLOWED_POLICIES = ["fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive"]
+ALLOWED_POLICIES = list(C.ALL_POLICIES)
 ALLOWED_DEMAND_LEVELS = ["low", "medium", "heavy"]
 ALLOWED_PRESETS = ["full", "smoke", "custom"]
 ALLOWED_EMERGENCY_APPROACHES = ["N", "S", "E", "W"]

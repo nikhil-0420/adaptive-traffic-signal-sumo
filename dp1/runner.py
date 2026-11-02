@@ -147,9 +147,16 @@ def _run_once(
 
     tripinfo = out_dir / "tripinfo.xml"
 
+    add_files = [str(det_file)]
+    if policy == "sumo_actuated":
+        from .controllers.sumo_actuated import get_actuated_additional_file
+        temp_states = SignalStates(net_file, tls_id=tls_id)
+        act_file = get_actuated_additional_file(network, tls_id, temp_states, out_dir=out_dir)
+        add_files.append(str(act_file))
+
     cmd = [
         binary("sumo-gui" if gui else "sumo"),
-        "-n", str(net_file), "-r", str(routes), "-a", str(det_file),
+        "-n", str(net_file), "-r", str(routes), "-a", ",".join(add_files),
         "--tripinfo-output", str(tripinfo),
         "--seed", str(seed), "--step-length", str(C.SIM.step_s),
         "--time-to-teleport", "-1",          # no teleporting: jams must show up in the metrics
@@ -172,7 +179,7 @@ def _run_once(
     kwargs = dict(policy_kwargs or {})
     kwargs["network"] = network
     kwargs["tls_id"] = tls_id
-    if policy in ("fixed_webster", "hybrid_queue_adaptive"):
+    if policy in ("fixed_webster", "hybrid_queue_adaptive", "fixed_matched_cycle", "webster_oracle"):
         if "scenario" not in kwargs:
             kwargs["scenario"] = scenario
         if "demand_level" not in kwargs:
@@ -332,6 +339,12 @@ def _run_once(
 
     _write_csv(out_dir / "timeseries.csv", series)
     _write_csv(out_dir / "decisions.csv", ctl.decisions)
+    if hasattr(ctl, "plan_log") and ctl.plan_log:
+        try:
+            with open(out_dir / "plan_log.json", "w", encoding="utf-8") as f:
+                json.dump(ctl.plan_log, f, indent=2)
+        except Exception:
+            pass
 
     metrics = summarise_run(
         tripinfo,
