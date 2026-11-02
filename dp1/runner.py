@@ -67,6 +67,7 @@ def run_simulation(
     emergency_cfg: C.EmergencyConfig = None,
     record_vehicles: bool = False,
     network: str = "synthetic",
+    max_sim_time_s: int = None,
 ):
     """Run one simulation. Retries on TraCI connection failures (parallel runs can race for ports).
 
@@ -82,6 +83,7 @@ def run_simulation(
                 emergency_cfg=emergency_cfg,
                 record_vehicles=record_vehicles,
                 network=network,
+                max_sim_time_s=max_sim_time_s,
             )
         except Exception as e:
             last = e
@@ -96,7 +98,7 @@ def run_simulation(
 def _run_once(
     scenario, policy, seed, gui, out_dir, policy_kwargs, demand_level,
     emergency_event=False, emergency_priority=False, emergency_cfg=None,
-    record_vehicles=False, network="synthetic",
+    record_vehicles=False, network="synthetic", max_sim_time_s=None,
 ):
     if network == "marathahalli":
         from .site_network import get_network_paths, build_network as build_site_net
@@ -206,7 +208,8 @@ def _run_once(
         q = queues_to_legacy_dict(init_queues)
         ctl.start(t, q)
         ctl.apply()
-        while t < C.SIM.max_sim_time_s:
+        sim_time_cap = max_sim_time_s or C.SIM.max_sim_time_s
+        while t < sim_time_cap:
             traci.simulationStep()
             t = traci.simulation.getTime()
             app_queues = q_engine.measure_all(t)
@@ -268,6 +271,8 @@ def _run_once(
                 "approach_queues": app_queues_data,
                 "adaptive_decision": adaptive_decision,
             })
+            if max_sim_time_s is not None and t >= max_sim_time_s:
+                break
             if t >= C.SIM.demand_duration_s and traci.simulation.getMinExpectedNumber() == 0:
                 break
         unfinished = traci.simulation.getMinExpectedNumber()

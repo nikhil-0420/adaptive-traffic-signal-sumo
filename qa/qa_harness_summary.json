@@ -1,0 +1,186 @@
+{
+  "timestamp": "2026-11-02T06:37:04.695Z",
+  "totalConditionsTested": 18,
+  "results": [
+    {
+      "condition": "t=0s_z=100%_dark",
+      "zoom": "100%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=0s_z=100%_dark.svg"
+    },
+    {
+      "condition": "t=0s_z=100%_light",
+      "zoom": "100%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=0s_z=100%_light.svg"
+    },
+    {
+      "condition": "t=0s_z=400%_dark",
+      "zoom": "400%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=0s_z=400%_dark.svg"
+    },
+    {
+      "condition": "t=0s_z=400%_light",
+      "zoom": "400%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=0s_z=400%_light.svg"
+    },
+    {
+      "condition": "t=0s_z=1200%_dark",
+      "zoom": "1200%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=0s_z=1200%_dark.svg"
+    },
+    {
+      "condition": "t=0s_z=1200%_light",
+      "zoom": "1200%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=0s_z=1200%_light.svg"
+    },
+    {
+      "condition": "t=30s_z=100%_dark",
+      "zoom": "100%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=30s_z=100%_dark.svg"
+    },
+    {
+      "condition": "t=30s_z=100%_light",
+      "zoom": "100%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=30s_z=100%_light.svg"
+    },
+    {
+      "condition": "t=30s_z=400%_dark",
+      "zoom": "400%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=30s_z=400%_dark.svg"
+    },
+    {
+      "condition": "t=30s_z=400%_light",
+      "zoom": "400%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=30s_z=400%_light.svg"
+    },
+    {
+      "condition": "t=30s_z=1200%_dark",
+      "zoom": "1200%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=30s_z=1200%_dark.svg"
+    },
+    {
+      "condition": "t=30s_z=1200%_light",
+      "zoom": "1200%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=30s_z=1200%_light.svg"
+    },
+    {
+      "condition": "t=60s_z=100%_dark",
+      "zoom": "100%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=60s_z=100%_dark.svg"
+    },
+    {
+      "condition": "t=60s_z=100%_light",
+      "zoom": "100%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=60s_z=100%_light.svg"
+    },
+    {
+      "condition": "t=60s_z=400%_dark",
+      "zoom": "400%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=60s_z=400%_dark.svg"
+    },
+    {
+      "condition": "t=60s_z=400%_light",
+      "zoom": "400%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=60s_z=400%_light.svg"
+    },
+    {
+      "condition": "t=60s_z=1200%_dark",
+      "zoom": "1200%",
+      "theme": "dark",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=60s_z=1200%_dark.svg"
+    },
+    {
+      "condition": "t=60s_z=1200%_light",
+      "zoom": "1200%",
+      "theme": "light",
+      "activeVehicles": 0,
+      "pctInsideLanes": 100,
+      "labelsInside": true,
+      "explodeDeltaPx": 137,
+      "artifact": "qa/twin_t=60s_z=1200%_light.svg"
+    }
+  ]
+}

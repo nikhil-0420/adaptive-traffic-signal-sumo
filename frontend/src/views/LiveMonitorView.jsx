@@ -469,7 +469,7 @@ export function LiveMonitorView() {
             modeLabel={
               isLiveApi && (telemetry?.status === 'running' || telemetry?.status === 'starting')
                 ? 'REAL-TIME TRACI LIVE TWIN'
-                : 'COMPLETED / RECORDED RUN'
+                : 'VERIFIED TRACI REPLAY'
             }
             availableRuns={allRuns.map((r) => ({
               id: r.run_id,

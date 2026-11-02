@@ -7,10 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/api-client.test.js"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
+    "framer-motion": "^14.6.0",
     "lucide-react": "^0.477.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
