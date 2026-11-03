@@ -135,6 +135,23 @@ def summarise_run(
             metrics[f"gt_avg_queue_{a}_m"] = None
             metrics[f"gt_max_queue_{a}_m"] = None
 
+    # Extended ground-truth queue metrics (evaluation-only, microscopic across leg + upstream ramp)
+    has_gt_ext = bool(series and f"gt_ext_q_{C.APPROACHES[0]}" in series[0])
+    if has_gt_ext:
+        gt_ext_matrix = np.array([[r[f"gt_ext_q_{a}"] for a in C.APPROACHES] for r in series])
+        gt_ext_approach_queues = {a: np.array([r[f"gt_ext_q_{a}"] for r in series]) for a in C.APPROACHES}
+        metrics["gt_ext_avg_queue_m"] = float(gt_ext_matrix.mean())
+        metrics["gt_ext_max_queue_m"] = float(gt_ext_matrix.max())
+        for a in C.APPROACHES:
+            metrics[f"gt_ext_avg_queue_{a}_m"] = float(gt_ext_approach_queues[a].mean())
+            metrics[f"gt_ext_max_queue_{a}_m"] = float(gt_ext_approach_queues[a].max())
+    else:
+        metrics["gt_ext_avg_queue_m"] = None
+        metrics["gt_ext_max_queue_m"] = None
+        for a in C.APPROACHES:
+            metrics[f"gt_ext_avg_queue_{a}_m"] = None
+            metrics[f"gt_ext_max_queue_{a}_m"] = None
+
     # Detector full fraction (evaluation-only: queue >= span minus setback, e.g. 24.0m for Marathahalli)
     has_det_full = bool(series and f"det_full_{C.APPROACHES[0]}" in series[0])
     if has_det_full:

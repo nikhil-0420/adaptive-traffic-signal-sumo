@@ -1,13 +1,14 @@
 # DP1 Ablation Ladder: Hybrid Controller Improvements
 
 > [!WARNING]
-> **Phase 10B Measurement & Oracle Notice**:
-> 1. **Detector-Clipped Metrics in Phase 10**: All `MaxQ` deltas below from the original Phase 10 evaluation were derived from E2 detector measurements clipped at $\approx 24.00$\,m (lead-vehicle stopline setback) and are invalid for claims. Microscopic ground truth (`gt_max_queue_m`) is now the authoritative primary queue metric.
-> 2. **R0 was Oracle-Seeded**: The original R0 reference baseline was seeded via `site_webster_plan(scenario, demand_level)`, reading true scenario tables (`SITE_DEMAND_PATTERNS`). It is now relabelled `hybrid_oracle_seeded` [ORACLE-SEEDED].
-> 3. **R4 Adopted as Validity Fix**: Although R4 failed the strict performance improvement threshold on Phase 10 validation seeds, it is adopted by design mandate as a **VALIDITY FIX** to remove oracle scenario leakage. The de-oracled R4 version is the new default `hybrid_queue_adaptive`.
+> **Phase 10B/10C Measurement & Oracle Notice**:
+> 1. **Detector-Clipped Metrics in Phase 10**: All `MaxQ` deltas from the original Phase 10 evaluation were derived from E2 detector measurements clipped at $\approx 24.00$\,m (lead-vehicle stopline setback) and are invalid for claims.
+> 2. **Phase 10C Extended Ground-Truth Queue**: Ground-truth queue measurement is extended across approach legs ($31.6\text{ m}–34.2\text{ m}$) through internal connectors onto inbound approach ramps ($127.7\text{ m}–163.7\text{ m}$ total horizon). Primary max queue is now `gt_ext_max_queue_m` per Pre-Registration Amendment 2 (`docs/PREREGISTRATION_AMENDMENT_2.md`).
+> 3. **R0 was Oracle-Seeded**: The original R0 reference baseline was seeded via `site_webster_plan(scenario, demand_level)`, reading true scenario tables (`SITE_DEMAND_PATTERNS`). It is relabelled `hybrid_oracle_seeded` [ORACLE-SEEDED].
+> 4. **R4 Adopted as Validity Fix**: Although R4 failed the strict performance improvement threshold on Phase 10 validation seeds, it was adopted by design mandate as a **VALIDITY FIX** to remove oracle scenario leakage. The de-oracled R4 version is the default `hybrid_queue_adaptive`.
 
 Evaluated on **validation seeds (106–110)** (Phase 10) and **validation-2 seeds (111–120)** (Phase 10B R3 amendment) across all 18 demand conditions (12 stationary + 6 non-stationary).
-All keep/cut decisions strictly follow the pre-registered protocol in `docs/PREREGISTRATION.md` and `docs/PREREGISTRATION_AMENDMENT_1.md`.
+All keep/cut decisions strictly follow the pre-registered protocol in `docs/PREREGISTRATION.md`, `docs/PREREGISTRATION_AMENDMENT_1.md`, and `docs/PREREGISTRATION_AMENDMENT_2.md`.
 
 | Rung | Name | Status | Change Description | Validation Deltas (vs Prev Rung) | 95% Bootstrap CI | Verdict | Rule Evaluation / Reason |
 | :--- | :--- | :---: | :--- | :--- | :--- | :---: | :--- |
@@ -25,3 +26,5 @@ All keep/cut decisions strictly follow the pre-registered protocol in `docs/PRER
 - **Default Policy (`hybrid_queue_adaptive`)**: R4 (De-oracled empirical base green via 300s warm-up + cycle boundary Webster calculation).
 - **R1, R2, R3, R5**: All rejected / cut.
 - **Oracle Baseline (`hybrid_oracle_seeded`)**: Retained strictly as benchmark comparator for retrospective analyses.
+- **Phase 10C Extended Ground-Truth Queue Re-Analysis**: Evaluated across 9 conditions on dev seeds (101–105). `hybrid_queue_adaptive` demonstrates statistically significant queue length reductions over measured Webster baselines ($\Delta = -22.07\text{ m}$ vs `webster_measured`, 95% CI $[-30.86, -14.55]\text{ m}$; $\Delta = -23.13\text{ m}$ vs `webster_recalc`, 95% CI $[-32.60, -14.82]\text{ m}$) while matching oracle-seeded performance ($\Delta = -0.42\text{ s}$ mean wait vs `hybrid_oracle_seeded`).
+

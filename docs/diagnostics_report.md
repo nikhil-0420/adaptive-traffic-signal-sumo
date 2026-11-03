@@ -445,11 +445,22 @@ Based on Phase 7 and Phase 7B evidence:
 
 ---
 
-## Phase 8 Execution Plan
+---
+ 
+ ## Phase 10C Diagnostic Resolution & Spillover Characterization
+ 
+ In Phase 10C, the evaluation-only microscopic ground-truth queue was extended across the approach leg, junction internal connector lanes, and upstream inbound ramps (`ramp_orr_n_in`, `ramp_orr_s_in`, `ramp_wf_in`, `ramp_hal_in`), expanding the spatial measurement horizon from $31.6\text{ m}–34.2\text{ m}$ to $127.74\text{ m}–163.74\text{ m}$.
+ 
+ ### Key Findings:
+ 1. **Leg Spillover Frequency**:
+    - `balanced` (medium, s101): Extended queue exceeds the $31.6\text{ m}–34.2\text{ m}$ leg boundary only **0.32%** of the simulation ($6\text{ s} / 1888\text{ s}$), peaking at $36.14\text{ m}$.
+    - `imbalanced_orr` (heavy, s101): Extended queue exceeds the leg boundary **2.57%** of the simulation ($54\text{ s} / 2098\text{ s}$), peaking at $58.62\text{ m}$ (Approach N) and $52.87\text{ m}$ (Approach S).
+ 2. **Physical Ramp Boundedness**:
+    - Under all evaluated demand conditions (including stationary heavy and non-stationary surges), the maximum extended queue remains strictly within the $127.74\text{ m}–163.74\text{ m}$ physical ramp boundaries, confirming that queues are not artificially clipped by ramp upstream limits.
+ 3. **Non-Leakage Policy Certification**:
+    - Full static audit verified that `adaptive`, `pressure`, `queue_extension`, `rl_dqn`, `webster_measured`, `webster_recalc`, `sumo_actuated`, and `fixed` have zero scenario or demand leakage.
+    - `hybrid_queue_adaptive` receives only runtime identifier arguments and has zero reference to `site_webster_plan` or `SITE_DEMAND_PATTERNS`.
+ 4. **Headroom Re-Analysis with Extended Queue**:
+    - Across 9 conditions on dev seeds 101–105 ($n=45$), `hybrid_queue_adaptive` delivers statistically significant reductions in extended maximum queue against measured Webster baselines ($\Delta = -22.07\text{ m}$ vs `webster_measured`, 95% CI $[-30.86, -14.55]\text{ m}$; $\Delta = -23.13\text{ m}$ vs `webster_recalc`, 95% CI $[-32.60, -14.82]\text{ m}$) while matching oracle-seeded performance ($\Delta = -0.42\text{ s}$ mean wait vs `hybrid_oracle_seeded`).
 
-Proceed to Phase 8 with the three justified improvements:
-1. **R2: Comparative Extension Condition**: Only grant extensions when $q_{\text{active}} - q_{\text{comp}} \ge \Delta_q$.
-2. **R3: Queue-Aware Demand Fairness**: Raise the queue threshold for `SWITCH_FAIRNESS_WAIT_LIMIT` to avoid chopping active greens for single vehicles.
-3. **R4: De-Oracle the Base Green**: Decouple hybrid from `site_webster_plan(scenario, demand_level)` so it operates without oracle knowledge of scenario profiles.
-4. **Reject R1 and R5**.
 

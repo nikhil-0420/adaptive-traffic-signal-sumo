@@ -250,6 +250,8 @@ def _run_once(
                 "state": traci.trafficlight.getRedYellowGreenState(tls_id),
                 **{f"gt_q_{a}": round(app_queues[a].ground_truth_queue_m, 2) for a in C.APPROACHES},
                 **{f"gt_n_{a}": app_queues[a].ground_truth_veh_count for a in C.APPROACHES},
+                **{f"gt_ext_q_{a}": round(app_queues[a].extended_ground_truth_queue_m, 2) for a in C.APPROACHES},
+                **{f"gt_ext_n_{a}": app_queues[a].extended_ground_truth_veh_count for a in C.APPROACHES},
                 **{f"det_full_{a}": app_queues[a].det_full for a in C.APPROACHES},
             }
             if emergency_event:
