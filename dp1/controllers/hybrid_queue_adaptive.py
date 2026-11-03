@@ -91,6 +91,19 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         self.extensions_granted: int = 0
         self.last_decision_record: Dict[str, Any] = {}
 
+        # Phase 12: Short-Horizon Queue Projection State
+        self.proj_enabled: bool = bool(getattr(self.cfg, "projection_enabled", False))
+        self.proj_window_s: float = float(getattr(self.cfg, "projection_window_s", 15.0))
+        self.proj_horizon_s: float = float(getattr(self.cfg, "projection_horizon_s", 6.0))
+        self.proj_alpha: float = float(getattr(self.cfg, "projection_blend_alpha", 0.5))
+        self.proj_sat_mu: float = float(getattr(self.cfg, "projection_sat_flow_fallback_mps", 7.5))
+
+        self._queue_history: Dict[str, List[Tuple[float, float, bool]]] = {a: [] for a in C.APPROACHES}
+        self.lambda_rates: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+        self.mu_rates: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+        self.q_pred: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+        self.q_eff: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+
     def _log_plan(self, t: float, plan: C.FixedTimeConfig, source: str, extra: Optional[Dict] = None):
         rec = format_plan_record(
             t_applied_s=t,
@@ -217,21 +230,99 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         self.last_decision_record = rec
         return g_base
 
-    def green_should_end(self, axis: str, elapsed: float, queues: Dict[str, float], t: float) -> bool:
-        """Evaluate hold, extension, gap-out, or switch at each step during GREEN."""
+    def _update_projection(self, t: float, axis: str, queues: Dict[str, float]) -> Dict[str, float]:
+        """Update sliding window arrival/discharge estimates and compute projected queues."""
+        c = self.cfg
+        w = self.proj_window_s
+        h = self.proj_horizon_s
+        alpha = self.proj_alpha
+        fallback_mu = self.proj_sat_mu
+
+        q_pred = {}
+        q_eff = {}
+
+        # 1. Append queue reading to history
+        for a in C.APPROACHES:
+            # Determine if approach a is currently in GREEN
+            is_green = (a in C.AXES[axis] and self.phase == "GREEN")
+            q_val = queues.get(a, 0.0)
+            self._queue_history[a].append((t, q_val, is_green))
+
+            # Prune entries older than t - w
+            cutoff = t - w
+            self._queue_history[a] = [
+                (t_h, q_h, g_h) for t_h, q_h, g_h in self._queue_history[a] if t_h >= cutoff
+            ]
+
+            hist = self._queue_history[a]
+            if len(hist) >= 2:
+                t_old, q_old, _ = hist[0]
+                dt = max(1.0, t - t_old)
+                dq = q_val - q_old
+                if is_green:
+                    mu = fallback_mu if q_val > 0.0 else 0.0
+                    lambda_raw = max(0.0, (dq / dt) + mu)
+                else:
+                    mu = 0.0
+                    lambda_raw = max(0.0, dq / dt)
+            else:
+                mu = fallback_mu if is_green and q_val > 0.0 else 0.0
+                lambda_raw = 0.0
+
+            # Smooth with EMA
+            beta = 1.0 / max(1.0, min(10.0, w))
+            self.lambda_rates[a] = (1.0 - beta) * self.lambda_rates[a] + beta * lambda_raw
+            self.mu_rates[a] = mu
+
+            # Remaining green g_a over horizon h
+            if is_green:
+                remaining_headroom = max(0.0, c.max_green_s - self.target_green_s)
+                g_a = min(h, remaining_headroom)
+            else:
+                g_a = 0.0
+
+            # Projection: max(0, q + lambda * h - mu * g)
+            pred = max(0.0, q_val + self.lambda_rates[a] * h - mu * g_a)
+
+            # Saturation handling: clamp extrapolation if measured queue is at detector saturation (24.4m)
+            if q_val >= 24.0:
+                pred = min(pred, 24.4 + self.lambda_rates[a] * h)
+
+            q_pred[a] = pred
+            q_eff[a] = (1.0 - alpha) * q_val + alpha * pred
+
+        self.q_pred = q_pred
+        self.q_eff = q_eff
+        self.mu_rates[axis] = fallback_mu if any(queues.get(a, 0.0) > 0 for a in C.AXES[axis]) else 0.0
+        return q_eff
+
+    def _evaluate_rules(
+        self,
+        axis: str,
+        elapsed: float,
+        cleaned_q: Dict[str, float],
+        t: float,
+        record_decisions: bool = True,
+        raw_queues: Optional[Dict[str, float]] = None,
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """Evaluate signal state machine decision rules against a candidate queue state.
+
+        When record_decisions=False (counterfactual evaluation), internal state is NOT mutated.
+        """
         c = self.cfg
         other_axis = C.OTHER_AXIS[axis]
+        logged_q = raw_queues or cleaned_q
 
-        cleaned_q = self._clean_queues(queues)
         own_q = self.axis_queue(axis, cleaned_q)
         comp_q = self.axis_queue(other_axis, cleaned_q)
         competing_red_elapsed = max(0.0, t - self.red_start_times.get(other_axis, 0.0))
 
-        # Dynamic arrival detection: check queue growth indicating incoming arrivals
+        # Dynamic arrival detection
         prev_own = self._prev_queues.get(axis, own_q)
         delta_q = max(0.0, own_q - prev_own)
-        self._prev_queues[axis] = own_q
-        self._prev_queues[other_axis] = comp_q
+        if record_decisions:
+            self._prev_queues[axis] = own_q
+            self._prev_queues[other_axis] = comp_q
 
         # Demand scores
         score_active = own_q + 0.5 * delta_q
@@ -241,78 +332,79 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         axis_label = "North–South" if axis == "NS" else "East–West"
         comp_label = "East–West" if axis == "NS" else "North–South"
 
-        # -------------------------------------------------------------
         # 1. Hard Minimum Green Floor Enforcement
-        # -------------------------------------------------------------
         if elapsed < c.min_green_s:
             rec = self._make_record(
                 t, axis, "HOLD",
                 f"{axis_label} elapsed green ({elapsed:.1f}s) < minimum green floor ({c.min_green_s:.1f}s); switch prohibited by safety invariant.",
-                "HOLD_MIN_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                "HOLD_MIN_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="HOLD", applied_action="HOLD", decision_outcome="HOLD_MIN_GREEN"
             )
-            self.last_decision_record = rec
-            return False
+            if record_decisions:
+                self.last_decision_record = rec
+            return False, rec
 
-        # -------------------------------------------------------------
         # 2. Hard Maximum Green Ceiling Enforcement
-        # -------------------------------------------------------------
         if elapsed >= c.max_green_s:
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"{axis_label} elapsed green ({elapsed:.1f}s) >= maximum green ceiling ({c.max_green_s:.1f}s); switch forced to prevent approach starvation.",
-                "SWITCH_MAX_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, True,
+                "SWITCH_MAX_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, True,
                 proposed_action="REQUEST_SWITCH", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_MAX_GREEN"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return True, rec
 
-        # -------------------------------------------------------------
         # 3. Gap-Out Evaluation: Active approach fully cleared
-        # -------------------------------------------------------------
         if own_q <= 0.0 and comp_q >= c.min_competing_queue_m:
-            if self._empty_since is None:
-                self._empty_since = t
-            empty_duration = t - self._empty_since
+            if record_decisions:
+                if self._empty_since is None:
+                    self._empty_since = t
+                empty_duration = t - self._empty_since
+            else:
+                empty_since = self._empty_since or t
+                empty_duration = t - empty_since
+
             if empty_duration >= c.gap_out_s:
                 rec = self._make_record(
                     t, axis, "GAP_OUT",
                     f"{axis_label} queue cleared (0.0m for {empty_duration:.1f}s >= gap-out threshold {c.gap_out_s:.1f}s) while {comp_label} is waiting ({comp_q:.1f}m); gapping out early.",
-                    "SWITCH_GAP_OUT", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "SWITCH_GAP_OUT", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="GAP_OUT", applied_action="GAP_OUT", decision_outcome="SWITCH_GAP_OUT"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
             else:
                 rec = self._make_record(
                     t, axis, "HOLD",
                     f"{axis_label} queue empty for {empty_duration:.1f}s (< gap-out persistence {c.gap_out_s:.1f}s); holding green for clearance.",
-                    "HOLD_CLEARING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "HOLD_CLEARING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="GAP_OUT", applied_action="HOLD", decision_outcome="HOLD_CLEARING"
                 )
-                self.last_decision_record = rec
-                return False
+                if record_decisions:
+                    self.last_decision_record = rec
+                return False, rec
         else:
-            self._empty_since = None
+            if record_decisions:
+                self._empty_since = None
 
-        # -------------------------------------------------------------
         # 4. Within Approved Target Green Duration
-        # -------------------------------------------------------------
         if elapsed < self.target_green_s:
             rec = self._make_record(
                 t, axis, "HOLD",
                 f"{axis_label} green servicing within approved target ({self.target_green_s:.1f}s = baseline {self.baseline_green_s[axis]:.1f}s + extra {self.accumulated_extra_s:.1f}s); elapsed: {elapsed:.1f}s.",
-                "HOLD_SERVICING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                "HOLD_SERVICING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="HOLD", applied_action="HOLD", decision_outcome="HOLD_SERVICING"
             )
-            self.last_decision_record = rec
-            return False
+            if record_decisions:
+                self.last_decision_record = rec
+            return False, rec
 
-        # -------------------------------------------------------------
         # 5. Target Reached: Evaluate Bounded Extension Increment
-        # -------------------------------------------------------------
         req_increment = c.extend_step_s
         headroom = max(0.0, c.max_green_s - self.target_green_s)
 
@@ -321,28 +413,28 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: {axis_label} target green ({self.target_green_s:.1f}s) has reached maximum ceiling ({c.max_green_s:.1f}s). Enforcing mandatory switch.",
-                "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, True,
+                "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, True,
                 proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_CEILING_REACHED"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return True, rec
 
         # 5b. Anti-Monopoly / Fairness Wait Check
         if "R3" in c.rungs:
-            # Hard maximum-wait cap (35.0s) forces switch regardless of competing queue size
             if competing_red_elapsed >= c.r3_hard_wait_cap_s:
                 rec = self._make_record(
                     t, axis, "REQUEST_SWITCH",
                     f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= hard anti-starvation cap ({c.r3_hard_wait_cap_s:.1f}s). Forcing fair switch.",
-                    "SWITCH_FAIRNESS_HARD", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "SWITCH_FAIRNESS_HARD", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_HARD"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
 
-            # Soft wait limit scaled by competing queue size (no soft fairness switch if competing queue is empty)
             if comp_q > 0.0:
                 q_ratio = min(1.0, comp_q / max(1.0, c.r3_queue_ref_m))
                 soft_wait_limit = c.r3_hard_wait_cap_s - (c.r3_hard_wait_cap_s - c.r3_soft_min_wait_s) * q_ratio
@@ -350,40 +442,41 @@ class HybridQueueAdaptiveController(PhaseMachineController):
                     rec = self._make_record(
                         t, axis, "REQUEST_SWITCH",
                         f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= queue-scaled soft wait limit ({soft_wait_limit:.1f}s for queue {comp_q:.1f}m). Forcing fair switch.",
-                        "SWITCH_FAIRNESS_SOFT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                        "SWITCH_FAIRNESS_SOFT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                         proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_SOFT"
                     )
-                    self.last_decision_record = rec
-                    self.decisions.append(rec)
-                    return True
+                    if record_decisions:
+                        self.last_decision_record = rec
+                        self.decisions.append(rec)
+                    return True, rec
         else:
-            # R0 baseline anti-monopoly check
             if comp_q >= c.min_competing_queue_m and competing_red_elapsed >= c.max_competing_wait_s:
                 rec = self._make_record(
                     t, axis, "REQUEST_SWITCH",
                     f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= maximum allowed wait ({c.max_competing_wait_s:.1f}s) with waiting queue ({comp_q:.1f}m). Triggering fair phase switch.",
-                    "SWITCH_FAIRNESS_WAIT_LIMIT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "SWITCH_FAIRNESS_WAIT_LIMIT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_WAIT_LIMIT"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
 
-        # 5c. Demand Imbalance Check: Competing score exceeds fairness ratio
+        # 5c. Demand Imbalance Check
         if comp_q >= c.min_competing_queue_m and score_competing > (score_active * c.fairness_ratio):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: Competing {comp_label} demand score ({score_competing:.1f}) exceeds active {axis_label} score ({score_active:.1f}) by fairness ratio ({c.fairness_ratio}). Switching to relieve opposing corridor.",
-                "SWITCH_DEMAND_FAIRNESS", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                "SWITCH_DEMAND_FAIRNESS", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_FAIRNESS"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return True, rec
 
         # 5d. Extension Justification Check
         if "R2" in c.rungs:
-            # R2: Comparative extension condition
             comp_thresh = c.r2_margin * score_competing + c.r2_switch_cost_m
             max_extra = c.max_green_s - self.baseline_green_s[axis]
             extra_headroom = max(0.0, max_extra - self.accumulated_extra_s)
@@ -392,18 +485,20 @@ class HybridQueueAdaptiveController(PhaseMachineController):
                 rec = self._make_record(
                     t, axis, "REQUEST_SWITCH",
                     f"Comparative extension rejected: Cumulative extra green ({self.accumulated_extra_s:.1f}s) reached G_MAX limit ({max_extra:.1f}s).",
-                    "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, True,
+                    "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, True,
                     proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_CEILING_REACHED"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
 
             if score_active > comp_thresh:
                 app_increment = min(req_increment, headroom, extra_headroom)
-                self.accumulated_extra_s += app_increment
-                self.target_green_s += app_increment
-                self.extensions_granted += 1
+                if record_decisions:
+                    self.accumulated_extra_s += app_increment
+                    self.target_green_s += app_increment
+                    self.extensions_granted += 1
                 explanation = (
                     f"Comparative extension approved: Active {axis_label} score ({score_active:.1f}) exceeds "
                     f"threshold ({comp_thresh:.1f} = {c.r2_margin:.1f} * {score_competing:.1f} + {c.r2_switch_cost_m:.1f}m switch cost); "
@@ -411,12 +506,13 @@ class HybridQueueAdaptiveController(PhaseMachineController):
                 )
                 rec = self._make_record(
                     t, axis, "EXTEND", explanation,
-                    "EXTEND_COMPARATIVE", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "EXTEND_COMPARATIVE", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="EXTEND", applied_action="EXTEND", decision_outcome="EXTEND_COMPARATIVE"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return False
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return False, rec
             else:
                 explanation = (
                     f"Comparative extension rejected: Active {axis_label} score ({score_active:.1f}) does not exceed "
@@ -425,32 +521,31 @@ class HybridQueueAdaptiveController(PhaseMachineController):
                 )
                 rec = self._make_record(
                     t, axis, "REQUEST_SWITCH", explanation,
-                    "SWITCH_COMPARATIVE_REJECTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "SWITCH_COMPARATIVE_REJECTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_COMPARATIVE_REJECTED"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
         else:
-            # R0 baseline active demand justification check
             if own_q < c.extend_threshold_m and delta_q < c.arrival_detection_threshold:
                 rec = self._make_record(
                     t, axis, "REQUEST_SWITCH",
                     f"Extension rejected: Active {axis_label} queue ({own_q:.1f}m < threshold {c.extend_threshold_m:.1f}m) and no new arrivals detected (delta Q = {delta_q:.1f}m). Terminating green phase.",
-                    "SWITCH_DEMAND_EXHAUSTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                    "SWITCH_DEMAND_EXHAUSTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_EXHAUSTED"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
 
-            # -------------------------------------------------------------
-            # R0 Approved Extension
-            # -------------------------------------------------------------
             app_increment = min(req_increment, headroom)
-            self.accumulated_extra_s += app_increment
-            self.target_green_s += app_increment
-            self.extensions_granted += 1
+            if record_decisions:
+                self.accumulated_extra_s += app_increment
+                self.target_green_s += app_increment
+                self.extensions_granted += 1
 
             explanation = (
                 f"{axis_label} green extended by {app_increment:.0f} seconds: "
@@ -462,12 +557,44 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "EXTEND",
                 explanation,
-                "EXTEND_APPROVED", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, cleaned_q, False,
+                "EXTEND_APPROVED", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="EXTEND", applied_action="EXTEND", decision_outcome="EXTEND_APPROVED"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return False
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return False, rec
+
+    def green_should_end(self, axis: str, elapsed: float, queues: Dict[str, float], t: float) -> bool:
+        """Evaluate hold, extension, gap-out, or switch at each step during GREEN."""
+        cleaned_q = self._clean_queues(queues)
+
+        if not self.proj_enabled:
+            should_end, _ = self._evaluate_rules(axis, elapsed, cleaned_q, t, record_decisions=True, raw_queues=cleaned_q)
+            return should_end
+
+        # With projection enabled:
+        q_eff = self._update_projection(t, axis, cleaned_q)
+
+        # 1. Counterfactual decision with unprojected cleaned_q
+        cf_should_end, cf_rec = self._evaluate_rules(axis, elapsed, cleaned_q, t, record_decisions=False, raw_queues=cleaned_q)
+
+        # 2. Actual decision with projected q_eff
+        act_should_end, act_rec = self._evaluate_rules(axis, elapsed, q_eff, t, record_decisions=True, raw_queues=cleaned_q)
+
+        # 3. Detect divergence between predictive intervention and baseline
+        divergence = (act_should_end != cf_should_end or act_rec.get("decision_outcome") != cf_rec.get("decision_outcome"))
+        act_rec["projection_divergence"] = divergence
+        act_rec["counterfactual_action"] = cf_rec.get("applied_action", "UNKNOWN")
+        act_rec["counterfactual_outcome"] = cf_rec.get("decision_outcome", "UNKNOWN")
+
+        if divergence:
+            act_rec["reason"] = (
+                f"[PREDICTIVE INTERVENTION (cf: {cf_rec.get('applied_action')}/{cf_rec.get('decision_outcome')})] "
+                + act_rec["reason"]
+            )
+
+        return act_should_end
 
     def _make_record(
         self,
@@ -494,7 +621,7 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         app = applied_action or action
         outcome = decision_outcome or reason_code
 
-        return {
+        rec = {
             "t": round(t, 1),
             "cycle": self.cycle,
             "axis": axis,
@@ -519,3 +646,16 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             "green_s": round(self.target_green_s, 1),
             **{f"q_{a}_m": round(queues.get(a, 0.0), 1) for a in C.APPROACHES},
         }
+
+        if self.proj_enabled:
+            rec.update({
+                **{f"lambda_{a}": round(self.lambda_rates.get(a, 0.0), 3) for a in C.APPROACHES},
+                "mu_active": round(self.mu_rates.get(axis, 0.0), 2),
+                **{f"q_pred_{a}": round(self.q_pred.get(a, 0.0), 1) for a in C.APPROACHES},
+                **{f"q_eff_{a}": round(self.q_eff.get(a, 0.0), 1) for a in C.APPROACHES},
+                "projection_divergence": False,
+                "counterfactual_action": app,
+                "counterfactual_outcome": outcome,
+            })
+
+        return rec

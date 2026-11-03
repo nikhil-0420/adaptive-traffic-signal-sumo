@@ -111,6 +111,13 @@ class HybridQueueAdaptiveConfig:
     # R4: Measured Webster baseline green
     r4_warmup_s: float = 300.0          # Measured arrival estimation window for Webster baseline green
 
+    # Phase 12: Short-Horizon Queue Projection
+    projection_enabled: bool = False    # Predictive short-horizon queue projection intervention
+    projection_window_s: float = 15.0   # Sliding window W [seconds] for arrival rate smoothing
+    projection_horizon_s: float = 6.0   # Short-horizon lookahead h [seconds]
+    projection_blend_alpha: float = 0.5 # Convex blend weight alpha: q_eff = (1 - alpha)*q + alpha*q_pred
+    projection_sat_flow_fallback_mps: float = 7.5 # Saturation discharge capacity fallback [m/s]
+
 
 @dataclass(frozen=True)
 class WebsterMeasuredConfig:

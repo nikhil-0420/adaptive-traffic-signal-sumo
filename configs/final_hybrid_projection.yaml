@@ -1,0 +1,34 @@
+policy: hybrid_queue_adaptive_projection
+date_frozen: 2026-11-03
+provenance: phase12_validation_P0_default
+training_seeds:
+  - 101
+  - 102
+  - 103
+  - 104
+  - 105
+validation_seeds:
+  - 106
+  - 107
+  - 108
+  - 109
+  - 110
+kept_rungs:
+  - R4
+projection_parameters:
+  projection_enabled: True
+  projection_window_s: 15.0
+  projection_horizon_s: 6.0
+  projection_blend_alpha: 0.5
+  projection_sat_flow_fallback_mps: 7.5
+parameters:
+  extend_step_s: 3.0
+  extend_threshold_m: 4.0
+  fairness_ratio: 1.2
+  gap_out_s: 3.0
+  min_competing_queue_m: 2.0
+  max_competing_wait_s: 35.0
+  r4_warmup_s: 300.0
+  demand_weight_active: 1.0
+  demand_weight_competing: 1.0
+  arrival_detection_threshold: 0.5

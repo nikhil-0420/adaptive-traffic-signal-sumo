@@ -385,7 +385,8 @@ def _run_once(
 def _write_csv(path, rows):
     if not rows:
         return
+    fieldnames = list({k: None for row in rows for k in row.keys()}.keys())
     with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
