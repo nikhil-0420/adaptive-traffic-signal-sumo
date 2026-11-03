@@ -1,0 +1,14 @@
+policy: "adaptive"
+date_frozen: "2026-11-03"
+provenance: "pre_registered_baseline_trial_00"
+training_seeds: [101, 102, 103, 104, 105]
+parameters:
+  k_s_per_m: 0.30
+  extend_threshold_m: 15.0
+  gap_out_s: 3.0
+  min_competing_queue_m: 1.0
+safety_invariants:
+  min_green_s: 10.0
+  max_green_s: 60.0
+  yellow_s: 3.0
+  all_red_s: 2.0

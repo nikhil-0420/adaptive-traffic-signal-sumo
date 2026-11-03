@@ -1,0 +1,22 @@
+policy: "hybrid_queue_adaptive"
+date_frozen: "2026-11-03"
+provenance: "pre_registered_baseline_trial_00"
+training_seeds: [101, 102, 103, 104, 105]
+kept_rungs:
+  - "R4"
+parameters:
+  extend_step_s: 3.0
+  extend_threshold_m: 4.0
+  fairness_ratio: 1.2
+  gap_out_s: 3.0
+  min_competing_queue_m: 2.0
+  max_competing_wait_s: 35.0
+  r4_warmup_s: 300.0
+  demand_weight_active: 1.0
+  demand_weight_competing: 1.0
+  arrival_detection_threshold: 0.5
+safety_invariants:
+  min_green_s: 10.0
+  max_green_s: 60.0
+  yellow_s: 3.0
+  all_red_s: 2.0
