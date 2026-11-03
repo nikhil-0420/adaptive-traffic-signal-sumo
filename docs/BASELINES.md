@@ -113,3 +113,25 @@ SUMO's built-in `type="actuated"` logic operates natively within SUMO's microsim
 - **Diagnostic Role**: Excluded from the competitive evaluation matrix.
 - **Algorithm**: Uses `FixedWebsterController` with mathematical arrival curves derived from offline ground-truth scenario definitions (`dp1/site_scenarios.py:SITE_DEMAND_PATTERNS`).
 - **Purpose**: Establishes the theoretical upper bound for static Webster optimization when the arrival distribution is known perfectly a priori without measurement delay or sensor error.
+
+---
+
+## 6. `hybrid_queue_adaptive` (Proposed Policy - v2.0 Measured Base Green)
+
+### Specification
+- **Label**: `hybrid_queue_adaptive` (Default Proposed Policy)
+- **Provenance**: Tag `dp1-phase10b-policy` (Phase 10B)
+- **Algorithm**:
+  - Warm-up ($t < 300\text{ s}$): Uses field-grounded BTP fixed splits (19.0s NS / 21.0s EW for Marathahalli; 15.0s / 15.0s synthetic). **Never reads scenario tables or demand multipliers**.
+  - Cycle Boundary ($t \ge 300\text{ s}$): Base green durations $G_{\text{base, ns}}, G_{\text{base, ew}}$ are solved from empirical vehicle arrivals accumulated during the 300s warm-up window via canonical Webster formula.
+  - Cycle-to-cycle dynamic adaptation: Real-time queue length measurements via E2 detectors modulate green extensions subject to minimum green, maximum green, and gap-out rules.
+
+---
+
+## 7. `hybrid_oracle_seeded` (Legacy Baseline - v1.0 Oracle-Seeded)
+
+### Specification
+- **Label**: Explicitly designated as `[ORACLE-SEEDED]` across registry, docs, and outputs.
+- **Provenance**: Evaluated in Phase 8 (`exp_marathahalli_hybrid_840`) and Phase 10 R0.
+- **Algorithm**: Hybrid queue adaptive controller whose base green was seeded via `site_webster_plan(scenario, demand_level)`, reading ground-truth `SITE_DEMAND_PATTERNS`.
+- **Status**: Deprecated for competitive evaluation; preserved strictly for retrospective reproducibility.

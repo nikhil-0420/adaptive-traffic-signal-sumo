@@ -137,6 +137,14 @@ Because ORR and Varthur carry identical total vehicles across the 1800s horizon 
 
 ## 7. Non-Triviality Verification Results (Seeds 101–105)
 
+> [!WARNING]
+> **Phase 10B Note on Baseline Validity and Queue Measurement**:
+> The non-triviality evaluation table below was generated during Phase 8 and contains two significant artifacts identified in Phase 10B:
+> 1. **Baseline Used Oracle Information**: The `fixed_webster` baseline evaluated here used `site_webster_plan`, which directly read scenario demand and multipliers from `SITE_DEMAND_PATTERNS`.
+> 2. **Detector-Clipped Max Queue**: The `Mean Max Q` and `Peak Max Q` numbers reflect E2 detector jam length, which is physically clipped at $\approx 24.00$\,m – $24.90$\,m due to lead-vehicle setback and detector span. They do not capture true spatial queue spillback beyond $24.9$\,m.
+> 
+> For ground-truth queue measurements (`gt_max_queue_m`) and comparison against non-oracle baselines (`webster_measured`, `webster_recalc`, `sumo_actuated`), refer to the Phase 10B headroom recheck results in `results/research/exp_headroom_recheck_dev/` and `docs/phase10b_report.md`.
+
 Executed on dev seeds 101–105 ($60\text{ runs}$) in `results/research/exp_scenario_check_dev/`:
 
 | Scenario | Level | Policy | Mean Wait (s) | Std Wait (s) | P95 Wait (s) | Mean Max Q (m) | Peak Max Q (m) | Sat. Fraction | Unfinished |

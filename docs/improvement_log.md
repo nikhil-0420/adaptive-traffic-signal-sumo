@@ -149,3 +149,40 @@
   - Item 4: `max_queue_m` uses detector queue. Evaluation-only ground-truth logging proposed with byte-identical regression test.
   - Item 5: In balanced-low, hybrid mean green is 13.89s (min 13.0s) vs pure adaptive 11.84s (min 9.0s, 23.56% <= 10s).
   - Item 6: R4 updated to "De-oracle the base green" (JUSTIFIED).
+
+## 2026-11-02: Phase 8 - Freeze Non-Stationary Scenarios
+- **Tag**: `dp1-phase8-scenarios-frozen`
+- **Report**: [`docs/phase8_report.md`](./phase8_report.md), [`docs/SCENARIOS.md`](./SCENARIOS.md)
+- **Scenarios Added**: `ramp_peak` (rush hour surge), `surge_shift` (mid-run arterial inversion), `lane_closure` (10-minute capacity reduction on `ramp_orr_n_in_0`).
+- **Validation**: 60 runs on dev seeds 101–105 (`results/research/exp_scenario_check_dev/`). Note: Non-triviality section used oracle Webster and detector-clipped max queue (corrected in Phase 10B).
+
+## 2026-11-03: Phase 9 - Reference Baselines Implementation
+- **Tag**: `dp1-phase9-baselines`
+- **Report**: [`docs/phase9_report.md`](./phase9_report.md), [`docs/BASELINES.md`](./BASELINES.md)
+- **Baselines Added**:
+  - `webster_measured`: 300s warm-up under BTP plan; solves Webster from measured counts; applies at next cycle boundary.
+  - `webster_recalc`: Recalculates every 300s using a 300s sliding window; applies at next cycle boundary.
+  - `fixed_matched_cycle`: Matches Webster optimal cycle while fixing splits to BTP ratio (52.5% EW : 47.5% NS).
+  - `sumo_actuated`: Wraps SUMO native actuated logic (10s min, 60s max, 3s gap-out) inside `PhaseMachineController`.
+  - `webster_oracle`: Diagnostic theoretical upper bound using ground-truth scenario tables.
+- **Parameter Rationale & Confirmation [DECISION NEEDED]**:
+  - Warm-up duration (300 s), recalculation interval (300 s), and sliding window (300 s) were selected to provide sufficient sample size (~80–150 Poisson arrival events across approaches) for robust flow ratio estimation while preserving 1500 s (83.3% of the 1800 s horizon) of evaluated control. DQN evaluated as-is without retraining to maintain historical integrity.
+
+## 2026-11-03: Phase 10 - Ablation Ladder (Validation Seeds 106–110)
+- **Tag**: `dp1-phase10-ladder`
+- **Report**: [`docs/phase10_report.md`](./phase10_report.md), [`docs/ablation_ladder.md`](./ablation_ladder.md)
+- **Findings**:
+  - R1 and R5 skipped (NOT JUSTIFIED).
+  - R2 (Comparative Extension) CUT (no primary metric CI strictly excluded zero).
+  - R3 (Queue-Aware Fairness) CUT under 5 validation seeds (approach gap delta -1.23s, CI [-2.48, +0.04]).
+  - R4 (Measured Base Green) CUT under performance acceptance rule, but identified as vital validity requirement.
+  - Measurement Discovery: E2 detector jam length capped at ~24.0m, causing `max_queue_m` deltas to be meaningless. Base green in default hybrid leaked oracle information via `site_webster_plan`.
+
+## 2026-11-03: Phase 10B - Measurement Fix, De-Oracle Policy, R3 Amendment, Headroom Recheck
+- **Tags**: `dp1-phase10b-policy` (Task 3 de-oracle checkpoint), `dp1-phase10b` (Final)
+- **Deliverables**:
+  - Pre-Registration Amendment 1 ([`docs/PREREGISTRATION_AMENDMENT_1.md`](./PREREGISTRATION_AMENDMENT_1.md)).
+  - Evaluation-only microscopic ground-truth queue logging (`gt_max_queue_m`, `gt_avg_queue_m`, per-approach `det_full` fraction) verified 100% byte-identical on controller decisions.
+  - De-oracled default policy `hybrid_queue_adaptive` (v2.0, R4 measured base green, un-oracled BTP warm-up); legacy renamed to `hybrid_oracle_seeded`. Policy version catalog: [`docs/POLICY_VERSIONS.md`](./POLICY_VERSIONS.md).
+  - R3 Amendment Test on validation-2 seeds 111–120 (540 runs) in `results/research/exp_ladder_R3_amend_val2/`.
+  - Headroom Recheck on dev seeds 101–105 (315 runs) in `results/research/exp_headroom_recheck_dev/`.

@@ -69,6 +69,14 @@ Simulations were executed on dev seed 101 for both `fixed_webster` and `hybrid_q
 
 ## 4. Non-Triviality Check Results (Dev Seeds 101–105)
 
+> [!WARNING]
+> **Phase 10B Retrospective Note on Oracle Baseline & Clipped Metrics**:
+> The non-triviality experiment reported below was conducted with two limitations later uncovered during Phases 10 and 10B:
+> 1. **Baseline Oracle Knowledge**: `fixed_webster` utilized `site_webster_plan`, which directly read scenario demand and multipliers from `SITE_DEMAND_PATTERNS`.
+> 2. **Detector-Clipped Max Queue**: `Mean Max Q` and `Peak Max Q` reflect E2 detector jam length, which is clipped at $\approx 24.00$\,m – $24.90$\,m due to stopline setback and physical detector span.
+> 
+> See Phase 10B headroom recheck results (`results/research/exp_headroom_recheck_dev/` and `docs/phase10b_report.md`) for evaluations using unclipped ground-truth queue lengths (`gt_max_queue_m`) and realistic measured baselines (`webster_measured`, `webster_recalc`, `sumo_actuated`).
+
 To ensure the scenarios are genuinely challenging and not trivial for Webster's stationary timing plans, an evaluation experiment was conducted in `results/research/exp_scenario_check_dev/`:
 - **Sample size:** 60 simulation runs (2 policies $\times$ 3 scenarios $\times$ 2 levels $\times$ 5 dev seeds).
 - **Seeds:** 101, 102, 103, 104, 105.

@@ -63,7 +63,7 @@ Per the project integrity rules:
 | **West** | heavy | fixed_webster | 84,954 | 73 | **0.086%** |
 | **West** | heavy | hybrid_queue_adaptive | 84,931 | 6 | **0.007%** |
 
-- **Finding**: Detector saturation is virtually **non-existent** in low demand ($0.000\%$) and negligible in medium demand ($< 0.026\%$). Even in heavy demand, saturation accounts for less than $0.32\%$ of time across all approaches. The hypothesis that detector saturation blind spots corrupt controller decision-making across typical operating conditions is **refuted**.
+- **Revised Finding (Phase 10B Correction)**: The initial conclusion that detector saturation was negligible (< 0.32%) was an artifact of a measurement mismatch: the controller-facing `SATURATED` flag fired only at $q \ge 24.4$\,m, whereas the detector's physical jam length caps at $\approx 24.00$\,m due to lead-vehicle stopline setback ($\approx 0.9$\,m). Consequently, the `SATURATED` flag almost never fired even while the detector was physically packed at capacity. When measured properly via evaluation-only detector-full fraction ($q \ge 24.0$\,m) and microscopic ground truth (`gt_q`), the detector is physically full **4% to 14% of the time** in heavy cells (and up to **26.5%** on South approach in `imbalanced_orr_heavy`). The legacy `SATURATED` flag never fired at the $24.0$\,m cap; detector-full fraction and ground truth are the authoritative measures.
 
 ---
 
@@ -83,7 +83,7 @@ Per the project integrity rules:
 | `balanced` | heavy | fixed_webster | E | 12 | 1.7 | 5 | 0.5 |
 | All Low & Med | low/med | both policies | all | $\le 1$ | $0.0 - 0.2$ | $0 - 2$ | $< 0.2$ |
 
-- **Finding**: Sustained saturation episodes only occur in severe heavy-demand scenarios (`imbalanced_varthur_heavy` on East approach, and `surge_orr_north_heavy` on North approach). In low and medium demand, saturation events are momentary 1-second transient spikes.
+- **Revised Finding (Phase 10B Correction)**: Sustained detector-full episodes ($q \ge 24.0$\,m) occur frequently in heavy-demand conditions (`imbalanced_varthur_heavy`, `surge_orr_north_heavy`, `imbalanced_orr_heavy`), with physical packing occurring up to 14% of the entire run duration. The previous metric underreported episode lengths because the threshold was placed above the physical jam length ceiling.
 
 ---
 
