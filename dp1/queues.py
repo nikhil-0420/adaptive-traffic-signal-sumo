@@ -41,6 +41,7 @@ class ApproachQueueInfo:
     total_queued_vehicles: int     # sum of queued vehicles across lanes
     is_saturated: bool             # true if any lane queue reaches detector length
     sensor_status: str = "MEASURING" # "SATURATED", "CONFIRMED_ZERO", "MEASURING", "OFFLINE"
+    det_full: bool = False         # evaluation-only: detector queue >= span minus setback
     
     # Ground-truth microscopic metrics (for validation, distinct from sensor)
     ground_truth_queue_m: float = 0.0   # contiguous stopped cluster from stop line
@@ -229,6 +230,7 @@ class QueueMeasurementEngine:
                 total_queued_vehicles=total_vehs,
                 is_saturated=approach_sat,
                 sensor_status=status_label,
+                det_full=bool(longitudinal_q >= (24.0 if det_len < 30.0 else (det_len - 2.0))),
                 ground_truth_queue_m=round(gt_approach_q, 2),
                 ground_truth_veh_count=gt_approach_vehs,
                 total_waiting_time_s=round(total_wait, 1),

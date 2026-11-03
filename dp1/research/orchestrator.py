@@ -260,6 +260,12 @@ def run_research_experiment(
         "levels": list(matrix.levels),
         "demand_multipliers": {lvl: C.DEMAND_LEVELS[lvl] for lvl in matrix.levels},
         "policies": list(matrix.policies),
+        "policy_version": "v2_phase10b",
+        "policy_versions": {
+            "hybrid_queue_adaptive": "v2.0_measured_base_green",
+            "hybrid_oracle_seeded": "v1.0_oracle_seeded",
+            "hybrid_r3": "v2.0_amended_r4_plus_r3",
+        },
         "seeds": list(matrix.seeds),
         "bootstrap_resamples": C.RESEARCH.bootstrap_resamples,
         "bootstrap_seed": C.RESEARCH.bootstrap_seed,

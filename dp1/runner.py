@@ -248,6 +248,9 @@ def _run_once(
                 "t": t, "phase": ctl.phase, "axis": ctl.axis,
                 **{f"q_{a}": round(q[a], 2) for a in C.APPROACHES},
                 "state": traci.trafficlight.getRedYellowGreenState(tls_id),
+                **{f"gt_q_{a}": round(app_queues[a].ground_truth_queue_m, 2) for a in C.APPROACHES},
+                **{f"gt_n_{a}": app_queues[a].ground_truth_veh_count for a in C.APPROACHES},
+                **{f"det_full_{a}": app_queues[a].det_full for a in C.APPROACHES},
             }
             if emergency_event:
                 series_rec["emergency_approaching"] = em_detected

@@ -43,12 +43,12 @@ class MockStates:
 
 
 def test_r0_flags_off_regression_identity(tmp_path):
-    """Regression test: hybrid with flags off (rungs=()) is bit-for-bit identical to default hybrid."""
-    # Run with default HYBRID_QUEUE_ADAPTIVE
+    """Regression test: hybrid_oracle_seeded with flags off (rungs=()) is bit-for-bit identical to legacy hybrid."""
+    # Run with default hybrid_oracle_seeded
     run_default = tmp_path / "run_default"
     res_default = run_simulation(
         scenario="imbalanced_ns",
-        policy="hybrid_queue_adaptive",
+        policy="hybrid_oracle_seeded",
         seed=1,
         network="synthetic",
         demand_level="medium",
@@ -60,7 +60,7 @@ def test_r0_flags_off_regression_identity(tmp_path):
     run_off = tmp_path / "run_off"
     res_off = run_simulation(
         scenario="imbalanced_ns",
-        policy="hybrid_queue_adaptive",
+        policy="hybrid_oracle_seeded",
         policy_kwargs={"cfg": cfg_off},
         seed=1,
         network="synthetic",
@@ -72,10 +72,34 @@ def test_r0_flags_off_regression_identity(tmp_path):
     assert res_default["max_queue_m"] == pytest.approx(res_off["max_queue_m"], abs=1e-6)
     assert res_default["cycles"] == res_off["cycles"]
 
-    # Byte-identical decisions check
+    # Byte-identical decisions check against known reference hash
+    import hashlib
     dec_default = (run_default / "decisions.csv").read_bytes()
     dec_off = (run_off / "decisions.csv").read_bytes()
     assert dec_default == dec_off, "Flags-off decisions.csv must be 100% byte-identical to default hybrid"
+    ref_hash = "494b5fb67ea40890b79736a7a44792578b16566e41571d218f26812a62ee6b1c"
+    assert hashlib.sha256(dec_default).hexdigest() == ref_hash
+
+
+def test_de_oracled_hybrid_no_leakage():
+    """Verify default hybrid_queue_adaptive does not import or call site_webster_plan or leak scenario demand."""
+    import inspect
+    from dp1.controllers import hybrid_queue_adaptive as hqa_mod
+
+    # 1. Module must not import or call site_webster_plan or reference SITE_DEMAND_PATTERNS
+    src = inspect.getsource(hqa_mod)
+    assert "site_webster_plan" not in src, "hybrid_queue_adaptive module must NEVER import or call site_webster_plan"
+    assert "SITE_DEMAND_PATTERNS" not in src, "hybrid_queue_adaptive module must NEVER reference SITE_DEMAND_PATTERNS"
+
+    # 2. Instantiating with arbitrary/bogus scenario & demand_level must NOT fail or alter unoracled baseline
+    states = MockStates()
+    ctl_marathahalli = HybridQueueAdaptiveController(states, scenario="fake_scenario", demand_level="fake_level", network="marathahalli")
+    assert ctl_marathahalli.baseline_plan.green_ns_s == 19.0
+    assert ctl_marathahalli.baseline_plan.green_ew_s == 21.0
+
+    ctl_syn = HybridQueueAdaptiveController(states, scenario="fake_scenario", demand_level="fake_level", network="synthetic")
+    assert ctl_syn.baseline_plan.green_ns_s == 15.0
+    assert ctl_syn.baseline_plan.green_ew_s == 15.0
 
 
 def test_min_green_not_reached_holds_green():

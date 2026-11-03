@@ -6,6 +6,7 @@ from .adaptive_pressure import AdaptivePressureController
 from .queue_extension import QueueExtensionController
 from .rl_dqn import RLDQNController
 from .hybrid_queue_adaptive import HybridQueueAdaptiveController
+from .hybrid_oracle_seeded import HybridOracleSeededController
 from .webster_measured import WebsterMeasuredController
 from .webster_recalc import WebsterRecalcController
 from .fixed_matched_cycle import FixedMatchedCycleController
@@ -35,17 +36,17 @@ class HybridR2R3R4Controller(HybridQueueAdaptiveController):
 
 
 class HybridR3Controller(HybridQueueAdaptiveController):
-    """Hybrid controller with R3 only (Queue-aware fairness)."""
+    """Hybrid controller with R3: New default (R4) + R3 Queue-aware fairness."""
     name = "hybrid_r3"
     def __init__(self, states, cfg=None, **kw):
-        super().__init__(states, cfg=cfg or C.HybridQueueAdaptiveConfig(rungs=("R3",)), **kw)
+        super().__init__(states, cfg=cfg or C.HYBRID_R3, **kw)
 
 
 class HybridR4Controller(HybridQueueAdaptiveController):
-    """Hybrid controller with R4 only (Measured Webster base green)."""
+    """Hybrid controller with R4 only (Measured Webster base green, identical to new default)."""
     name = "hybrid_r4"
     def __init__(self, states, cfg=None, **kw):
-        super().__init__(states, cfg=cfg or C.HybridQueueAdaptiveConfig(rungs=("R4",)), **kw)
+        super().__init__(states, cfg=cfg or C.HYBRID_R4, **kw)
 
 
 POLICIES = {
@@ -56,6 +57,7 @@ POLICIES = {
     "queue_extension": QueueExtensionController,
     "rl_dqn": RLDQNController,
     "hybrid_queue_adaptive": HybridQueueAdaptiveController,
+    "hybrid_oracle_seeded": HybridOracleSeededController,
     "hybrid_r2": HybridR2Controller,
     "hybrid_r3": HybridR3Controller,
     "hybrid_r4": HybridR4Controller,

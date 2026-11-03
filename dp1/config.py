@@ -251,8 +251,11 @@ FIXED_MARATHAHALLI = FixedTimeConfig(
 ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
-HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig()
+HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig(rungs=("R4",))
+HYBRID_ORACLE_SEEDED = HybridQueueAdaptiveConfig(rungs=())
 HYBRID_R2 = HybridQueueAdaptiveConfig(rungs=("R2",))
+HYBRID_R3 = HybridQueueAdaptiveConfig(rungs=("R4", "R3"))
+HYBRID_R4 = HybridQueueAdaptiveConfig(rungs=("R4",))
 HYBRID_R2_R3 = HybridQueueAdaptiveConfig(rungs=("R2", "R3"))
 HYBRID_R2_R3_R4 = HybridQueueAdaptiveConfig(rungs=("R2", "R3", "R4"))
 WEBSTER_MEASURED = WebsterMeasuredConfig()
@@ -269,7 +272,7 @@ HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue
 BASELINE_POLICIES = ("fixed", "fixed_webster", "webster_measured", "webster_recalc", "fixed_matched_cycle", "sumo_actuated")
 ALL_POLICIES = (
     "fixed", "fixed_webster", "adaptive", "pressure", "queue_extension",
-    "rl_dqn", "hybrid_queue_adaptive", "webster_measured", "webster_recalc",
+    "rl_dqn", "hybrid_queue_adaptive", "hybrid_oracle_seeded", "webster_measured", "webster_recalc",
     "fixed_matched_cycle", "sumo_actuated", "webster_oracle",
     "hybrid_r2", "hybrid_r3", "hybrid_r4", "hybrid_r2_r3", "hybrid_r2_r3_r4",
 )

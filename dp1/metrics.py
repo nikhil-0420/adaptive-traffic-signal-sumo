@@ -118,6 +118,35 @@ def summarise_run(
         metrics[f"avg_queue_{a}_m"] = float(aq.mean())
         metrics[f"max_queue_{a}_m"] = float(aq.max())
 
+    # Ground-truth queue metrics (evaluation-only, microscopic)
+    has_gt = bool(series and f"gt_q_{C.APPROACHES[0]}" in series[0])
+    if has_gt:
+        gt_matrix = np.array([[r[f"gt_q_{a}"] for a in C.APPROACHES] for r in series])
+        gt_approach_queues = {a: np.array([r[f"gt_q_{a}"] for r in series]) for a in C.APPROACHES}
+        metrics["gt_avg_queue_m"] = float(gt_matrix.mean())
+        metrics["gt_max_queue_m"] = float(gt_matrix.max())
+        for a in C.APPROACHES:
+            metrics[f"gt_avg_queue_{a}_m"] = float(gt_approach_queues[a].mean())
+            metrics[f"gt_max_queue_{a}_m"] = float(gt_approach_queues[a].max())
+    else:
+        metrics["gt_avg_queue_m"] = None
+        metrics["gt_max_queue_m"] = None
+        for a in C.APPROACHES:
+            metrics[f"gt_avg_queue_{a}_m"] = None
+            metrics[f"gt_max_queue_{a}_m"] = None
+
+    # Detector full fraction (evaluation-only: queue >= span minus setback, e.g. 24.0m for Marathahalli)
+    has_det_full = bool(series and f"det_full_{C.APPROACHES[0]}" in series[0])
+    if has_det_full:
+        det_full_matrix = np.array([[1.0 if r[f"det_full_{a}"] else 0.0 for a in C.APPROACHES] for r in series])
+        metrics["detector_full_frac"] = float(det_full_matrix.mean())
+        for a in C.APPROACHES:
+            metrics[f"detector_full_frac_{a}"] = float(np.mean([1.0 if r[f"det_full_{a}"] else 0.0 for r in series]))
+    else:
+        metrics["detector_full_frac"] = None
+        for a in C.APPROACHES:
+            metrics[f"detector_full_frac_{a}"] = None
+
     # Per-approach wait summaries (null/None if empty group)
     valid_approach_means: List[float] = []
     for a in C.APPROACHES:

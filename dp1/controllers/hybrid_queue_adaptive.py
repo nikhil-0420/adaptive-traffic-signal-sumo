@@ -53,17 +53,12 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         # 1. Establish baseline green plan
         if plan is not None:
             self.baseline_plan = plan
-        elif "R4" in self.cfg.rungs:
-            # R4: Un-oracled baseline during warm-up (no scenario or future demand knowledge)
+        else:
+            # Un-oracled baseline during warm-up (no scenario or future demand knowledge)
             if self.network == "marathahalli":
                 self.baseline_plan = C.FixedTimeConfig(green_ns_s=19.0, green_ew_s=21.0)
             else:
                 self.baseline_plan = C.FixedTimeConfig(green_ns_s=15.0, green_ew_s=15.0)
-        elif self.network == "marathahalli" or scenario in ("imbalanced_orr", "imbalanced_varthur", "surge_orr_north"):
-            from ..site_scenarios import site_webster_plan
-            self.baseline_plan = site_webster_plan(scenario, demand_level=demand_level)
-        else:
-            self.baseline_plan = C.webster_plan(scenario, demand_level=demand_level)
 
         # Baseline targets clamped to [min_green, max_green]
         self.baseline_green_s = {
