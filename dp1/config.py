@@ -99,6 +99,18 @@ class HybridQueueAdaptiveConfig:
     demand_weight_competing: float = 1.0 # Weight for competing approach queue in demand score
     arrival_detection_threshold: float = 0.5 # Min queue delta to detect active arrivals
 
+    # Ablation Ladder Rung Configuration
+    rungs: tuple = ()                   # Active rungs: e.g. ("R2",), ("R2", "R3"), ("R2", "R3", "R4")
+    # R2: Comparative extension parameters
+    r2_margin: float = 1.0              # Multiplier on competing score (1.0 = parity)
+    r2_switch_cost_m: float = 5.0       # 5.0s lost clearance time in score units (5.0m effective queue)
+    # R3: Queue-aware fairness parameters
+    r3_soft_min_wait_s: float = 20.0    # Min competing wait before soft queue-aware fairness triggers
+    r3_queue_ref_m: float = 20.0        # Reference competing queue scaling soft wait limit
+    r3_hard_wait_cap_s: float = 35.0    # Hard anti-starvation cap regardless of competing queue
+    # R4: Measured Webster baseline green
+    r4_warmup_s: float = 300.0          # Measured arrival estimation window for Webster baseline green
+
 
 @dataclass(frozen=True)
 class WebsterMeasuredConfig:
@@ -240,6 +252,9 @@ ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
 HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig()
+HYBRID_R2 = HybridQueueAdaptiveConfig(rungs=("R2",))
+HYBRID_R2_R3 = HybridQueueAdaptiveConfig(rungs=("R2", "R3"))
+HYBRID_R2_R3_R4 = HybridQueueAdaptiveConfig(rungs=("R2", "R3", "R4"))
 WEBSTER_MEASURED = WebsterMeasuredConfig()
 WEBSTER_RECALC = WebsterRecalcConfig()
 FIXED_MATCHED_CYCLE = FixedMatchedCycleConfig()
@@ -256,6 +271,7 @@ ALL_POLICIES = (
     "fixed", "fixed_webster", "adaptive", "pressure", "queue_extension",
     "rl_dqn", "hybrid_queue_adaptive", "webster_measured", "webster_recalc",
     "fixed_matched_cycle", "sumo_actuated", "webster_oracle",
+    "hybrid_r2", "hybrid_r3", "hybrid_r4", "hybrid_r2_r3", "hybrid_r2_r3_r4",
 )
 
 # Demand levels and multipliers (P3)

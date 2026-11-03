@@ -179,7 +179,7 @@ def _run_once(
     kwargs = dict(policy_kwargs or {})
     kwargs["network"] = network
     kwargs["tls_id"] = tls_id
-    if policy in ("fixed_webster", "hybrid_queue_adaptive", "fixed_matched_cycle", "webster_oracle"):
+    if policy in ("fixed_webster", "hybrid_queue_adaptive", "fixed_matched_cycle", "webster_oracle") or policy.startswith("hybrid_"):
         if "scenario" not in kwargs:
             kwargs["scenario"] = scenario
         if "demand_level" not in kwargs:

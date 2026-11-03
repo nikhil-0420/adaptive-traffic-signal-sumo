@@ -10,6 +10,43 @@ from .webster_measured import WebsterMeasuredController
 from .webster_recalc import WebsterRecalcController
 from .fixed_matched_cycle import FixedMatchedCycleController
 from .sumo_actuated import SumoActuatedController
+from .. import config as C
+
+
+class HybridR2Controller(HybridQueueAdaptiveController):
+    """Hybrid controller with R2: Comparative extension."""
+    name = "hybrid_r2"
+    def __init__(self, states, cfg=None, **kw):
+        super().__init__(states, cfg=cfg or C.HYBRID_R2, **kw)
+
+
+class HybridR2R3Controller(HybridQueueAdaptiveController):
+    """Hybrid controller with R2 (Comparative extension) + R3 (Queue-aware fairness)."""
+    name = "hybrid_r2_r3"
+    def __init__(self, states, cfg=None, **kw):
+        super().__init__(states, cfg=cfg or C.HYBRID_R2_R3, **kw)
+
+
+class HybridR2R3R4Controller(HybridQueueAdaptiveController):
+    """Hybrid controller with R2 + R3 + R4 (Measured Webster base green)."""
+    name = "hybrid_r2_r3_r4"
+    def __init__(self, states, cfg=None, **kw):
+        super().__init__(states, cfg=cfg or C.HYBRID_R2_R3_R4, **kw)
+
+
+class HybridR3Controller(HybridQueueAdaptiveController):
+    """Hybrid controller with R3 only (Queue-aware fairness)."""
+    name = "hybrid_r3"
+    def __init__(self, states, cfg=None, **kw):
+        super().__init__(states, cfg=cfg or C.HybridQueueAdaptiveConfig(rungs=("R3",)), **kw)
+
+
+class HybridR4Controller(HybridQueueAdaptiveController):
+    """Hybrid controller with R4 only (Measured Webster base green)."""
+    name = "hybrid_r4"
+    def __init__(self, states, cfg=None, **kw):
+        super().__init__(states, cfg=cfg or C.HybridQueueAdaptiveConfig(rungs=("R4",)), **kw)
+
 
 POLICIES = {
     "fixed": FixedTimeController,
@@ -19,6 +56,11 @@ POLICIES = {
     "queue_extension": QueueExtensionController,
     "rl_dqn": RLDQNController,
     "hybrid_queue_adaptive": HybridQueueAdaptiveController,
+    "hybrid_r2": HybridR2Controller,
+    "hybrid_r3": HybridR3Controller,
+    "hybrid_r4": HybridR4Controller,
+    "hybrid_r2_r3": HybridR2R3Controller,
+    "hybrid_r2_r3_r4": HybridR2R3R4Controller,
     "webster_measured": WebsterMeasuredController,
     "webster_recalc": WebsterRecalcController,
     "fixed_matched_cycle": FixedMatchedCycleController,
