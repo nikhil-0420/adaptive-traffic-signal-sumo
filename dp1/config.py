@@ -259,6 +259,14 @@ ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
 HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig(rungs=("R4",))
+HYBRID_QUEUE_ADAPTIVE_PROJ = HybridQueueAdaptiveConfig(
+    rungs=("R4",),
+    projection_enabled=True,
+    projection_window_s=15.0,
+    projection_horizon_s=6.0,
+    projection_blend_alpha=0.5,
+    projection_sat_flow_fallback_mps=7.5,
+)
 HYBRID_ORACLE_SEEDED = HybridQueueAdaptiveConfig(rungs=())
 HYBRID_R2 = HybridQueueAdaptiveConfig(rungs=("R2",))
 HYBRID_R3 = HybridQueueAdaptiveConfig(rungs=("R4", "R3"))
@@ -275,11 +283,11 @@ SIM = SimConfig()
 
 # Evaluation policy rosters
 STANDARD_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
-HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive")
+HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive", "hybrid_queue_adaptive_proj")
 BASELINE_POLICIES = ("fixed", "fixed_webster", "webster_measured", "webster_recalc", "fixed_matched_cycle", "sumo_actuated")
 ALL_POLICIES = (
     "fixed", "fixed_webster", "adaptive", "pressure", "queue_extension",
-    "rl_dqn", "hybrid_queue_adaptive", "hybrid_oracle_seeded", "webster_measured", "webster_recalc",
+    "rl_dqn", "hybrid_queue_adaptive", "hybrid_queue_adaptive_proj", "hybrid_oracle_seeded", "webster_measured", "webster_recalc",
     "fixed_matched_cycle", "sumo_actuated", "webster_oracle",
     "hybrid_r2", "hybrid_r3", "hybrid_r4", "hybrid_r2_r3", "hybrid_r2_r3_r4",
 )

@@ -49,6 +49,13 @@ class HybridR4Controller(HybridQueueAdaptiveController):
         super().__init__(states, cfg=cfg or C.HYBRID_R4, **kw)
 
 
+class HybridQueueAdaptiveProjController(HybridQueueAdaptiveController):
+    """Hybrid controller with R4 + Short-Horizon Queue Projection (winning Phase 12 policy)."""
+    name = "hybrid_queue_adaptive_proj"
+    def __init__(self, states, cfg=None, **kw):
+        super().__init__(states, cfg=cfg or C.HYBRID_QUEUE_ADAPTIVE_PROJ, **kw)
+
+
 POLICIES = {
     "fixed": FixedTimeController,
     "fixed_webster": FixedWebsterController,
@@ -57,6 +64,7 @@ POLICIES = {
     "queue_extension": QueueExtensionController,
     "rl_dqn": RLDQNController,
     "hybrid_queue_adaptive": HybridQueueAdaptiveController,
+    "hybrid_queue_adaptive_proj": HybridQueueAdaptiveProjController,
     "hybrid_oracle_seeded": HybridOracleSeededController,
     "hybrid_r2": HybridR2Controller,
     "hybrid_r3": HybridR3Controller,
@@ -69,3 +77,4 @@ POLICIES = {
     "sumo_actuated": SumoActuatedController,
     "webster_oracle": WebsterOracleController,
 }
+

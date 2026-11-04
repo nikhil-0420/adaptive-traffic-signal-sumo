@@ -1,0 +1,85 @@
+{
+  "experiment_id": "exp_marathahalli_improve_final",
+  "description": "Final evaluation matrix for DP1 adaptive traffic-signal optimization on Marathahalli junction.",
+  "created_at": "2026-11-04",
+  "network": "marathahalli",
+  "proposed_policy": "hybrid_queue_adaptive_proj",
+  "proposed_policy_provenance": "Phase 12 KEEP verdict (W=15s, h=6s, alpha=0.50, frozen in configs/final_hybrid_projection.yaml)",
+  "main_matrix": {
+    "policies": [
+      { "name": "fixed", "type": "baseline_time_of_day" },
+      { "name": "fixed_matched_cycle", "type": "baseline_cycle_matched" },
+      { "name": "webster_measured", "type": "baseline_model_empirical" },
+      { "name": "webster_recalc", "type": "baseline_model_dynamic" },
+      { "name": "sumo_actuated", "type": "baseline_industry_standard" },
+      { "name": "adaptive", "type": "baseline_queue_proportional" },
+      { "name": "pressure", "type": "baseline_max_pressure" },
+      { "name": "queue_extension", "type": "baseline_actuated_extension" },
+      { "name": "rl_dqn", "type": "baseline_reinforcement_learning" },
+      { "name": "hybrid_queue_adaptive_proj", "type": "proposed_predictive_hybrid" }
+    ],
+    "conditions": [
+      { "scenario": "balanced", "demand_level": "low" },
+      { "scenario": "balanced", "demand_level": "medium" },
+      { "scenario": "balanced", "demand_level": "heavy" },
+      { "scenario": "imbalanced_orr", "demand_level": "low" },
+      { "scenario": "imbalanced_orr", "demand_level": "medium" },
+      { "scenario": "imbalanced_orr", "demand_level": "heavy" },
+      { "scenario": "imbalanced_varthur", "demand_level": "low" },
+      { "scenario": "imbalanced_varthur", "demand_level": "medium" },
+      { "scenario": "imbalanced_varthur", "demand_level": "heavy" },
+      { "scenario": "surge_orr_north", "demand_level": "low" },
+      { "scenario": "surge_orr_north", "demand_level": "medium" },
+      { "scenario": "surge_orr_north", "demand_level": "heavy" },
+      { "scenario": "ramp_peak", "demand_level": "medium" },
+      { "scenario": "ramp_peak", "demand_level": "heavy" },
+      { "scenario": "surge_shift", "demand_level": "medium" },
+      { "scenario": "surge_shift", "demand_level": "heavy" },
+      { "scenario": "lane_closure", "demand_level": "medium" },
+      { "scenario": "lane_closure", "demand_level": "heavy" }
+    ],
+    "seeds": [131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150]
+  },
+  "ablation_submatrix": {
+    "description": "Ablation study evaluating contributions of projection, queue-aware fairness, and de-oracling.",
+    "reference_ladder": "docs/ablation_ladder.md",
+    "variants": [
+      { "name": "hybrid_queue_adaptive", "rung": "R4" },
+      { "name": "hybrid_r3", "rung": "R4+R3" },
+      { "name": "hybrid_oracle_seeded", "rung": "R0" }
+    ],
+    "conditions": [
+      { "scenario": "ramp_peak", "demand_level": "medium" },
+      { "scenario": "ramp_peak", "demand_level": "heavy" },
+      { "scenario": "surge_shift", "demand_level": "medium" },
+      { "scenario": "surge_shift", "demand_level": "heavy" },
+      { "scenario": "lane_closure", "demand_level": "medium" },
+      { "scenario": "lane_closure", "demand_level": "heavy" },
+      { "scenario": "balanced", "demand_level": "heavy" },
+      { "scenario": "imbalanced_orr", "demand_level": "heavy" },
+      { "scenario": "imbalanced_varthur", "demand_level": "heavy" }
+    ],
+    "seeds": [131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150]
+  },
+  "diagnostic_submatrix": {
+    "policies": [
+      { "name": "webster_oracle", "type": "diagnostic_oracle_benchmark" }
+    ],
+    "conditions": [
+      { "scenario": "balanced", "demand_level": "heavy" },
+      { "scenario": "imbalanced_orr", "demand_level": "heavy" },
+      { "scenario": "imbalanced_varthur", "demand_level": "heavy" },
+      { "scenario": "ramp_peak", "demand_level": "heavy" },
+      { "scenario": "surge_shift", "demand_level": "heavy" },
+      { "scenario": "lane_closure", "demand_level": "heavy" }
+    ],
+    "seeds": [131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150]
+  },
+  "cell_counts": {
+    "main_matrix": 3600,
+    "ablation_submatrix": 540,
+    "diagnostic_submatrix": 120,
+    "grand_total_full": 4140,
+    "grand_total_cut": 3070
+  }
+}
