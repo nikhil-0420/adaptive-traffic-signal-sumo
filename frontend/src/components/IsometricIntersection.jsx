@@ -264,14 +264,14 @@ export function IsometricIntersection({
   // "Live simulation view" only with a real advancing run ID; "Replay" for saved runs; "Snapshot" for read-only data.
   const resolvedModeLabel = useMemo(() => {
     if (modeLabel) return modeLabel;
-    if (isLiveMode && runId && !isPaused) {
-      return 'Live simulation view';
+    if (isLiveMode && runId) {
+      return isPlaying ? 'Live simulation view' : 'Live simulation view (Paused)';
     }
     if (replayData || (runId && !isLiveMode)) {
       return 'Replay';
     }
     return 'Snapshot';
-  }, [modeLabel, isLiveMode, runId, isPaused, replayData]);
+  }, [modeLabel, isLiveMode, runId, isPlaying, replayData]);
 
   // Selected vehicle for detail card & follow mode
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
