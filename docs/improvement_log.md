@@ -186,3 +186,30 @@
   - De-oracled default policy `hybrid_queue_adaptive` (v2.0, R4 measured base green, un-oracled BTP warm-up); legacy renamed to `hybrid_oracle_seeded`. Policy version catalog: [`docs/POLICY_VERSIONS.md`](./POLICY_VERSIONS.md).
   - R3 Amendment Test on validation-2 seeds 111–120 (540 runs) in `results/research/exp_ladder_R3_amend_val2/`.
   - Headroom Recheck on dev seeds 101–105 (315 runs) in `results/research/exp_headroom_recheck_dev/`.
+
+## 2026-11-03: Phase 10C - Extended Ground-Truth Queue Tracking
+- **Tag**: `dp1-phase10c`
+- **Deliverables**:
+  - Pre-Registration Amendment 2 ([`docs/PREREGISTRATION_AMENDMENT_2.md`](./PREREGISTRATION_AMENDMENT_2.md)).
+  - Extended ground-truth queue metric across approach legs, internal connector lanes, and inbound ramps (`gt_ext_max_queue_m`, `gt_ext_avg_queue_m`).
+  - Approach queue extents expanded from ~32m to 127m–163m.
+
+## 2026-11-04: Phase 12 - Short-Horizon Queue Projection
+- **Report**: [`docs/phase12_report.md`](./phase12_report.md), [`docs/PROJECTION.md`](./PROJECTION.md)
+- **Outcome**: Negative Result (CUT under Pre-Registration Section 6). All 95% bootstrap confidence intervals for primary metrics spanned zero. Configuration archived to `configs/experimental_hybrid_projection.yaml`. Recommended scientific description: "proactive, state-aware intervention".
+
+## 2026-11-04: Phase F1 - Final Matrix Correction & Re-Freeze (Pre-Registration Amendment 3)
+- **Tag Status**: `dp1-final-frozen` deleted and withheld pending explicit approval.
+- **Authority**: [`docs/PREREGISTRATION_AMENDMENT_3.md`](./PREREGISTRATION_AMENDMENT_3.md)
+- **Matrix Configuration**: [`experiments/final_matrix.yaml`](file:///e:/dp1-traffic-signal/experiments/final_matrix.yaml) & [`experiments/final_matrix.json`](file:///e:/dp1-traffic-signal/experiments/final_matrix.json)
+- **Key Changes**:
+  - Proposed Policy: `hybrid_queue_adaptive` (R4 default, no projection).
+  - Main Policies (7): `fixed`, `webster_measured`, `webster_recalc`, `sumo_actuated`, `adaptive`, `queue_extension`, `hybrid_queue_adaptive`.
+  - Ablation Policy (1): `hybrid_oracle_seeded`.
+  - Conditions (6): `balanced-low`, `balanced-heavy`, `imbalanced_orr-heavy`, `ramp_peak-medium`, `surge_shift-medium`, `lane_closure-medium`.
+  - Seeds: 131–138 (8 seeds), seed-major ordering (48 runs per seed block, 384 total simulations).
+  - Runner Upgrade: Subprocess-isolated fresh processes per run, collision-free TraCI port allocation ($20000 + 200w$), `--workers 5` default, `--max-hours` stopping rule, `--dry-run`.
+  - API Layer: Exposes `gt_ext_q_N/S/E/W`, `det_full_N/S/E/W`, `reason_code`, `delta_g_req_s`, `delta_g_app_s`, and `policy_provenance` (`MEASURED`, `ORACLE`, `ORACLE-SEEDED`, `LEARNED`).
+  - Analysis Pipeline: [`analysis/run_analysis.py`](file:///e:/dp1-traffic-signal/analysis/run_analysis.py) producing paired bootstrap (10k resamples, seed 42), Holm-Bonferroni correction, post-warmup $t \ge 300\text{ s}$ sensitivity, win/tie/loss map, and [`docs/RESULTS_SUMMARY.md`](file:///e:/dp1-traffic-signal/docs/RESULTS_SUMMARY.md).
+  - Validation: 23/23 targeted tests passing; 5 random means recomputed independently with 0.000000 error.
+

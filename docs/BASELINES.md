@@ -67,9 +67,10 @@ $$\text{GREEN}(\text{axis}) \xrightarrow{3\text{ s yellow}} \text{YELLOW}(\text{
 
 ---
 
-## 3. `fixed_matched_cycle` (Cycle-Matched BTP Split Baseline)
+## 3. `fixed_matched_cycle` / `ORACLE-CYCLE` (Cycle-Matched BTP Split Baseline — ORACLE)
 
-### Algorithm & Purpose
+### Algorithm & Provenance
+- **Oracle Status**: **`ORACLE-CYCLE`** (Reads offline scenario demand tables to compute Webster optimal cycle length $C_{\text{webster}}$).
 - **Purpose**: Separates the benefit of **cycle length optimization** from **directional split adaptation**.
 - **Cycle Length**: Matches the exact Webster optimal cycle $C_{\text{webster}}$ for the given scenario and demand level:
   $$C_{\text{matched}} = g_{\text{ns, webster}} + g_{\text{ew, webster}} + 10.0\text{ s}$$
@@ -84,6 +85,7 @@ $$\text{GREEN}(\text{axis}) \xrightarrow{3\text{ s yellow}} \text{YELLOW}(\text{
     - Phase 1 mapped to NS (52.5%), Phase 2 to EW (47.5%).
 - Remains fixed for the entire simulation run.
 - Emits `plan_log.json` containing the matched cycle, split percentages, and Webster original splits.
+- **Benchmark Exclusion**: Dropped from the main final comparison matrix under Pre-Registration Amendment 3 because it requires exact prior knowledge of scenario flows. In outputs and logs it is explicitly relabeled as `ORACLE-CYCLE`.
 
 ---
 

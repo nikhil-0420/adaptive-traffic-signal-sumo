@@ -1,10 +1,11 @@
 experiment_id: exp_marathahalli_improve_final
-description: "Final evaluation matrix for DP1 adaptive traffic-signal optimization on Marathahalli junction."
+description: "Final evaluation matrix for DP1 adaptive traffic-signal optimization on Marathahalli junction under Amendment 3."
 created_at: "2026-11-04"
 network: "marathahalli"
 
-proposed_policy: "hybrid_queue_adaptive_proj"
-proposed_policy_provenance: "Phase 12 KEEP verdict (W=15s, h=6s, alpha=0.50, frozen in configs/final_hybrid_projection.yaml)"
+proposed_policy: "hybrid_queue_adaptive"
+proposed_policy_provenance: "MEASURED (R4 measured base green, no projection, default parameters in configs/final_hybrid_queue_adaptive.yaml)"
+reference_policy: "webster_measured"
 
 main_matrix:
   policies:
@@ -12,129 +13,66 @@ main_matrix:
       type: "baseline_time_of_day"
       description: "Field BTP fixed-time plan (Phase 1 Varthur 105s, Phase 2 ORR 95s, net of clearance)."
       config_source: "dp1/config.py:FIXED_MARATHAHALLI"
-    - name: "fixed_matched_cycle"
-      type: "baseline_cycle_matched"
-      description: "Fixed-time plan matched to adaptive mean cycle time per condition."
-      config_source: "dp1/config.py:FIXED_MATCHED_CYCLE"
+      provenance: "MEASURED"
     - name: "webster_measured"
       type: "baseline_model_empirical"
       description: "Webster equisaturation timing computed from online measured 300s warmup flows."
       config_source: "dp1/config.py:WEBSTER_MEASURED"
+      provenance: "MEASURED"
     - name: "webster_recalc"
       type: "baseline_model_dynamic"
       description: "Webster equisaturation timing recalculated every 300s online window."
       config_source: "dp1/config.py:WEBSTER_RECALC"
+      provenance: "MEASURED"
     - name: "sumo_actuated"
       type: "baseline_industry_standard"
       description: "SUMO native gap-out actuated controller with detector gaps."
       config_source: "dp1/config.py:SUMO_ACTUATED"
+      provenance: "MEASURED"
     - name: "adaptive"
       type: "baseline_queue_proportional"
       description: "Classical queue-proportional controller (green duration proportional to detector queue length)."
       config_source: "configs/final_adaptive.yaml"
-    - name: "pressure"
-      type: "baseline_max_pressure"
-      description: "Max-pressure greedy controller based on approach differential queue lengths."
-      config_source: "dp1/config.py:PRESSURE"
+      provenance: "MEASURED"
     - name: "queue_extension"
       type: "baseline_actuated_extension"
       description: "Queue extension controller with gap-out and competing wait cap."
       config_source: "configs/final_queue_extension.yaml"
-    - name: "rl_dqn"
-      type: "baseline_reinforcement_learning"
-      description: "Deep Q-Network reinforcement learning agent trained on Marathahalli junction states."
-      model_path: "models/dqn_marathahalli_site_best.zip"
-      model_id: "dqn_marathahalli_all_s101_1791958726"
-      model_sha256: "ca46961a82ae9d9847ff3745b9fa5c3ae1be531c032b967fb18b5b9be2e73f59"
-      obs_schema_version: "1.0.0"
-      training_seeds: [101, 102, 103, 104, 105]
-    - name: "hybrid_queue_adaptive_proj"
-      type: "proposed_predictive_hybrid"
-      description: "Proposed Policy: De-oracled empirical base green + queue extension + short-horizon measured-rate queue projection."
-      config_source: "configs/final_hybrid_projection.yaml"
+      provenance: "MEASURED"
+    - name: "hybrid_queue_adaptive"
+      type: "proposed_hybrid"
+      description: "Proposed Policy: De-oracled empirical base green + state-aware queue extension."
+      config_source: "configs/final_hybrid_queue_adaptive.yaml"
+      provenance: "MEASURED"
   conditions:
-    # 12 stationary conditions (4 patterns x 3 levels)
-    - { scenario: "balanced", demand_level: "low" }
-    - { scenario: "balanced", demand_level: "medium" }
-    - { scenario: "balanced", demand_level: "heavy" }
-    - { scenario: "imbalanced_orr", demand_level: "low" }
-    - { scenario: "imbalanced_orr", demand_level: "medium" }
-    - { scenario: "imbalanced_orr", demand_level: "heavy" }
-    - { scenario: "imbalanced_varthur", demand_level: "low" }
-    - { scenario: "imbalanced_varthur", demand_level: "medium" }
-    - { scenario: "imbalanced_varthur", demand_level: "heavy" }
-    - { scenario: "surge_orr_north", demand_level: "low" }
-    - { scenario: "surge_orr_north", demand_level: "medium" }
-    - { scenario: "surge_orr_north", demand_level: "heavy" }
-    # 6 non-stationary conditions (3 scenarios x 2 levels)
-    - { scenario: "ramp_peak", demand_level: "medium" }
-    - { scenario: "ramp_peak", demand_level: "heavy" }
-    - { scenario: "surge_shift", demand_level: "medium" }
-    - { scenario: "surge_shift", demand_level: "heavy" }
-    - { scenario: "lane_closure", demand_level: "medium" }
-    - { scenario: "lane_closure", demand_level: "heavy" }
-  seeds: [131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150]
+    - { scenario: "balanced", demand_level: "low", key: "balanced-low" }
+    - { scenario: "balanced", demand_level: "heavy", key: "balanced-heavy" }
+    - { scenario: "imbalanced_orr", demand_level: "heavy", key: "imbalanced_orr-heavy" }
+    - { scenario: "ramp_peak", demand_level: "medium", key: "ramp_peak-medium" }
+    - { scenario: "surge_shift", demand_level: "medium", key: "surge_shift-medium" }
+    - { scenario: "lane_closure", demand_level: "medium", key: "lane_closure-medium" }
+  seeds: [131, 132, 133, 134, 135, 136, 137, 138]
 
 ablation_submatrix:
-  description: "Ablation study evaluating contributions of projection, queue-aware fairness, and de-oracling."
-  reference_ladder: "docs/ablation_ladder.md"
+  description: "Ablation evaluating removal of scenario demand oracle (R4 measured base green vs R0 oracle-seeded)."
   variants:
-    - name: "hybrid_queue_adaptive"
-      rung: "R4"
-      description: "Proposed architecture without projection (frozen unprojected baseline from Phase 11)."
-      config_source: "configs/final_hybrid_queue_adaptive.yaml"
-    - name: "hybrid_r3"
-      rung: "R4+R3"
-      description: "Ablation with queue-aware fairness soft-wait scaling enabled on top of R4."
-      config_source: "dp1/config.py:HYBRID_R3"
     - name: "hybrid_oracle_seeded"
       rung: "R0"
       description: "Legacy reference hybrid controller seeded from true scenario demand tables (oracle leak benchmark)."
       config_source: "dp1/config.py:HYBRID_ORACLE_SEEDED"
+      provenance: "ORACLE-SEEDED"
   conditions:
-    # 6 non-stationary conditions
-    - { scenario: "ramp_peak", demand_level: "medium" }
-    - { scenario: "ramp_peak", demand_level: "heavy" }
-    - { scenario: "surge_shift", demand_level: "medium" }
-    - { scenario: "surge_shift", demand_level: "heavy" }
-    - { scenario: "lane_closure", demand_level: "medium" }
-    - { scenario: "lane_closure", demand_level: "heavy" }
-    # 3 stationary heavy conditions
-    - { scenario: "balanced", demand_level: "heavy" }
-    - { scenario: "imbalanced_orr", demand_level: "heavy" }
-    - { scenario: "imbalanced_varthur", demand_level: "heavy" }
-  seeds: [131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150]
+    - { scenario: "balanced", demand_level: "low", key: "balanced-low" }
+    - { scenario: "balanced", demand_level: "heavy", key: "balanced-heavy" }
+    - { scenario: "imbalanced_orr", demand_level: "heavy", key: "imbalanced_orr-heavy" }
+    - { scenario: "ramp_peak", demand_level: "medium", key: "ramp_peak-medium" }
+    - { scenario: "surge_shift", demand_level: "medium", key: "surge_shift-medium" }
+    - { scenario: "lane_closure", demand_level: "medium", key: "lane_closure-medium" }
+  seeds: [131, 132, 133, 134, 135, 136, 137, 138]
 
-diagnostic_submatrix:
-  description: "Diagnostic benchmark comparing online performance against true offline scenario-table Webster plan."
-  policies:
-    - name: "webster_oracle"
-      type: "diagnostic_oracle_benchmark"
-      description: "Fixed Webster plan derived from ground-truth scenario demand matrices (theoretical upper bound)."
-      config_source: "dp1/controllers/fixed_webster.py:WebsterOracleController"
-  conditions:
-    - { scenario: "balanced", demand_level: "heavy" }
-    - { scenario: "imbalanced_orr", demand_level: "heavy" }
-    - { scenario: "imbalanced_varthur", demand_level: "heavy" }
-    - { scenario: "ramp_peak", demand_level: "heavy" }
-    - { scenario: "surge_shift", demand_level: "heavy" }
-    - { scenario: "lane_closure", demand_level: "heavy" }
-  seeds: [131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150]
-
-cell_counts:
-  main_matrix: 3600       # 10 policies x 18 conditions x 20 seeds
-  ablation_submatrix: 540  # 3 variants x 9 conditions x 20 seeds
-  diagnostic_submatrix: 120 # 1 policy x 6 conditions x 20 seeds
-  grand_total_full: 4140   # 3600 main + 540 ablation (diagnostic run optionally)
-
-execution_cut_order:
-  enabled_for_fast_review: true
-  policy_rule: "NEVER reduce seeds or conditions for only some policies."
-  cut_rules:
-    - step: 1
-      action: "Reduce ablation seeds from 20 to 10 (seeds 131..140)"
-      cell_reduction: 270  # 3 variants x 9 conditions x 10 seeds cut
-    - step: 2
-      action: "Omit 4 stationary-low conditions across all main policies (balanced_low, imbalanced_orr_low, imbalanced_varthur_low, surge_orr_north_low)"
-      cell_reduction: 800  # 10 policies x 4 conditions x 20 seeds cut
-  grand_total_cut: 3070    # 2800 main (14 conditions x 20 seeds x 10 policies) + 270 ablation
+execution_summary:
+  total_main_runs: 336
+  total_ablation_runs: 48
+  total_runs: 384
+  ordering: "seed_major"
+  runs_per_seed_block: 48

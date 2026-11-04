@@ -68,6 +68,7 @@ def run_simulation(
     record_vehicles: bool = False,
     network: str = "synthetic",
     max_sim_time_s: int = None,
+    port: int = None,
 ):
     """Run one simulation. Retries on TraCI connection failures (parallel runs can race for ports).
 
@@ -84,6 +85,7 @@ def run_simulation(
                 record_vehicles=record_vehicles,
                 network=network,
                 max_sim_time_s=max_sim_time_s,
+                port=port,
             )
         except Exception as e:
             last = e
@@ -99,6 +101,7 @@ def _run_once(
     scenario, policy, seed, gui, out_dir, policy_kwargs, demand_level,
     emergency_event=False, emergency_priority=False, emergency_cfg=None,
     record_vehicles=False, network="synthetic", max_sim_time_s=None,
+    port=None,
 ):
     if network == "marathahalli":
         from .site_network import get_network_paths, build_network as build_site_net
@@ -166,9 +169,12 @@ def _run_once(
     if gui:
         cmd += ["--start", "true", "--delay", "100"]
     conn_label = f"{net_tag}{scenario}_{demand_level}_{policy}_{seed}_{os.getpid()}_{random.randint(1000, 9999)}"
+    traci_kwargs = {"label": conn_label}
+    if port is not None:
+        traci_kwargs["port"] = int(port)
     for attempt in range(4):
         try:
-            traci.start(cmd, label=conn_label)
+            traci.start(cmd, **traci_kwargs)
             break
         except Exception:
             if attempt == 3:

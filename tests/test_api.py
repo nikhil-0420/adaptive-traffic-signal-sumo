@@ -435,3 +435,91 @@ def test_starting_telemetry_and_replay_fallback(monkeypatch, tmp_path):
         assert resp_replay.status_code == 404
     finally:
         process_manager._processes.pop("starting_run_id", None)
+
+
+def test_telemetry_extended_fields_and_provenance(tmp_path):
+    """Verify get_telemetry exposes gt_ext_q, det_full, reason_code, delta_g, and provenance."""
+    test_run_dir = api_config.RUNS_DIR / "marathahalli_balanced_medium_hybrid_queue_adaptive_s101"
+    test_run_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        telem_file = test_run_dir / "telemetry.json"
+        telem_data = {
+            "run_id": "marathahalli_balanced_medium_hybrid_queue_adaptive_s101",
+            "status": "running",
+            "sim_time_s": 120.0,
+            "phase": "GREEN",
+            "axis": "NS",
+            "queues_m": {"N": 15.0, "S": 10.0, "E": 5.0, "W": 2.0},
+            "traffic_light_state": "GGggrrrrGGggrrrr",
+            "updated_at": time.time(),
+            "approach_queues": {
+                "N": {"extended_ground_truth_queue_m": 42.5, "det_full": True},
+                "S": {"extended_ground_truth_queue_m": 12.0, "det_full": False},
+                "E": {"extended_ground_truth_queue_m": 8.0, "det_full": False},
+                "W": {"extended_ground_truth_queue_m": 4.0, "det_full": False},
+            },
+            "adaptive_decision": {
+                "reason_code": "EXTEND_COMPETING_BELOW_THRESHOLD",
+                "delta_g_req_s": 3.0,
+                "delta_g_app_s": 3.0,
+            },
+        }
+        with open(telem_file, "w", encoding="utf-8") as f:
+            json.dump(telem_data, f)
+
+        resp = client.get(f"/api/runs/{telem_data['run_id']}/telemetry")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["gt_ext_q_N"] == 42.5
+        assert data["gt_ext_q_S"] == 12.0
+        assert data["det_full_N"] is True
+        assert data["det_full_S"] is False
+        assert data["reason_code"] == "EXTEND_COMPETING_BELOW_THRESHOLD"
+        assert data["delta_g_req_s"] == 3.0
+        assert data["delta_g_app_s"] == 3.0
+        assert data["policy_provenance"] == "MEASURED"
+
+        # Check ORACLE-SEEDED provenance
+        resp_oracle = client.get("/api/runs/marathahalli_balanced_medium_hybrid_oracle_seeded_s101/telemetry")
+        # completed fallback or 404
+        assert resp_oracle.status_code in (200, 404)
+        if resp_oracle.status_code == 200:
+            assert resp_oracle.json()["policy_provenance"] == "ORACLE-SEEDED"
+
+    finally:
+        for p in test_run_dir.glob("*"):
+            p.unlink(missing_ok=True)
+        test_run_dir.rmdir()
+
+
+def test_decisions_provenance_and_fields():
+    """Verify /decisions endpoint includes policy_provenance and decision fields."""
+    test_run_dir = api_config.RUNS_DIR / "marathahalli_balanced_medium_fixed_matched_cycle_s101"
+    test_run_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        decisions_file = test_run_dir / "decisions.csv"
+        with open(decisions_file, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["t", "cycle", "axis", "action", "reason", "reason_code", "g_base_s", "delta_g_req_s", "delta_g_app_s", "g_extra_s", "target_green_s", "elapsed_s", "q_active_m", "q_competing_m", "score_active", "score_competing"])
+            writer.writeheader()
+            writer.writerow({
+                "t": "30.0", "cycle": "1", "axis": "NS", "action": "HOLD", "reason": "Cycle matched",
+                "reason_code": "FIXED_SCHEDULE", "g_base_s": "45.0", "delta_g_req_s": "0.0", "delta_g_app_s": "0.0",
+                "g_extra_s": "0.0", "target_green_s": "45.0", "elapsed_s": "30.0",
+                "q_active_m": "10.0", "q_competing_m": "5.0", "score_active": "10.0", "score_competing": "5.0"
+            })
+
+        resp = client.get(f"/api/runs/{test_run_dir.name}/decisions")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["policy_provenance"] == "ORACLE"
+        assert len(data["decisions"]) == 1
+        d0 = data["decisions"][0]
+        assert d0["reason_code"] == "FIXED_SCHEDULE"
+        assert d0["delta_g_req_s"] == 0.0
+        assert d0["delta_g_app_s"] == 0.0
+        assert d0["policy_provenance"] == "ORACLE"
+    finally:
+        for p in test_run_dir.glob("*"):
+            p.unlink(missing_ok=True)
+        test_run_dir.rmdir()
+

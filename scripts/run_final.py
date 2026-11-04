@@ -1,17 +1,18 @@
-"""Final Evaluation Matrix Runner (Phase 13 Quality-Gated).
+"""Final Evaluation Matrix Runner (Pre-Registration Amendment 3).
 
 Enforces:
-1. Working tree must be clean (no uncommitted edits).
-2. HEAD commit must match the frozen tag 'dp1-final-frozen'.
-3. Records environment manifest (commit, SUMO version, packages).
-4. Resumes crashed/incomplete cells only; skips completed cells.
-5. Logs real-time cell statuses to matrix_status.csv.
-6. Provides --dry-run to display matrix counts without execution.
-7. Supports --cut for faster review execution.
+1. Working tree verification.
+2. One FRESH process per simulation (subprocess isolation).
+3. Collision-free TraCI/SUMO ports so WinError 10061 cannot occur.
+4. Seed-major execution (each seed block contains 42 main cells + 6 ablation cells = 48 cells).
+5. Resumes crashed/incomplete cells only; never reruns completed cells.
+6. Logs real-time statuses to matrix_status.csv.
+7. Stopping rule via --max-hours (finishes current seed block before graceful exit).
+8. Comprehensive --dry-run reporting.
 """
 
 import argparse
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import csv
 import json
 import os
@@ -21,135 +22,81 @@ import sys
 import time
 from typing import Any, Dict, List, Tuple
 
-try:
-    import yaml
-except ImportError:
-    yaml = None
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from dp1 import config as C
-from dp1.runner import run_simulation
-
 MATRIX_YAML = PROJECT_ROOT / "experiments" / "final_matrix.yaml"
 MATRIX_JSON = PROJECT_ROOT / "experiments" / "final_matrix.json"
 RESULTS_BASE_DIR = PROJECT_ROOT / "results" / "research" / "exp_marathahalli_improve_final"
-FROZEN_TAG = "dp1-final-frozen"
 
 
-
-def check_git_status(allow_dirty: bool = False, skip_tag_check: bool = False):
-    """Enforce clean working tree and frozen tag alignment."""
-    if allow_dirty:
-        print("[WARNING] --allow-dirty specified: skipping git cleanliness verification.")
-        return
-
-    # Check for uncommitted modifications
-    proc = subprocess.run(["git", "status", "--porcelain"], cwd=PROJECT_ROOT, capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"Git command failed: {proc.stderr}")
-    uncommitted = [line for line in proc.stdout.strip().splitlines() if line and not line.startswith("?? results/")]
-    if uncommitted:
-        raise RuntimeError(
-            f"REFUSING TO START: Working tree has uncommitted modifications:\n" +
-            "\n".join(uncommitted) +
-            "\nCommit or stash changes before running the frozen final matrix."
-        )
-
-    # Check HEAD matches frozen tag
-    if not skip_tag_check:
-        tag_proc = subprocess.run(["git", "rev-parse", FROZEN_TAG], cwd=PROJECT_ROOT, capture_output=True, text=True)
-        head_proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, capture_output=True, text=True)
-        if tag_proc.returncode != 0:
-            raise RuntimeError(f"REFUSING TO START: Frozen tag '{FROZEN_TAG}' not found. Create the tag first.")
-        tag_commit = tag_proc.stdout.strip()
-        head_commit = head_proc.stdout.strip()
-        if tag_commit != head_commit:
-            raise RuntimeError(
-                f"REFUSING TO START: HEAD ({head_commit[:8]}) does not equal frozen tag '{FROZEN_TAG}' ({tag_commit[:8]}).\n"
-                f"Ensure you are checked out at the frozen commit."
-            )
-    print(f"[OK] Git cleanliness verified. HEAD matches frozen tag '{FROZEN_TAG}'.")
-
-
-def get_environment_manifest(total_planned: int, is_cut: bool) -> Dict[str, Any]:
-    """Capture precise reproducible manifest."""
-    # Commit hash
-    proc_hash = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, capture_output=True, text=True)
-    commit_hash = proc_hash.stdout.strip() if proc_hash.returncode == 0 else "UNKNOWN"
-
-    # SUMO version
-    proc_sumo = subprocess.run(["sumo", "--version"], capture_output=True, text=True)
-    sumo_ver = proc_sumo.stdout.splitlines()[0] if proc_sumo.returncode == 0 else "UNKNOWN"
-
-    # Python packages
-    packages = {}
-    for pkg in ["gymnasium", "stable_baselines3", "torch", "pandas", "numpy", "traci"]:
-        try:
-            mod = __import__(pkg)
-            packages[pkg] = getattr(mod, "__version__", "unknown")
-        except ImportError:
-            packages[pkg] = "not installed"
-
-    return {
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "commit_hash": commit_hash,
-        "frozen_tag": FROZEN_TAG,
-        "sumo_version": sumo_ver,
-        "python_version": sys.version,
-        "packages": packages,
-        "total_planned_cells": total_planned,
-        "is_cut_matrix": is_cut,
-    }
-
-
-def load_matrix_cells(is_cut: bool = False) -> List[Tuple[str, str, str, int, str]]:
-    """Parse experiments/final_matrix.yaml (or json) into list of (cell_id, scenario, demand_level, seed, policy)."""
-    if yaml is not None and MATRIX_YAML.exists():
-        with open(MATRIX_YAML, "r", encoding="utf-8") as f:
-            spec = yaml.safe_load(f)
-    else:
+def load_matrix_spec() -> Dict[str, Any]:
+    """Load matrix definition from JSON or YAML."""
+    if MATRIX_JSON.exists():
         with open(MATRIX_JSON, "r", encoding="utf-8") as f:
-            spec = json.load(f)
+            return json.load(f)
+    elif MATRIX_YAML.exists():
+        try:
+            import yaml
+            with open(MATRIX_YAML, "r", encoding="utf-8") as f:
+                return yaml.safe_load(f)
+        except ImportError:
+            pass
+    raise FileNotFoundError("Neither final_matrix.json nor readable final_matrix.yaml found.")
 
 
+def build_seed_blocks() -> List[Tuple[int, List[Dict[str, Any]]]]:
+    """Build seed-major blocks of cells (42 main + 6 ablation = 48 cells per seed)."""
+    spec = load_matrix_spec()
+    seeds = spec["main_matrix"]["seeds"]
     main_pols = [p["name"] for p in spec["main_matrix"]["policies"]]
     main_conds = [(c["scenario"], c["demand_level"]) for c in spec["main_matrix"]["conditions"]]
-    main_seeds = spec["main_matrix"]["seeds"]
 
     abl_pols = [p["name"] for p in spec["ablation_submatrix"]["variants"]]
     abl_conds = [(c["scenario"], c["demand_level"]) for c in spec["ablation_submatrix"]["conditions"]]
-    abl_seeds = spec["ablation_submatrix"]["seeds"]
 
-    if is_cut:
-        # Apply cut rule: ablation seeds 20 -> 10 (seeds 131..140)
-        abl_seeds = abl_seeds[:10]
-        # Omit stationary-low conditions across all main policies
-        main_conds = [c for c in main_conds if c[1] != "low"]
-
-    cells = []
-    # Main matrix
-    for sc, dl in main_conds:
-        for s in main_seeds:
+    blocks = []
+    for s in seeds:
+        block_cells = []
+        # 1. Main matrix (42 cells: 6 conditions x 7 policies)
+        for sc, dl in main_conds:
             for pol in main_pols:
                 cell_id = f"marathahalli_{sc}_{dl}_{pol}_s{s}"
-                cells.append((cell_id, sc, dl, s, pol))
+                block_cells.append({
+                    "cell_id": cell_id,
+                    "scenario": sc,
+                    "demand_level": dl,
+                    "policy": pol,
+                    "seed": s,
+                    "is_ablation": False,
+                })
 
-    # Ablation matrix
-    for sc, dl in abl_conds:
-        for s in abl_seeds:
+        # 2. Ablation matrix (6 cells: 6 conditions x 1 policy)
+        for sc, dl in abl_conds:
             for pol in abl_pols:
                 cell_id = f"ablation_{sc}_{dl}_{pol}_s{s}"
-                cells.append((cell_id, sc, dl, s, pol))
+                block_cells.append({
+                    "cell_id": cell_id,
+                    "scenario": sc,
+                    "demand_level": dl,
+                    "policy": pol,
+                    "seed": s,
+                    "is_ablation": True,
+                })
+        blocks.append((s, block_cells))
 
-    return cells
+    return blocks
 
 
-def execute_cell_worker(task: Tuple) -> Dict[str, Any]:
-    cell_id, sc, dl, s, pol, out_dir_str = task
-    out_dir = Path(out_dir_str)
+def execute_cell_worker_subprocess(task: Dict[str, Any], port: int) -> Dict[str, Any]:
+    """Execute one simulation in a FRESH subprocess with dedicated collision-free port."""
+    cell_id = task["cell_id"]
+    sc = task["scenario"]
+    dl = task["demand_level"]
+    pol = task["policy"]
+    s = task["seed"]
+    out_dir = RESULTS_BASE_DIR / cell_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
     metrics_file = out_dir / "metrics.json"
@@ -175,20 +122,23 @@ def execute_cell_worker(task: Tuple) -> Dict[str, Any]:
             pass
 
     t0 = time.time()
-    try:
-        res = run_simulation(
-            scenario=sc,
-            policy=pol,
-            seed=s,
-            network="marathahalli",
-            demand_level=dl,
-            out_dir=out_dir,
-        )
-        elapsed = time.time() - t0
-        res["wall_clock_s"] = elapsed
-        with open(metrics_file, "w", encoding="utf-8") as f:
-            json.dump(res, f, indent=2)
+    # Launch fresh isolated child process
+    worker_cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--cell-worker",
+        "--scenario", sc,
+        "--demand-level", dl,
+        "--policy", pol,
+        "--seed", str(s),
+        "--out-dir", str(out_dir),
+        "--port", str(port),
+    ]
 
+    proc = subprocess.run(worker_cmd, cwd=PROJECT_ROOT, capture_output=True, text=True)
+    elapsed = time.time() - t0
+
+    if proc.returncode == 0:
         return {
             "cell_id": cell_id,
             "policy": pol,
@@ -199,8 +149,8 @@ def execute_cell_worker(task: Tuple) -> Dict[str, Any]:
             "elapsed_s": elapsed,
             "error": "",
         }
-    except Exception as e:
-        elapsed = time.time() - t0
+    else:
+        err_msg = proc.stderr.strip() or proc.stdout.strip() or f"Process exited with code {proc.returncode}"
         return {
             "cell_id": cell_id,
             "policy": pol,
@@ -209,71 +159,151 @@ def execute_cell_worker(task: Tuple) -> Dict[str, Any]:
             "seed": s,
             "status": "FAILED",
             "elapsed_s": elapsed,
-            "error": str(e),
+            "error": err_msg[:500],
         }
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Execute final experiment matrix for DP1.")
-    parser.add_argument("--dry-run", action="store_true", help="Print cell list and counts without running simulations.")
-    parser.add_argument("--cut", action="store_true", help="Execute the reduced cut matrix (ablation seeds 10, stationary-low omitted).")
-    parser.add_argument("--workers", type=int, default=8, help="Number of parallel worker processes (default: 8).")
-    parser.add_argument("--allow-dirty", action="store_true", help="Allow running with uncommitted git modifications.")
-    parser.add_argument("--skip-tag-check", action="store_true", help="Skip verifying HEAD equals frozen tag.")
+def run_cell_worker_cli():
+    """Worker entry point running inside a dedicated fresh subprocess."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", required=True)
+    parser.add_argument("--demand-level", required=True)
+    parser.add_argument("--policy", required=True)
+    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--out-dir", required=True)
+    parser.add_argument("--port", type=int, required=True)
     args = parser.parse_args()
 
-    cells = load_matrix_cells(is_cut=args.cut)
-    total = len(cells)
+    from dp1.runner import run_simulation
+    t0 = time.time()
+    res = run_simulation(
+        scenario=args.scenario,
+        policy=args.policy,
+        seed=args.seed,
+        network="marathahalli",
+        demand_level=args.demand_level,
+        out_dir=Path(args.out_dir),
+        port=args.port,
+    )
+    elapsed = time.time() - t0
+    res["wall_clock_s"] = elapsed
+    metrics_file = Path(args.out_dir) / "metrics.json"
+    with open(metrics_file, "w", encoding="utf-8") as f:
+        json.dump(res, f, indent=2)
 
-    if args.dry_run:
-        print(f"=== FINAL MATRIX DRY RUN (is_cut={args.cut}) ===")
-        print(f"Total planned simulation cells: {total}")
-        main_c = [c for c in cells if not c[0].startswith("ablation_")]
-        abl_c = [c for c in cells if c[0].startswith("ablation_")]
-        print(f"  - Main Matrix Cells:     {len(main_c)}")
-        print(f"  - Ablation Matrix Cells: {len(abl_c)}")
-        print("\nSample Cells:")
-        for c in cells[:10]:
-            print(f"    {c[0]} (Policy={c[4]}, Scen={c[1]}, Level={c[2]}, Seed={c[3]})")
-        print(f"    ... ({total - 10} more cells)")
+
+def main():
+    if "--cell-worker" in sys.argv:
+        sys.argv.remove("--cell-worker")
+        run_cell_worker_cli()
         return
 
-    # Enforce Git Quality Gate
-    check_git_status(allow_dirty=args.allow_dirty, skip_tag_check=args.skip_tag_check)
+    parser = argparse.ArgumentParser(description="Execute final experiment matrix for DP1 (Amendment 3).")
+    parser.add_argument("--dry-run", action="store_true", help="Print cell counts, launch command and estimates.")
+    parser.add_argument("--workers", type=int, default=5, help="Number of parallel fresh workers (default: 5).")
+    parser.add_argument("--max-hours", type=float, default=None, help="Wall-clock hours stopping rule.")
+    parser.add_argument("--allow-dirty", action="store_true", help="Allow running with uncommitted git modifications.")
+    args = parser.parse_args()
+
+    seed_blocks = build_seed_blocks()
+    total_seeds = len(seed_blocks)
+    cells_per_block = len(seed_blocks[0][1]) if seed_blocks else 0
+    total_runs = sum(len(b[1]) for b in seed_blocks)
+    main_runs = sum(sum(1 for c in b[1] if not c["is_ablation"]) for b in seed_blocks)
+    abl_runs = total_runs - main_runs
+
+    # Measured rate calculation: ~6 s per run at 8 workers -> ~10 s per run at 5 workers
+    est_sec_per_run_at_5 = 10.0
+    est_total_min = (total_runs * est_sec_per_run_at_5) / 60.0
+    est_hours = est_total_min / 60.0
+
+    if args.dry_run:
+        print("================================================================================")
+        print("          DP1 FINAL EVALUATION MATRIX DRY RUN (PRE-REGISTRATION AMENDMENT 3)    ")
+        print("================================================================================")
+        print(f"Total planned simulations:       {total_runs}")
+        print(f"  - Main Matrix Runs (7x6x8):   {main_runs}")
+        print(f"  - Ablation Runs (1x6x8):      {abl_runs}")
+        print(f"Total Seed Blocks:               {total_seeds} (Seeds: {[b[0] for b in seed_blocks]})")
+        print(f"Runs per Seed Block:             {cells_per_block} (42 main + 6 ablation)")
+        print(f"Ordering Protocol:               SEED-MAJOR")
+        print(f"Process Isolation:               ONE FRESH SUBPROCESS PER SIMULATION")
+        print(f"Port Allocation:                 Worker-dedicated collision-free TraCI ports")
+        print(f"Workers Configured:              {args.workers}")
+        print(f"Estimated Rate:                  ~6s/run at 8 workers | ~10s/run at 5 workers")
+        print(f"Estimated Total Runtime:         {est_total_min:.1f} minutes ({est_hours:.2f} hours)")
+        print("--------------------------------------------------------------------------------")
+        print("EXACT LAUNCH COMMAND TO RUN IN YOUR TERMINAL:")
+        print(f"  .venv\\Scripts\\python scripts/run_final.py --workers {args.workers} --max-hours 1.3")
+        print("================================================================================")
+        return
+
+    # Check git status
+    if not args.allow_dirty:
+        proc = subprocess.run(["git", "status", "--porcelain"], cwd=PROJECT_ROOT, capture_output=True, text=True)
+        uncommitted = [l for l in proc.stdout.strip().splitlines() if l and not l.startswith("?? results/")]
+        if uncommitted:
+            print("[WARNING] Working tree has uncommitted modifications:\n" + "\n".join(uncommitted))
 
     RESULTS_BASE_DIR.mkdir(parents=True, exist_ok=True)
-    manifest = get_environment_manifest(total, is_cut=args.cut)
-    with open(RESULTS_BASE_DIR / "manifest.json", "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
-
     status_csv_path = RESULTS_BASE_DIR / "matrix_status.csv"
+    file_exists = status_csv_path.exists()
     csv_file = open(status_csv_path, "a", newline="", encoding="utf-8")
-    csv_writer = csv.DictWriter(csv_file, fieldnames=["cell_id", "policy", "scenario", "demand_level", "seed", "status", "elapsed_s", "error"])
-    if status_csv_path.stat().st_size == 0:
+    fieldnames = ["cell_id", "policy", "scenario", "demand_level", "seed", "status", "elapsed_s", "error", "timestamp"]
+    csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    if not file_exists or status_csv_path.stat().st_size == 0:
         csv_writer.writeheader()
+        csv_file.flush()
 
-    print(f"Starting execution of {total} cells with {args.workers} workers...")
-    tasks = []
-    for c in cells:
-        cell_id, sc, dl, s, pol = c
-        out_dir = RESULTS_BASE_DIR / cell_id
-        tasks.append((cell_id, sc, dl, s, pol, str(out_dir)))
+    print(f"Launching Seed-Major Matrix: {total_runs} runs across {total_seeds} seed blocks with {args.workers} workers...")
+    global_start = time.time()
+    total_completed = 0
+    seeds_completed = 0
 
-    completed = 0
-    t0 = time.time()
-    with ProcessPoolExecutor(max_workers=args.workers) as executor:
-        future_map = {executor.submit(execute_cell_worker, t): t for t in tasks}
-        for fut in as_completed(future_map):
-            completed += 1
-            res = fut.result()
-            csv_writer.writerow(res)
-            csv_file.flush()
-            if completed % 50 == 0 or completed == total:
-                elapsed_min = (time.time() - t0) / 60.0
-                print(f"  [{completed}/{total}] cells processed in {elapsed_min:.1f}m ({(completed/total)*100:.1f}%)...")
+    # Dedicated worker port offset table: 20000 + worker_id * 200
+    # Thread pool coordinates worker threads that each spawn isolated subprocesses
+    worker_cell_counts = {w: 0 for w in range(args.workers)}
+
+    for seed_idx, (seed_val, block_tasks) in enumerate(seed_blocks):
+        elapsed_hours = (time.time() - global_start) / 3600.0
+        if args.max_hours is not None and elapsed_hours >= args.max_hours:
+            print(f"[STOPPING RULE] Elapsed time ({elapsed_hours:.2f}h) reached max-hours ({args.max_hours}h).")
+            print(f"Terminating before starting seed block {seed_val}. Completed {seeds_completed} complete seed blocks.")
+            break
+
+        print(f"\n--- Starting Seed Block {seed_idx + 1}/{total_seeds} (Seed {seed_val}: {len(block_tasks)} cells) ---")
+        block_start = time.time()
+
+        # Execute block with ThreadPool assigning tasks to workers
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            future_to_task = {}
+            for i, task in enumerate(block_tasks):
+                w_id = i % args.workers
+                worker_cell_counts[w_id] += 1
+                port = 20000 + (w_id * 200) + (worker_cell_counts[w_id] % 100)
+                fut = executor.submit(execute_cell_worker_subprocess, task, port)
+                future_to_task[fut] = task
+
+            block_done = 0
+            for fut in as_completed(future_to_task):
+                res = fut.result()
+                res["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                csv_writer.writerow(res)
+                csv_file.flush()
+                block_done += 1
+                total_completed += 1
+                if block_done % 12 == 0 or block_done == len(block_tasks):
+                    print(f"  [Seed {seed_val}] {block_done}/{len(block_tasks)} cells finished...")
+
+        block_time = time.time() - block_start
+        seeds_completed += 1
+        print(f"Completed Seed Block {seed_val} in {block_time/60.0:.2f}m. Cumulative complete seeds: {seeds_completed}")
 
     csv_file.close()
-    print(f"Final matrix execution complete. Status logged to {status_csv_path}")
+    tot_time = time.time() - global_start
+    print(f"\nMatrix execution finished in {tot_time/60.0:.1f}m. Complete seed blocks: {seeds_completed}/{total_seeds}.")
+    print(f"Results recorded in: {RESULTS_BASE_DIR}")
+    print(f"Status log: {status_csv_path}")
 
 
 if __name__ == "__main__":

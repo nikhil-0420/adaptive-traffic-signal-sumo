@@ -13,7 +13,7 @@ This document tracks the explicit definition, provenance, and experimental histo
 | `webster_oracle` | v1.0 | Explicit alias for `fixed_webster` to denote true offline mathematical scenario demand curves. | Phase 9–10B | `cda9433` | **ORACLE** |
 | `webster_measured` | v1.0 | Fixed-time Webster plan with flows measured empirically during a 300 s warm-up window (BTP warm-up plan: 19s NS / 21s EW). Non-oracle reference. | Phases 9–10B | `cda9433` | Non-oracle |
 | `webster_recalc` | v1.0 | Recalculated Webster baseline updated every 300 s using a 300 s sliding window of measured vehicle arrivals. | Phases 9–10B | `cda9433` | Non-oracle |
-| `fixed_matched_cycle` | v1.0 | Fixed-time plan matching scenario Webster cycle length with BTP split ratio (47.5% NS / 52.5% EW). | Phases 9–10B | `cda9433` | Semi-oracle (cycle from scenario demand) |
+| `fixed_matched_cycle` (`ORACLE-CYCLE`) | v1.0 | Fixed-time plan matching scenario Webster cycle length with BTP split ratio (47.5% NS / 52.5% EW). Reads true scenario demand table. Dropped from main benchmark matrix. | Phases 9–10B | `cda9433` | **ORACLE-CYCLE** |
 | `sumo_actuated` | v1.0 | SUMO native detector-actuated logic (minDur=10s, maxDur=60s, max-gap=3.0s). Non-oracle reference. | Phases 9–10B | `cda9433` | Non-oracle |
 | `adaptive` | v1.0 | Queue-proportional green allocation ($G = G_{min} + k \cdot Q$). | Phases 1–10B | `dp1-v1.0` | Non-oracle |
 | `pressure` | v1.0 | Queue-differential green allocation ($G = G_{min} + k \cdot \Delta Q$). | Phases 1–10B | `dp1-v1.0` | Non-oracle |
