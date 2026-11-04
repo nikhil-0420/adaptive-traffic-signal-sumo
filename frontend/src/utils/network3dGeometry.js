@@ -150,7 +150,7 @@ export function buildRibbonGeometry(polyline3d, width = 3.2, yOffset = 0.0) {
 /**
  * Generate dashed line segments along a lane polyline.
  */
-export function buildDashedLineGeometry(polyline3d, dashLength = 3.0, gapLength = 3.0, lineWidth = 0.14, yOffset = 0.015) {
+export function buildDashedLineGeometry(polyline3d, dashLength = 3.0, gapLength = 3.0, lineWidth = 0.26, yOffset = 0.035) {
   if (!polyline3d || polyline3d.length < 2) return null;
 
   const pts = polyline3d.map((p) => {
@@ -231,7 +231,7 @@ export function buildDashedLineGeometry(polyline3d, dashLength = 3.0, gapLength 
 /**
  * Generate solid outer edge line ribbon.
  */
-export function buildEdgeLineGeometry(polyline3d, laneWidth = 3.2, side = 'both', lineWidth = 0.15, yOffset = 0.015) {
+export function buildEdgeLineGeometry(polyline3d, laneWidth = 3.2, side = 'both', lineWidth = 0.36, yOffset = 0.035) {
   if (!polyline3d || polyline3d.length < 2) return null;
 
   const pts = polyline3d.map((p) => {
@@ -301,7 +301,7 @@ export function buildEdgeLineGeometry(polyline3d, laneWidth = 3.2, side = 'both'
 /**
  * Generate a stop line bar perpendicular to lane direction at the stop line position.
  */
-export function buildStopLineGeometry(lanePolyline3d, width = 3.2, barThickness = 0.4, yOffset = 0.02) {
+export function buildStopLineGeometry(lanePolyline3d, width = 3.2, barThickness = 0.85, yOffset = 0.045) {
   if (!lanePolyline3d || lanePolyline3d.length < 2) return null;
   const pLast = lanePolyline3d[lanePolyline3d.length - 1];
   const pPrev = lanePolyline3d[lanePolyline3d.length - 2];
@@ -696,14 +696,14 @@ export function compileNetwork3DGeometries(networkData) {
   }
 
   for (const l of underpassLanes) {
-    const rg = buildRibbonGeometry(l.polyline, l.width);
+    const rg = buildRibbonGeometry(l.polyline, l.width, -3.8);
     if (rg) underpassRoadGeoms.push(rg);
 
     if (!l.is_internal) {
-      const eg = buildEdgeLineGeometry(l.polyline, l.width, 'both');
+      const eg = buildEdgeLineGeometry(l.polyline, l.width, 'both', 0.36, -3.8 + 0.035);
       if (eg) edgeLineGeoms.push(eg);
       if (l.index === 1) {
-        const dg = buildDashedLineGeometry(l.polyline);
+        const dg = buildDashedLineGeometry(l.polyline, 3.0, 3.0, 0.26, -3.8 + 0.035);
         if (dg) dashedLineGeoms.push(dg);
       }
     }

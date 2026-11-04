@@ -47,10 +47,10 @@ export function JunctionTwin({
           showControls={showControls}
           modeLabel={
             mode === 'live'
-              ? 'REAL-TIME TRACI LIVE TWIN'
+              ? 'Live simulation view'
               : mode === 'replay'
-              ? 'RECORDED TRACI REPLAY'
-              : 'MARATHAHALLI BRIDGE JUNCTION TWIN'
+              ? 'Replay'
+              : 'Snapshot'
           }
           className="w-full"
         />

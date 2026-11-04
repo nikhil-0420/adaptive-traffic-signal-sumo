@@ -167,7 +167,7 @@ export function RunExplorerView() {
               Approach Queue Lengths Over Time (Metres)
             </h3>
             <p className="text-[11px] text-slate-400">
-              Sensor readings from lane-area detectors (det_N, det_S, det_E, det_W) along 150m approach arms
+              Sensor readings from 24.9m E2 lane-area detectors (det_N, det_S, det_E, det_W; clipped near 24m)
             </p>
           </div>
           <div className="flex items-center gap-3 text-xs font-mono">
@@ -184,7 +184,7 @@ export function RunExplorerView() {
               <LineChart data={timeseries} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                 <XAxis dataKey="t" tick={{ fill: '#94a3b8', fontSize: 11 }} unit="s" />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} unit="m" domain={[0, 150]} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} unit="m" domain={[0, 'auto']} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#111827', borderColor: 'rgba(255,255,255,0.1)', fontSize: '12px' }}
                   formatter={(val, name) => [`${val}m`, name.replace('q_', 'Queue ')]}

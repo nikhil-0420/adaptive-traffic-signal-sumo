@@ -3,12 +3,14 @@ import { useApp } from '../context/AppContext';
 import { useResults, POLICY_META, SCENARIO_META } from '../context/useResults';
 import { IconFilter, IconArrowRight, IconDownload, IconRefresh, IconInfo, IconCheck } from '../components/icons';
 import clsx from 'clsx';
+import { getPolicyProvenance, getProvenanceBadgeClass } from '../utils/policyProvenance';
+import { ResearchEvidencePanel } from '../components/ResearchEvidencePanel';
 
 export function EvidenceView() {
   const { allRuns, openRunReview } = useApp();
   const { aggregateData, pairedDeltas } = useResults();
 
-  const [activeTab, setActiveTab] = useState('archive'); // 'matrix' | 'archive' | 'rerun'
+  const [activeTab, setActiveTab] = useState('study'); // 'study' | 'archive' | 'liveruns' | 'matrix' | 'rerun'
 
   // Run Archive Filter State
   const [filterScenario, setFilterScenario] = useState('all');
@@ -135,12 +137,28 @@ export function EvidenceView() {
       </div>
 
       {/* Primary Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-hairline text-xs font-mono">
+      <div className="flex items-center gap-2 border-b border-hairline text-xs font-mono overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab('study')}
+          className={clsx(
+            'px-4 py-2 border-b-2 font-medium transition-colors flex items-center gap-1.5 shrink-0',
+            activeTab === 'study'
+              ? 'border-petrol text-petrol font-bold'
+              : 'border-transparent text-ink-secondary hover:text-ink'
+          )}
+        >
+          <span>Amendment 3 Study (Primary Evidence)</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-accent/20 text-accent font-bold">
+            7 Policies
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveTab('archive')}
           className={clsx(
-            'px-4 py-2 border-b-2 font-medium transition-colors',
+            'px-4 py-2 border-b-2 font-medium transition-colors shrink-0',
             activeTab === 'archive'
               ? 'border-petrol text-petrol font-semibold'
               : 'border-transparent text-ink-secondary hover:text-ink'
@@ -194,6 +212,9 @@ export function EvidenceView() {
           Re-Run Experiments
         </button>
       </div>
+
+      {/* TAB 0: AMENDMENT 3 STUDY EVIDENCE */}
+      {activeTab === 'study' && <ResearchEvidencePanel />}
 
       {/* TAB 1: RUN ARCHIVE */}
       {activeTab === 'archive' && (
@@ -498,8 +519,16 @@ export function EvidenceView() {
                     <td className="py-2.5 px-3 text-ink-secondary capitalize">
                       {agg.demand_level}
                     </td>
-                    <td className="py-2.5 px-3 text-ink font-semibold">
-                      {agg.policy}
+                    <td className="py-2.5 px-3 text-ink font-semibold flex items-center gap-2">
+                      <span>{agg.policy}</span>
+                      {(() => {
+                        const prov = getPolicyProvenance(agg.policy);
+                        return (
+                          <span className={clsx('px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider', getProvenanceBadgeClass(prov))}>
+                            {prov}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-2.5 px-3 text-right text-ink">
                       {agg.avg_wait_s_mean?.toFixed(1)} ± {agg.avg_wait_s_std?.toFixed(1)} s
@@ -508,7 +537,7 @@ export function EvidenceView() {
                       {agg.p95_wait_s_mean ? `${agg.p95_wait_s_mean.toFixed(1)} s` : '—'}
                     </td>
                     <td className="py-2.5 px-3 text-right text-ink-secondary">
-                      {agg.max_queue_m_mean >= 149 ? '150 m (capped)' : `${agg.max_queue_m_mean?.toFixed(1)} m`}
+                      {agg.max_queue_m_mean >= 24 ? `${agg.max_queue_m_mean?.toFixed(1)} m (det clipped)` : `${agg.max_queue_m_mean?.toFixed(1)} m`}
                     </td>
                     <td className="py-2.5 px-3 text-right text-ink-secondary">
                       {agg.directional_wait_disparity_s_mean != null

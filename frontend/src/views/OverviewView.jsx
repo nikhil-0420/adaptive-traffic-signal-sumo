@@ -33,9 +33,9 @@ export function OverviewView() {
     },
     {
       label: 'Maximum Approach Queue',
-      value: siteHeadline.maxQueueCapped ? '150' : `${siteHeadline.maxQueueM}`,
+      value: siteHeadline.maxQueueCapped ? '24.9' : `${siteHeadline.maxQueueM}`,
       unit: 'm',
-      subtext: 'Sensor length capped at 150m'
+      subtext: 'Detector clipped at ~24m (ground truth extends higher)'
     }
   ];
 

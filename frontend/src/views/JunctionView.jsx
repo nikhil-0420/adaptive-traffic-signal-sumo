@@ -72,7 +72,7 @@ export function JunctionView() {
       name: 'ORR North (KR Puram approach)',
       detector: 'det_orr_n',
       lanes: 3,
-      length: '150 m (E2 lane-area detector)',
+      length: '24.9 m E2 lane-area detector (clipped near 24 m)',
       split: '70% through via underpass, 30% surface turn & slip',
       movement: 'Through to Kadubeesanahalli / Right turn to Whitefield'
     },
@@ -80,7 +80,7 @@ export function JunctionView() {
       name: 'ORR South (Kadubeesanahalli approach)',
       detector: 'det_orr_s',
       lanes: 3,
-      length: '150 m (E2 lane-area detector)',
+      length: '24.9 m E2 lane-area detector (clipped near 24 m)',
       split: '70% through via underpass, 30% surface turn & slip',
       movement: 'Through to KR Puram / Right turn to HAL'
     },
@@ -88,7 +88,7 @@ export function JunctionView() {
       name: 'East (Whitefield / Varthur Rd approach)',
       detector: 'det_wf',
       lanes: 2,
-      length: '150 m (E2 lane-area detector)',
+      length: '24.9 m E2 lane-area detector (clipped near 24 m)',
       split: '70% through via flyover, 30% surface roundabout',
       movement: 'Through to HAL Airport Rd / Left & Right turns to ORR'
     },
@@ -96,7 +96,7 @@ export function JunctionView() {
       name: 'West (HAL Airport Rd approach)',
       detector: 'det_hal',
       lanes: 2,
-      length: '150 m (E2 lane-area detector)',
+      length: '24.9 m E2 lane-area detector (clipped near 24 m)',
       split: '70% through via flyover, 30% surface roundabout',
       movement: 'Through to Whitefield / Left & Right turns to ORR'
     }
@@ -152,7 +152,7 @@ export function JunctionView() {
               <span>Marathahalli Bridge Microscopic Twin</span>
             </span>
             <span className="text-ink-2 text-[11px]">
-              E2 Loop Detectors (150m) · Z-Layer Separation {soloTier ? `· Solo: ${soloTier.toUpperCase()}` : ''}
+              E2 Lane-Area Detectors (24.9m span) · Z-Layer Separation {soloTier ? `· Solo: ${soloTier.toUpperCase()}` : ''}
             </span>
           </div>
 
@@ -237,7 +237,7 @@ export function JunctionView() {
               At-grade roundabout and signalized junction servicing all turning movements (including right-turns toward Bellandur and Whitefield) and remaining through traffic via slip roads and under-bridge connectors.
             </p>
             <div className="pt-2 border-t border-hairline text-[11px] font-mono text-ink-2 flex items-center justify-between">
-              <span>8 Surface Detectors (150m)</span>
+              <span>8 Surface Detectors (24.9m span)</span>
               <span className="text-accent text-[10px] font-semibold">{soloTier === 'surface' ? 'Click to restore' : 'Click to solo'}</span>
             </div>
           </motion.div>

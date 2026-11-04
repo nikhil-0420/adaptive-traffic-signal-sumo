@@ -17,6 +17,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import clsx from 'clsx';
+import { getPolicyProvenance, getProvenanceBadgeClass } from '../utils/policyProvenance';
+import { SCENARIOS } from '../utils/scenarioConstants';
 
 export function ControllerComparisonView() {
   const { getComparisonTable, getScenarioMatrix, SCENARIO_META, aggregateData } = useResults();
@@ -102,10 +104,11 @@ export function ControllerComparisonView() {
             className="dp1-select text-xs font-mono"
             aria-label="Evaluation Scenario"
           >
-            <option value="imbalanced_orr">Imbalanced ORR (Peak North Commuter)</option>
-            <option value="balanced">Balanced 4-Way Flow</option>
-            <option value="imbalanced_varthur">Imbalanced Varthur Rd (Cross-Street)</option>
-            <option value="surge_orr_north">Surge ORR North (Flyover Spillover)</option>
+            {SCENARIOS.map((sc) => (
+              <option key={sc.id} value={sc.id}>
+                {sc.label} {sc.isNonStationary ? '(Non-Stationary)' : ''}
+              </option>
+            ))}
           </select>
 
           <span className="text-xs font-semibold text-ink pl-2 border-l border-hairline">Demand:</span>
@@ -130,6 +133,18 @@ export function ControllerComparisonView() {
           7 policies evaluated · Standard error calculated across N=10 pairs
         </span>
       </div>
+
+      {/* Scenario 1-Line Description (Task 2) */}
+      {(() => {
+        const scMeta = SCENARIOS.find((s) => s.id === selectedScenario);
+        if (!scMeta) return null;
+        return (
+          <div className="p-3 bg-inset/70 border border-hairline rounded-xl text-xs font-mono text-ink-2 flex items-center gap-2">
+            <span className="font-bold text-ink shrink-0">{scMeta.label}:</span>
+            <span className="italic">{scMeta.description}</span>
+          </div>
+        );
+      })()}
 
       {/* 1. Ranked Comparison Table */}
       <div className="dp1-panel p-6 bg-panel rounded-2xl border border-hairline space-y-4 shadow-sm">
@@ -183,6 +198,14 @@ export function ControllerComparisonView() {
                         <span className="w-2 h-2 rounded-full bg-ink-2/40 shrink-0" />
                       )}
                       <span>{row.meta.label}</span>
+                      {(() => {
+                        const prov = getPolicyProvenance(row.policy);
+                        return (
+                          <span className={clsx('px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider', getProvenanceBadgeClass(prov))}>
+                            {prov}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono text-ink font-bold tabular-nums">
                       {row.avgWaitS.toFixed(1)} s
@@ -208,7 +231,7 @@ export function ControllerComparisonView() {
                       {row.directionalDisparityS != null ? `${row.directionalDisparityS.toFixed(1)} s` : '—'}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono text-ink-2 tabular-nums">
-                      {row.maxQueueM >= 149 ? '150 m (capped)' : `${row.maxQueueM.toFixed(1)} m`}
+                      {row.maxQueueM >= 24 ? `${row.maxQueueM.toFixed(1)} m (det clipped)` : `${row.maxQueueM.toFixed(1)} m`}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono text-ink-2 tabular-nums">
                       {row.throughputVph ? `${Math.round(row.throughputVph)} vph` : '—'}
@@ -485,6 +508,12 @@ export function ControllerComparisonView() {
           </div>
         </div>
       )}
+
+      {/* Task 5 Footer Disclaimer */}
+      <div className="pt-4 border-t border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-ink-2">
+        <span>Synthetic demand, modelled geometry, SUMO simulation.</span>
+        <span>Phasora Traffic Intelligence · Pre-Registration Amendment 3</span>
+      </div>
     </div>
   );
 }

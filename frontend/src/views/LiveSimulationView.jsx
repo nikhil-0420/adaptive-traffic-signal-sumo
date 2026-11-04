@@ -18,6 +18,11 @@ import {
   IconArrowRight,
   IconCheck
 } from '../components/icons';
+import { POLICIES, getPolicyConfig, DEFAULT_POLICY_ID } from '../utils/policyConstants';
+import { SCENARIOS, DEMAND_LEVELS, AMENDMENT_3_CONDITIONS } from '../utils/scenarioConstants';
+import { QueuePanel } from '../components/QueuePanel';
+import { DEMO_REPLAYS } from '../utils/replayConstants';
+import { Film, AlertTriangle, AlertCircle, Radio, Clock } from 'lucide-react';
 import clsx from 'clsx';
 
 export function LiveSimulationView() {
@@ -25,9 +30,15 @@ export function LiveSimulationView() {
 
   // Run Configuration State
   const [selectedScenario, setSelectedScenario] = useState('imbalanced_orr');
-  const [selectedController, setSelectedController] = useState('hybrid_queue_adaptive');
+  const [selectedController, setSelectedController] = useState(DEFAULT_POLICY_ID);
   const [selectedDemand, setSelectedDemand] = useState('medium');
-  const [selectedSeed, setSelectedSeed] = useState(121);
+  const [selectedSeed, setSelectedSeed] = useState(131);
+
+  // Replay Picker Demo State
+  const [selectedReplay, setSelectedReplay] = useState(DEMO_REPLAYS[0]);
+  const [isReplayMode, setIsReplayMode] = useState(false);
+  const [launchConflictError, setLaunchConflictError] = useState(null);
+  const [replayError, setReplayError] = useState(null);
 
   // Simulation Execution State
   const [isRunning, setIsRunning] = useState(false);
@@ -221,8 +232,8 @@ export function LiveSimulationView() {
         const cycleNum = Math.floor(simTime / 60);
 
         // Dynamic queue calculation
-        const qN = isNS ? Math.max(0, 34 - (simTime % 30) * 1.1) : Math.min(150, (simTime % 30) * 2.5);
-        const qE = !isNS ? Math.max(0, 26 - (simTime % 30) * 0.9) : Math.min(150, (simTime % 30) * 1.8);
+        const qN = isNS ? Math.max(0, 34 - (simTime % 30) * 1.1) : Math.min(24.9, (simTime % 30) * 2.5);
+        const qE = !isNS ? Math.max(0, 26 - (simTime % 30) * 0.9) : Math.min(24.9, (simTime % 30) * 1.8);
 
         // Emergency detection
         const isAmbulanceScenario = selectedScenario === 'demo_ambulance_priority';
@@ -370,28 +381,105 @@ export function LiveSimulationView() {
       {!isRunning && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            {/* Left 60%: Ambient Preview Twin */}
-            <div className="lg:col-span-7 flex flex-col">
+            {/* Left 60%: Ambient Preview Twin + Replay Picker + Queue HUD */}
+            <div className="lg:col-span-7 flex flex-col space-y-3">
+              {/* Task 7: Replay Picker for Demo */}
+              <div className="dp1-panel p-3 bg-panel border border-hairline font-mono text-xs shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-ink">
+                    <Film size={14} className="text-petrol" />
+                    <span>Saved Replay Picker (Dev Smoke Runs)</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    dev smoke replay, not final results
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {DEMO_REPLAYS.map((dr) => {
+                    const isSelected = isReplayMode && selectedReplay.id === dr.id;
+                    return (
+                      <button
+                        key={dr.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedReplay(dr);
+                          setIsReplayMode(true);
+                          setLaunchConflictError(null);
+                        }}
+                        className={clsx(
+                          'p-2 rounded-lg border text-left transition-all',
+                          isSelected
+                            ? 'bg-inset border-petrol ring-1 ring-petrol text-ink font-bold shadow-xs'
+                            : 'bg-panel border-hairline hover:bg-inset/50 text-ink-2 hover:text-ink'
+                        )}
+                      >
+                        <div className="text-[11px] font-bold text-ink truncate">{dr.label}</div>
+                        <div className="text-[10px] text-ink-2 truncate mt-0.5">{dr.sublabel}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Offline / Conflict Notice Banners */}
+              {connectionStatus.mode !== 'api' && (
+                <div className="p-3 rounded-xl bg-amber-950/20 border border-amber-500/40 text-xs font-mono text-ink flex items-center justify-between gap-2 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <Radio size={14} className="text-amber-400 animate-pulse shrink-0" />
+                    <span>Backend server offline: running in snapshot & verified replay mode. Live simulation engine paused.</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 font-bold shrink-0">
+                    SNAPSHOT ACTIVE
+                  </span>
+                </div>
+              )}
+
+              {launchConflictError && (
+                <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-500/40 text-xs font-mono text-ink flex items-center justify-between gap-2 shadow-xs">
+                  <div className="flex items-center gap-2 text-rose-300">
+                    <AlertCircle size={14} className="text-rose-400 shrink-0" />
+                    <span>{launchConflictError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLaunchConflictError(null)}
+                    className="text-xs text-ink-2 hover:text-ink font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
               <div className="dp1-panel p-3 bg-panel border border-hairline flex flex-col flex-1">
                 <div className="flex items-center justify-between px-2 py-1.5 mb-2 border-b border-hairline text-xs font-mono">
                   <span className="font-semibold text-ink flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-petrol animate-pulse" />
-                    <span>Preview: recorded run · {currentScenarioMeta.label}</span>
+                    <span>
+                      {isReplayMode ? `Replay: ${selectedReplay.label}` : `Preview: ${currentScenarioMeta.label}`}
+                    </span>
                   </span>
                   <span className="text-ink-2 text-[11px]">
-                    Ambient Microscopic Twin
+                    {isReplayMode ? '1:1 Recorded Replay' : 'Ambient Microscopic Twin'}
                   </span>
                 </div>
 
                 <div className="flex-1 rounded overflow-hidden">
                   <JunctionTwin
                     mode="replay"
-                    runId={currentScenarioMeta.previewRunId}
-                    height={460}
+                    runId={isReplayMode ? selectedReplay.id : currentScenarioMeta.previewRunId}
+                    height={440}
                     className="w-full h-full"
                   />
                 </div>
               </div>
+
+              {/* Task 4: Queue Panel (Side-by-side E2 Detector vs GT Extended Queue) */}
+              <QueuePanel
+                queues_m={{ N: 16.2, S: 11.5, E: 5.4, W: 4.8 }}
+                gtExtQueues={{ N: 28.4, S: 11.5, E: 5.4, W: 4.8 }}
+                detFull={{ N: true }}
+                sensorStatus={{ N: 'online', S: 'online', E: 'online', W: 'online' }}
+              />
             </div>
 
             {/* Right 40%: Configuration Console */}
@@ -401,14 +489,17 @@ export function LiveSimulationView() {
                   <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-2">
                     1. Select Demand Scenario
                   </label>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1">
                     {scenarios.map((sc) => {
-                      const isSelected = selectedScenario === sc.id;
+                      const isSelected = selectedScenario === sc.id && !isReplayMode;
                       return (
                         <button
                           key={sc.id}
                           type="button"
-                          onClick={() => setSelectedScenario(sc.id)}
+                          onClick={() => {
+                            setSelectedScenario(sc.id);
+                            setIsReplayMode(false);
+                          }}
                           className={clsx(
                             'p-2.5 rounded-lg border text-left transition-all flex items-center justify-between gap-3',
                             isSelected
@@ -424,6 +515,11 @@ export function LiveSimulationView() {
                               {sc.id === 'demo_ambulance_priority' && (
                                 <span className="px-1.5 py-0.2 rounded text-[10px] bg-emergency-tint text-emergency font-bold font-mono">
                                   EVSP
+                                </span>
+                              )}
+                              {sc.isNonStationary && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-950/80 text-cyan-300 font-bold font-mono">
+                                  DYNAMIC
                                 </span>
                               )}
                             </div>
@@ -442,29 +538,34 @@ export function LiveSimulationView() {
                   </div>
                 </div>
 
-                {/* Controller Segmented Selector */}
+                {/* Controller Segmented Selector with Provenance Badges (Task 1) */}
                 <div>
                   <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-2">
-                    2. Controller Policy
+                    2. Controller Policy ({POLICIES.length} Evaluated)
                   </label>
-                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-inset rounded-lg border border-hairline">
-                    {controllers.map((ctrl) => {
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-1 bg-inset rounded-lg border border-hairline max-h-56 overflow-y-auto">
+                    {POLICIES.map((ctrl) => {
                       const isSelected = selectedController === ctrl.id;
                       return (
                         <button
                           key={ctrl.id}
                           type="button"
                           onClick={() => setSelectedController(ctrl.id)}
-                          title={ctrl.desc}
+                          title={ctrl.description}
                           className={clsx(
-                            'p-2 rounded text-left transition-all',
+                            'p-2 rounded text-left transition-all flex flex-col justify-between',
                             isSelected
-                              ? 'bg-panel text-ink font-bold shadow-xs border border-hairline'
-                              : 'text-ink-2 hover:text-ink'
+                              ? 'bg-panel text-ink font-bold shadow-xs border border-petrol'
+                              : 'text-ink-2 hover:text-ink hover:bg-panel/50'
                           )}
                         >
-                          <div className="text-xs truncate">{ctrl.name}</div>
-                          <div className="text-[10px] text-ink-2 font-mono mt-0.5">{ctrl.badge}</div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-ink truncate">{ctrl.shortLabel}</span>
+                            <span className={clsx('px-1 py-0.2 rounded text-[9px] font-mono uppercase font-bold border', ctrl.badgeClass)}>
+                              {ctrl.isBenchmarkOnly ? 'BENCHMARK ONLY' : ctrl.provenance}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-ink-2 truncate mt-0.5">{ctrl.description}</div>
                         </button>
                       );
                     })}
@@ -787,6 +888,12 @@ export function LiveSimulationView() {
           </div>
         </div>
       )}
+
+      {/* Task 5 Footer Disclaimer */}
+      <div className="pt-4 border-t border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-mono text-ink-2">
+        <span>Synthetic demand, modelled geometry, SUMO simulation.</span>
+        <span>Phasora Traffic Intelligence · Pre-Registration Amendment 3</span>
+      </div>
     </div>
   );
 }

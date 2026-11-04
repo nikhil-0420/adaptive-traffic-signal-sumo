@@ -31,17 +31,26 @@ export function formatMeters(m) {
   if (m === null || m === undefined || m === 'n/a') return 'n/a';
   const val = Number(m);
   if (isNaN(val)) return 'n/a';
-  if (val >= 149.9) return '150 m (sensor capped)';
+  if (val >= 24.85) return `${val.toFixed(1)} m (det clipped)`;
   return `${val.toFixed(1)} m`;
 }
 
 export const DECISION_CODE_LABELS = {
+  BASELINE_ENTRY: 'Baseline Green Entry',
+  BASE_MIN: 'Baseline Green Entry',
   SWITCH_GAP_OUT: 'Early Gap-Out Terminated',
+  GAP_OUT: 'Early Gap-Out Terminated',
+  SWITCH_DEMAND_EXHAUSTED: 'Demand Exhausted Switch',
   EXTEND_APPROVED: 'Green Extension Approved',
+  QUEUE_EXTEND: 'Queue-Length Extension',
+  QUEUE_DRAIN: 'Queue-Length Extension',
   HOLD_CLEARING: 'Holding Green for Clearance',
   HOLD_MIN_GREEN: 'Holding for Minimum Green',
   REJECTED_MIN_GREEN: 'Switch Refused (Min Green)',
+  MIN_FLOOR: 'Minimum Green Floor Bound',
   SWITCH_MAX_GREEN: 'Maximum Green Ceiling Reached',
+  MAX_GREEN: 'Maximum Green Ceiling Reached',
+  MAX_GREEN_CEILING: 'Max Green Ceiling Reached',
   SWITCH_FAIRNESS: 'Fairness Wait Limit Reached',
   SWITCH_FAIRNESS_WAIT_LIMIT: 'Fairness Wait Limit Reached',
   SWITCH_PRESSURE: 'Pressure Switch Triggered',
@@ -62,7 +71,7 @@ export function getDecisionCodeLabel(code) {
 /**
  * Turns structured decision fields into plain, human-friendly text.
  * @param {Object} d Structured decision record
- * @returns {Object} { headline, prose, codeLabel, type, outcome, rawCode, deltaS, targetS, maxS }
+ * @returns {Object} Structured decision explanation with reason_code, proposed/applied actions, deltas, and cumulative extra green.
  */
 export function explainDecision(d) {
   if (!d) {
@@ -73,17 +82,31 @@ export function explainDecision(d) {
       type: 'neutral',
       outcome: 'PENDING',
       rawCode: 'NONE',
+      reasonCode: 'NONE',
+      reason: 'No decision telemetry available.',
+      proposedAction: 'HOLD',
+      appliedAction: 'HOLD',
+      deltaGReqS: null,
+      deltaGAppS: null,
+      gExtraS: 0,
       deltaS: 'n/a'
     };
   }
 
+  const rawCode = d.reason_code || d.decision_outcome || d.action || (d.actual_green_s != null ? 'CHOSE_GREEN' : 'UNKNOWN');
+  const reasonCode = d.reason_code || rawCode;
+  const proposedAction = d.proposed_action || d.action || (rawCode.includes('SWITCH') ? 'SWITCH' : 'HOLD');
+  const appliedAction = d.applied_action || d.action || proposedAction;
+  const deltaGReqS = d.delta_g_req_s !== undefined ? Number(d.delta_g_req_s) : (d.g_req_s !== undefined ? Number(d.g_req_s) : null);
+  const deltaGAppS = d.delta_g_app_s !== undefined ? Number(d.delta_g_app_s) : (d.g_app_s !== undefined ? Number(d.g_app_s) : null);
+  const gExtraS = d.g_extra_s !== undefined ? Number(d.g_extra_s) : (d.cumulative_extra_green_s !== undefined ? Number(d.cumulative_extra_green_s) : 0);
+
   // If a real logged reason exists directly from the controller, display it faithfully without inventing text:
   if (d.reason) {
-    const rawCode = d.decision_outcome || d.reason_code || d.action || 'UNKNOWN';
     return {
-      headline: getDecisionCodeLabel(rawCode),
+      headline: getDecisionCodeLabel(reasonCode),
       prose: d.reason,
-      codeLabel: getDecisionCodeLabel(rawCode),
+      codeLabel: getDecisionCodeLabel(reasonCode),
       type: rawCode.includes('EXTEND')
         ? 'extend'
         : rawCode.includes('GAP_OUT')
@@ -94,8 +117,16 @@ export function explainDecision(d) {
         ? 'hold'
         : 'neutral',
       outcome: rawCode,
+      code: reasonCode,
       rawCode,
-      deltaS: d.delta_g_app_s ?? 'n/a',
+      reasonCode,
+      reason: d.reason,
+      proposedAction,
+      appliedAction,
+      deltaGReqS,
+      deltaGAppS,
+      gExtraS,
+      deltaS: deltaGAppS !== null ? deltaGAppS : (d.delta_g_app_s ?? 'n/a'),
       targetS: d.target_green_s ?? d.actual_green_s ?? 15,
       maxS: 60,
     };
@@ -116,7 +147,6 @@ export function explainDecision(d) {
   qActive = qActive ?? 0;
   qCompeting = qCompeting ?? 0;
 
-  const rawCode = d.decision_outcome || d.reason_code || d.action || (d.actual_green_s != null ? 'CHOSE_GREEN' : 'UNKNOWN');
   const action = (d.applied_action || d.action || d.proposed_action || (d.actual_green_s != null ? 'CYCLE_ALLOCATION' : '')).toUpperCase();
   const axis = getAxisName(d.axis);
   const compAxis = getCompetingAxisName(d.axis);

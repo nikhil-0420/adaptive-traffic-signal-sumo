@@ -62,26 +62,42 @@ export function DecisionExplainer({ decision, className = '', compact = false })
       </p>
 
       {/* Structured telemetry pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-hairline text-xs font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-hairline text-xs font-mono">
         <div className="bg-inset p-2 rounded border border-hairline">
-          <div className="text-[10px] text-ink-secondary">Target Green</div>
-          <div className="text-sm font-semibold text-ink mt-0.5">{d.targetS ? `${d.targetS.toFixed(1)} s` : '—'}</div>
-        </div>
-        <div className="bg-inset p-2 rounded border border-hairline">
-          <div className="text-[10px] text-ink-secondary">Added Seconds</div>
-          <div className="text-sm font-semibold text-ink mt-0.5">
-            {d.deltaS > 0 ? `+${d.deltaS.toFixed(1)} s` : '0.0 s'}
+          <div className="text-[10px] text-ink-secondary uppercase">Action (Prop / App)</div>
+          <div className="text-xs font-bold text-ink mt-0.5 truncate" title={`Proposed: ${d.proposedAction || 'HOLD'} | Applied: ${d.appliedAction || 'HOLD'}`}>
+            <span className="text-[#38BDF8]">{d.proposedAction || 'HOLD'}</span>
+            <span className="text-ink-secondary mx-1">→</span>
+            <span className={d.appliedAction?.includes('EXTEND') ? 'text-emerald-400 font-bold' : 'text-ink'}>
+              {d.appliedAction || 'HOLD'}
+            </span>
           </div>
         </div>
         <div className="bg-inset p-2 rounded border border-hairline">
-          <div className="text-[10px] text-ink-secondary">Active Queue</div>
-          <div className="text-sm font-semibold text-ink mt-0.5">
+          <div className="text-[10px] text-ink-secondary uppercase">Delta G (Req / App)</div>
+          <div className="text-xs font-semibold text-ink mt-0.5">
+            <span className="text-ink-secondary">{d.deltaGReqS != null ? `+${d.deltaGReqS.toFixed(1)}s` : '0.0s'}</span>
+            <span className="text-ink-secondary mx-1">/</span>
+            <span className={d.deltaGAppS > 0 ? 'text-[#FFB020] font-bold' : 'text-ink'}>
+              {d.deltaGAppS != null ? `+${d.deltaGAppS.toFixed(1)}s` : (d.deltaS > 0 ? `+${Number(d.deltaS).toFixed(1)}s` : '0.0s')}
+            </span>
+          </div>
+        </div>
+        <div className="bg-inset p-2 rounded border border-hairline">
+          <div className="text-[10px] text-ink-secondary uppercase">Cumulative Extra Green</div>
+          <div className="text-xs font-bold text-emerald-400 mt-0.5">
+            {d.gExtraS > 0 ? `+${d.gExtraS.toFixed(1)} s` : '0.0 s'}
+          </div>
+        </div>
+        <div className="bg-inset p-2 rounded border border-hairline">
+          <div className="text-[10px] text-ink-secondary uppercase">Active Queue</div>
+          <div className="text-xs font-semibold text-ink mt-0.5">
             {decision?.q_active_m != null ? `${Number(decision.q_active_m).toFixed(1)} m` : '—'}
           </div>
         </div>
         <div className="bg-inset p-2 rounded border border-hairline">
-          <div className="text-[10px] text-ink-secondary">Opposing Queue</div>
-          <div className="text-sm font-semibold text-ink mt-0.5">
+          <div className="text-[10px] text-ink-secondary uppercase">Opposing Queue</div>
+          <div className="text-xs font-semibold text-ink mt-0.5">
             {decision?.q_competing_m != null ? `${Number(decision.q_competing_m).toFixed(1)} m` : '—'}
           </div>
         </div>

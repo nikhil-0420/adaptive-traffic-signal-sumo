@@ -22,12 +22,57 @@ import { api } from '../api/client';
 import { useApp } from '../context/AppContext';
 import marathahalliGeom from '../data/marathahalli_geometry.json';
 
-import { isWebGLAvailable } from '../utils/network3dGeometry';
+import { isWebGLAvailable, CAMERA_PRESETS } from '../utils/network3dGeometry';
 
 export { isWebGLAvailable };
 
-// Lazy-load Phase 4 3D Scene chunk to keep main bundle small
-const Network3DScene = React.lazy(() => import('./Network3DScene'));
+// Local Error Boundary to catch 3D module fetch / WebGL errors without crashing the parent view
+class ThreeErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('[ThreeErrorBoundary] Caught error in 3D scene:', error, errorInfo);
+    if (this.props.onError) {
+      this.props.onError(error);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback
+        ? this.props.fallback(this.state.error, () => this.setState({ hasError: false, error: null }))
+        : null;
+    }
+    return this.props.children;
+  }
+}
+
+// Resilient dynamic import for 3D Scene with retry and cache-busting
+function createLazy3DScene() {
+  return React.lazy(async () => {
+    try {
+      return await import('./Network3DScene.jsx');
+    } catch (err) {
+      console.warn('[3D Loader] First dynamic import failed, retrying once with cache buster...', err);
+      try {
+        await new Promise((r) => setTimeout(r, 250));
+        return await import(/* @vite-ignore */ `./Network3DScene.jsx?retry=${Date.now()}`);
+      } catch (retryErr) {
+        console.error('[3D Loader] Retry dynamic import also failed:', retryErr);
+        throw retryErr;
+      }
+    }
+  });
+}
+
+let LazyNetwork3DScene = createLazy3DScene();
 
 // Deterministic vehicle type classification when not explicitly set
 const VEHICLE_TYPES = ['car', 'motorcycle', 'auto', 'bus', 'truck'];
@@ -93,6 +138,7 @@ export function IsometricIntersection({
   vehicleScale = null,
   defaultSeeThroughFlyover = true,
   defaultShowTrails = true,
+  activePhase = null,
 }) {
   const { isDark } = useApp() || {};
   const canvasRef = useRef(null);
@@ -106,6 +152,16 @@ export function IsometricIntersection({
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 0.5, 1, 2, 5, 10
   const [viewMode, setViewMode] = useState(initialViewMode); // 'isometric' | 'topdown' | '3d'
   const [webglNotice, setWebglNotice] = useState(null);
+  const [threeLoadError, setThreeLoadError] = useState(null);
+  const [threeRetryKey, setThreeRetryKey] = useState(0);
+  const [cameraPresetKey, setCameraPresetKey] = useState('iso');
+
+  const handleRetry3D = useCallback(() => {
+    LazyNetwork3DScene = createLazy3DScene();
+    setThreeRetryKey((k) => k + 1);
+    setThreeLoadError(null);
+    setViewMode('3d');
+  }, []);
 
   const handleSetViewMode = useCallback((mode) => {
     if (mode === '3d') {
@@ -114,6 +170,7 @@ export function IsometricIntersection({
         setViewMode('isometric');
         return;
       }
+      setThreeLoadError(null);
     }
     setWebglNotice(null);
     setViewMode(mode);
@@ -202,6 +259,19 @@ export function IsometricIntersection({
 
   // Camera Fly-to Animation
   const cameraAnimRef = useRef(null);
+
+  // Derived labelling following Task 5:
+  // "Live simulation view" only with a real advancing run ID; "Replay" for saved runs; "Snapshot" for read-only data.
+  const resolvedModeLabel = useMemo(() => {
+    if (modeLabel) return modeLabel;
+    if (isLiveMode && runId && !isPaused) {
+      return 'Live simulation view';
+    }
+    if (replayData || (runId && !isLiveMode)) {
+      return 'Replay';
+    }
+    return 'Snapshot';
+  }, [modeLabel, isLiveMode, runId, isPaused, replayData]);
 
   // Selected vehicle for detail card & follow mode
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
@@ -1566,7 +1636,7 @@ export function IsometricIntersection({
     <div
       ref={containerRef}
       className={`relative w-full overflow-hidden select-none bg-[#0D1417] text-[#F3EDE0] ${className}`}
-      style={{ height: height || 480 }}
+      style={{ height: height || 480, minHeight: 460 }}
     >
       {/* 1. Canvas Viewport (2.5D Iso / Top-Down) */}
       <canvas
@@ -1580,41 +1650,99 @@ export function IsometricIntersection({
         className="w-full h-full cursor-grab active:cursor-grabbing"
       />
 
-      {/* 1b. 3D WebGL Viewport (Lazy-Loaded chunk with Suspense fallback) */}
+      {/* 1b. 3D WebGL Viewport (Lazy-Loaded chunk with Suspense fallback and local error boundary) */}
       {viewMode === '3d' && (
         <div className="absolute inset-0 z-0">
-          <Suspense
-            fallback={
-              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0C1316] text-[#AEB8BA] font-mono">
-                <div className="w-8 h-8 border-2 border-[#FFB020] border-t-transparent rounded-full animate-spin mb-3" />
-                <span className="text-sm">Loading 3D Road Scene...</span>
+          <ThreeErrorBoundary
+            key={threeRetryKey}
+            onError={(err) => {
+              console.warn('[IsometricIntersection] 3D render failed, falling back to 2.5D:', err);
+              setThreeLoadError(err);
+              setViewMode('isometric');
+            }}
+            fallback={(err, reset) => (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#0C1316] text-amber-300 font-mono p-6 text-center">
+                <div className="text-sm font-bold mb-2">3D Viewport Failed to Initialize</div>
+                <div className="text-xs text-slate-400 mb-4 max-w-md">{err?.message || 'Failed to load 3D scene module'}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    reset();
+                    handleRetry3D();
+                  }}
+                  className="px-4 py-1.5 rounded-full bg-amber-500 text-black font-bold text-xs shadow hover:bg-amber-400"
+                >
+                  Retry 3D View
+                </button>
               </div>
-            }
+            )}
           >
-            <Network3DScene
-              isDark={isDark}
-              seeThroughFlyover={seeThroughFlyover}
-              isExploded={isExploded}
-              onExplodeToggle={toggleExplode}
-              onSeeThroughToggle={() => setSeeThroughFlyover((prev) => !prev)}
-              showControls={showControls}
-              className="w-full h-full"
-              activeFrame={activeFrame}
-              prevFrame={isLiveMode ? liveHistoryRef.current?.prev : (replayData?.frames?.[currentFrameIdx - 1] || null)}
-              interpolationAlpha={frameAccumulatorRef.current}
-              vehicleScale={vehicleScaleMultiplier}
-              onVehicleScaleChange={setVehicleScaleMultiplier}
-              trafficLightState={activeFrame?.tl_state || activeFrame?.traffic_light_state || liveTelemetry?.traffic_light_state || 'rrrrGGGgrrrrGGGg'}
-              activePhase={activeFrame?.phase || liveTelemetry?.phase || 'GREEN'}
-              approachQueues={liveTelemetry?.approach_queues || null}
-              queues_m={activeFrame?.queues_m || liveTelemetry?.queues_m || {}}
-              adaptiveDecision={liveTelemetry?.adaptive_decision || null}
-              simTime={activeFrame?.t || 0}
-              isLiveMode={isLiveMode}
-              runId={runId}
-              modeLabel={modeLabel || (isLiveMode ? 'Live simulation' : (replayData ? 'Replay' : 'Snapshot'))}
-            />
-          </Suspense>
+            <Suspense
+              fallback={
+                <div className="w-full h-full flex flex-col items-center justify-center bg-[#0C1316] text-[#AEB8BA] font-mono">
+                  <div className="w-8 h-8 border-2 border-[#FFB020] border-t-transparent rounded-full animate-spin mb-3" />
+                  <span className="text-sm">Loading 3D Road Scene...</span>
+                </div>
+              }
+            >
+              <LazyNetwork3DScene
+                isDark={isDark}
+                seeThroughFlyover={seeThroughFlyover}
+                isExploded={isExploded}
+                onExplodeToggle={toggleExplode}
+                onSeeThroughToggle={() => setSeeThroughFlyover((prev) => !prev)}
+                showControls={false}
+                showLabels={showLabels}
+                className="w-full h-full"
+                activeFrame={activeFrame}
+                prevFrame={isLiveMode ? liveHistoryRef.current?.prev : (replayData?.frames?.[currentFrameIdx - 1] || null)}
+                interpolationAlpha={frameAccumulatorRef.current}
+                vehicleScale={vehicleScaleMultiplier}
+                onVehicleScaleChange={setVehicleScaleMultiplier}
+                trafficLightState={activeFrame?.tl_state || activeFrame?.traffic_light_state || liveTelemetry?.traffic_light_state || 'rrrrGGGgrrrrGGGg'}
+                activePhase={activePhase || activeFrame?.phase || liveTelemetry?.current_phase || liveTelemetry?.phase || 'GREEN'}
+                approachQueues={liveTelemetry?.approach_queues || null}
+                queues_m={activeFrame?.queues_m || liveTelemetry?.queues_m || {}}
+                gtExtQueues={liveTelemetry?.gt_ext_queues || activeFrame?.gt_ext_queues || {}}
+                detFull={liveTelemetry?.det_full || activeFrame?.det_full || {}}
+                adaptiveDecision={liveTelemetry?.adaptive_decision || null}
+                simTime={activeFrame?.t || 0}
+                isLiveMode={isLiveMode}
+                runId={runId}
+                modeLabel={modeLabel || (isLiveMode ? 'Live simulation view' : (replayData ? 'Replay' : 'Snapshot'))}
+                activePreset={CAMERA_PRESETS[cameraPresetKey] || CAMERA_PRESETS.iso}
+                onPresetChange={(p) => {
+                  const match = Object.entries(CAMERA_PRESETS).find(([, val]) => val.name === p.name);
+                  if (match) setCameraPresetKey(match[0]);
+                }}
+                onContextLost={() => {
+                  setWebglNotice('WebGL context was lost. Switched to 2.5D view.');
+                  setViewMode('isometric');
+                }}
+              />
+            </Suspense>
+          </ThreeErrorBoundary>
+        </div>
+      )}
+
+      {/* 3D Load Error / Fallback Notification Banner */}
+      {threeLoadError && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-amber-950/95 border border-amber-500/80 text-amber-200 px-4 py-2 rounded-xl text-xs font-mono shadow-2xl backdrop-blur-md z-30 flex items-center gap-3">
+          <span>3D view could not load ({threeLoadError.message || 'fetch error'}). Showing 2.5D view.</span>
+          <button
+            type="button"
+            onClick={handleRetry3D}
+            className="px-3 py-1 rounded bg-amber-500 text-black font-bold hover:bg-amber-400 text-xs"
+          >
+            Retry 3D
+          </button>
+          <button
+            type="button"
+            onClick={() => setThreeLoadError(null)}
+            className="text-slate-400 hover:text-white px-1 text-sm"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -1634,9 +1762,9 @@ export function IsometricIntersection({
 
       {/* 2. Top-Left: Mode Label & Status Badge */}
       <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 pointer-events-none z-20">
-        <div className="px-3 py-1 rounded-full bg-[#0C1316]/90 border border-white/10 text-xs font-mono font-semibold text-[#F3EDE0] flex items-center gap-2 shadow-lg backdrop-blur-md">
+        <div className="px-3 py-1 rounded-full bg-[#0C1316]/90 border border-white/10 text-xs font-mono font-semibold text-[#F3EDE0] flex items-center gap-2 shadow-lg backdrop-blur-md pointer-events-auto">
           <span className="w-2 h-2 rounded-full bg-[#2FA866] animate-pulse" />
-          <span>{modeLabel || 'PHASORA DIGITAL TWIN'}</span>
+          <span>{resolvedModeLabel}</span>
         </div>
 
         <div className="px-2.5 py-1 rounded-full bg-[#0C1316]/80 border border-white/10 text-[11px] font-mono text-[#AEB8BA] hidden sm:flex items-center gap-1.5 shadow-md">
@@ -1713,6 +1841,20 @@ export function IsometricIntersection({
             <span className="hidden sm:inline">Trails</span>
           </button>
 
+          {/* Labels Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowLabels((prev) => !prev)}
+            className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold flex items-center gap-1 transition-all shadow-md backdrop-blur-md ${
+              showLabels
+                ? 'bg-[#FFB020]/20 text-[#FFB020] border border-[#FFB020]/50'
+                : 'bg-[#0C1316]/90 text-[#AEB8BA] hover:bg-[#1A2327] border border-white/15'
+            }`}
+            title="Toggle 3D and canvas scene labels"
+          >
+            <span>Labels</span>
+          </button>
+
           {/* Explode 3-Tier Toggle Button */}
           <button
             type="button"
@@ -1757,6 +1899,34 @@ export function IsometricIntersection({
               3D
             </button>
           </div>
+
+          {/* 3D Camera Presets strip (only visible in 3D mode) */}
+          {viewMode === '3d' && (
+            <div className="flex items-center bg-[#0C1316]/90 border border-amber-500/30 rounded-full p-0.5 shadow-md">
+              <span className="text-[10px] font-mono text-amber-300 px-2 hidden sm:inline">Cam:</span>
+              {[
+                { key: 'iso', label: 'Iso' },
+                { key: 'topDown', label: 'Top' },
+                { key: 'junctionCloseUp', label: 'Junc' },
+                { key: 'flyoverSide', label: 'Deck' },
+                { key: 'fitJunction', label: 'Fit' },
+              ].map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setCameraPresetKey(p.key)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-colors ${
+                    cameraPresetKey === p.key
+                      ? 'bg-[#FFB020] text-black shadow-sm'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                  title={`Switch to ${p.label} camera perspective`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Legend Toggle */}
           <button
@@ -1833,7 +2003,7 @@ export function IsometricIntersection({
 
       {/* Map Legend Overlay */}
       {showLegend && (
-        <div className="absolute bottom-12 left-3 z-20 bg-[#0C1316]/95 border border-white/15 rounded-xl p-2.5 shadow-xl backdrop-blur-md text-[11px] font-mono space-y-2 pointer-events-auto max-w-[210px]">
+        <div className="absolute bottom-12 left-3 z-20 bg-[#0C1316]/95 border border-white/15 rounded-xl p-2.5 shadow-xl backdrop-blur-md text-[11px] font-mono space-y-2 pointer-events-auto max-w-[210px] max-h-[220px] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-white/10 pb-1">
             <span className="font-bold text-[#F3EDE0]">MAP LEGEND</span>
             <button
@@ -1961,6 +2131,11 @@ export function IsometricIntersection({
           </div>
         </div>
       )}
+
+      {/* Footer Disclaimer (Task 5) */}
+      <div className="absolute bottom-2 left-3 hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-[#0C1316]/85 border border-white/10 text-[10px] font-mono text-[#AEB8BA] pointer-events-none z-10 shadow-sm">
+        <span>Synthetic demand, modelled geometry, SUMO simulation.</span>
+      </div>
     </div>
   );
 }

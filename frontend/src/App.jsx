@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from './context/AppContext';
 import { FloatingNav } from './components/FloatingNav';
 import { CommandPalette } from './components/motion/CommandPalette';
@@ -10,9 +10,23 @@ import { ControllerComparisonView } from './views/ControllerComparisonView';
 import { EvidenceView } from './views/EvidenceView';
 import { RunReviewView } from './views/RunReviewView';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { formatExperimentFooter, loadFinalManifest } from './utils/manifestInfo';
 
 export function App() {
   const { currentView } = useApp();
+  const [footerExperimentText, setFooterExperimentText] = useState('Final results pending');
+
+  useEffect(() => {
+    let isMounted = true;
+    loadFinalManifest().then((manifest) => {
+      if (isMounted) {
+        setFooterExperimentText(formatExperimentFooter(manifest));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const isLanding = currentView === 'overview';
 
@@ -73,11 +87,11 @@ export function App() {
               </div>
 
               <div className="flex items-center gap-3 text-[11px] font-mono text-ink-2">
-                <span>Marathahalli Bridge</span>
+                <span>Marathahalli Bridge (modelled elevation, synthetic demand)</span>
                 <span>•</span>
                 <span>SUMO + TraCI</span>
                 <span>•</span>
-                <span>7 Policies Evaluated</span>
+                <span>{footerExperimentText}</span>
               </div>
             </div>
           </footer>
