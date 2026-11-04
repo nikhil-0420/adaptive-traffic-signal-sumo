@@ -1,0 +1,9 @@
+Policy,Throughput (veh/h),Switches / hour,Completion Rate (%),Unfinished Vehicles
+fixed,2688.0 ± 454.4,33.5 ± 0.4,100.0%,0
+webster_measured,2690.2 ± 446.6,144.3 ± 3.9,100.0%,0
+webster_recalc,2688.6 ± 446.7,144.2 ± 2.6,100.0%,0
+sumo_actuated,2687.6 ± 446.1,218.4 ± 6.0,100.0%,0
+adaptive,2685.6 ± 446.4,206.6 ± 4.9,100.0%,0
+queue_extension,2689.9 ± 447.5,219.0 ± 3.2,100.0%,0
+hybrid_queue_adaptive,2684.7 ± 443.5,189.4 ± 3.6,100.0%,0
+hybrid_oracle_seeded,2685.1 ± 444.0,190.6 ± 2.9,100.0%,0

@@ -1,0 +1,7 @@
+Condition,Hybrid,Webster-m,SUMO-act,Fixed
+balanced-low,43 / 25,50 / 34,41 / 26,86 / 46
+balanced-heavy,667 / 47,687 / 59,639 / 40,646 / 98
+imbalanced_orr-heavy,542 / 48,525 / 78,546 / 38,474 / 107
+ramp_peak-medium,595 / 43,588 / 51,593 / 44,585 / 91
+surge_shift-medium,280 / 43,296 / 82,294 / 39,287 / 82
+lane_closure-medium,587 / 48,535 / 69,600 / 41,516 / 95

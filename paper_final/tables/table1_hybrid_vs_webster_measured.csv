@@ -1,0 +1,10 @@
+Metric,Hybrid,Webster-m,Δ% (95% CI),Holm p,Verdict
+p95 wait (s),452.3,446.8,"-0.9% (-4.2, +2.5)",1.000,Not distinguished
+Max queue (m),42.2,62.2,"-28.8% (-35.0, -22.4)",<0.001,Lower (improved)
+Wait gap (s),58.3,59.8,"+3.0% (-8.0, +16.2)",1.000,Not distinguished
+Mean wait (s)*,76.7,77.7,"-3.1% (-5.3, -1.1)",n/a,Lower (improved)
+Mean queue (m)*,2.5,4.0,"-35.7% (-38.4, -33.1)",n/a,Lower (improved)
+Throughput (veh/h)*,2684.7,2690.2,"-0.2% (-0.4, +0.0)",n/a,Lower (improved)
+Switches / hour*,189.4,144.3,"+31.3% (+30.2, +32.5)",n/a,Higher (worse)
+Completion rate*,1.0,1.0,"+0.0% (+0.0, +0.0)",n/a,Higher (worse)
+Unfinished vehicles*,0.0,0.0,"+0.0% (+0.0, +0.0)",n/a,Higher (worse)
