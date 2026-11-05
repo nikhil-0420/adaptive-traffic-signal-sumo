@@ -76,6 +76,7 @@ class TimeseriesResponse(BaseModel):
 class DecisionsResponse(BaseModel):
     run_id: str
     total_decisions: int
+    policy_provenance: Optional[str] = Field("MEASURED", description="Policy provenance: MEASURED, ORACLE, ORACLE-SEEDED, or LEARNED")
     decisions: List[Dict[str, Any]]
 
 
@@ -101,6 +102,18 @@ class AdaptiveDecisionSchema(BaseModel):
     score_active: float = Field(..., description="Calculated demand score for active axis")
     score_competing: float = Field(..., description="Calculated demand score for competing axis")
     is_max_green: bool = Field(False, description="Whether max green ceiling was reached")
+    policy_provenance: Optional[str] = Field("MEASURED", description="Policy provenance: MEASURED, ORACLE, ORACLE-SEEDED, or LEARNED")
+
+
+class VehicleTelemetryItem(BaseModel):
+    id: str = Field(..., description="Vehicle unique identifier")
+    x: float = Field(..., description="SUMO X coordinate (east-west metres)")
+    y: float = Field(..., description="SUMO Y coordinate (north-south metres)")
+    z: float = Field(0.0, description="SUMO Z coordinate (elevation metres)")
+    a: float = Field(..., description="Vehicle heading angle in degrees")
+    s: float = Field(..., description="Vehicle speed in m/s")
+    w: Optional[float] = Field(None, description="Accumulated waiting time in seconds")
+    em: bool = Field(False, description="Emergency vehicle flag")
 
 
 class TelemetryResponse(BaseModel):
@@ -115,9 +128,21 @@ class TelemetryResponse(BaseModel):
     is_stale: bool
     emergency_approaching: bool = False
     emergency_dist_m: Optional[float] = None
-    vehicles: Optional[List[Dict[str, Any]]] = None
+    vehicles: Optional[List[VehicleTelemetryItem]] = None
     approach_queues: Optional[Dict[str, Any]] = None
     adaptive_decision: Optional[Dict[str, Any]] = None
+    gt_ext_q_N: Optional[float] = Field(None, description="Extended ground-truth queue length (m) on North approach")
+    gt_ext_q_S: Optional[float] = Field(None, description="Extended ground-truth queue length (m) on South approach")
+    gt_ext_q_E: Optional[float] = Field(None, description="Extended ground-truth queue length (m) on East approach")
+    gt_ext_q_W: Optional[float] = Field(None, description="Extended ground-truth queue length (m) on West approach")
+    det_full_N: Optional[bool] = Field(None, description="Detector saturation flag on North approach")
+    det_full_S: Optional[bool] = Field(None, description="Detector saturation flag on South approach")
+    det_full_E: Optional[bool] = Field(None, description="Detector saturation flag on East approach")
+    det_full_W: Optional[bool] = Field(None, description="Detector saturation flag on West approach")
+    reason_code: Optional[str] = Field(None, description="Machine-readable decision reason code")
+    delta_g_req_s: Optional[float] = Field(None, description="Requested green time increment (s)")
+    delta_g_app_s: Optional[float] = Field(None, description="Applied green time increment (s)")
+    policy_provenance: Optional[str] = Field("MEASURED", description="Policy provenance: MEASURED, ORACLE, ORACLE-SEEDED, or LEARNED")
     error: Optional[str] = None
 
 

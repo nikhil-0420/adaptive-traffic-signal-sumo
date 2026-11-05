@@ -1,17 +1,25 @@
-"""Hybrid Queue-Adaptive traffic signal controller for DP1.
+"""Hybrid Queue-Adaptive traffic signal controller for DP1 (with Ablation Ladder Rungs).
 
 Integrates three complementary functions:
 1. Baseline timing allocation (G_base): Derived from Webster's optimal cycle split
    based on scenario flow and saturation flow rates, bounded by [min_green, max_green].
+   (R4 de-oracles this by deriving from measured arrivals during a 300s warm-up).
 2. Queue-aware dynamic control: Evaluates active queues, competing queues, dynamic arrivals
    and demand scores to approve bounded extensions (delta_G, default 3s steps).
+   (R2 replaces fixed 4m threshold with comparative condition: score_active > margin * score_competing + switch_cost).
 3. Safety and fairness supervisor: Enforces min_green (10s), max_green (60s), gap-out,
    anti-monopoly competing wait limits (35s), and legal phase transitions.
+   (R3 scales soft competing wait limit by competing queue, keeping 35s hard cap).
 """
 
-from typing import Dict, Any, Optional
-from .base import PhaseMachineController
+import math
+from typing import Dict, Any, List, Optional, Set, Tuple
+import traci
+
+from .base import PhaseMachineController, ControllerAction
+from .webster_utils import compute_webster_plan, format_plan_record
 from .. import config as C
+from ..signal_states import MARATHAHALLI_APPROACH_EDGES
 
 
 class HybridQueueAdaptiveController(PhaseMachineController):
@@ -36,22 +44,43 @@ class HybridQueueAdaptiveController(PhaseMachineController):
 
         self.scenario = scenario
         self.demand_level = demand_level
-        self.network = network
+        self.network = network.lower().strip()
 
-        # 1. Establish Webster-derived baseline green plan
+        # Offline sensor fallback storage: remembers last valid reading per approach.
+        # Initialized with extend_threshold_m (4.0m) as nominal safe floor if offline from step 0.
+        self._last_valid_queues: Dict[str, float] = {a: float(self.cfg.extend_threshold_m) for a in C.APPROACHES}
+
+        # 1. Establish baseline green plan
         if plan is not None:
             self.baseline_plan = plan
-        elif network == "marathahalli" or scenario in ("imbalanced_orr", "imbalanced_varthur", "surge_orr_north"):
-            from ..site_scenarios import site_webster_plan
-            self.baseline_plan = site_webster_plan(scenario, demand_level=demand_level)
         else:
-            self.baseline_plan = C.webster_plan(scenario, demand_level=demand_level)
+            # Un-oracled baseline during warm-up (no scenario or future demand knowledge)
+            if self.network == "marathahalli":
+                self.baseline_plan = C.FixedTimeConfig(green_ns_s=19.0, green_ew_s=21.0)
+            else:
+                self.baseline_plan = C.FixedTimeConfig(green_ns_s=15.0, green_ew_s=15.0)
 
         # Baseline targets clamped to [min_green, max_green]
         self.baseline_green_s = {
             "NS": max(self.cfg.min_green_s, min(self.cfg.max_green_s, self.baseline_plan.green_ns_s)),
             "EW": max(self.cfg.min_green_s, min(self.cfg.max_green_s, self.baseline_plan.green_ew_s)),
         }
+
+        # R4 Measured Webster State Tracking
+        self.pending_plan: Optional[C.FixedTimeConfig] = None
+        self.plan_solved: bool = False
+        self.plan_applied: bool = False
+        self.measured_flows: Optional[Dict[str, float]] = None
+        self.warmup_s: float = float(self.cfg.r4_warmup_s)
+        if self.network == "marathahalli":
+            self.edges = dict(MARATHAHALLI_APPROACH_EDGES)
+        else:
+            self.edges = {a: f"{a}_in" for a in C.APPROACHES}
+        self.arrivals: Dict[str, List[Tuple[str, float]]] = {a: [] for a in C.APPROACHES}
+        self._active_on_edge: Dict[str, Set[str]] = {a: set() for a in C.APPROACHES}
+        self.plan_log: List[Dict] = []
+        if "R4" in self.cfg.rungs:
+            self._log_plan(0.0, self.baseline_plan, "unoracled_empirical_baseline")
 
         # Dynamic state tracking
         self.accumulated_extra_s: float = 0.0  # G_extra
@@ -62,10 +91,86 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         self.extensions_granted: int = 0
         self.last_decision_record: Dict[str, Any] = {}
 
+        # Phase 12: Short-Horizon Queue Projection State
+        self.proj_enabled: bool = bool(getattr(self.cfg, "projection_enabled", False))
+        self.proj_window_s: float = float(getattr(self.cfg, "projection_window_s", 15.0))
+        self.proj_horizon_s: float = float(getattr(self.cfg, "projection_horizon_s", 6.0))
+        self.proj_alpha: float = float(getattr(self.cfg, "projection_blend_alpha", 0.5))
+        self.proj_sat_mu: float = float(getattr(self.cfg, "projection_sat_flow_fallback_mps", 7.5))
+
+        self._queue_history: Dict[str, List[Tuple[float, float, bool]]] = {a: [] for a in C.APPROACHES}
+        self.lambda_rates: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+        self.mu_rates: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+        self.q_pred: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+        self.q_eff: Dict[str, float] = {a: 0.0 for a in C.APPROACHES}
+
+    def _log_plan(self, t: float, plan: C.FixedTimeConfig, source: str, extra: Optional[Dict] = None):
+        rec = format_plan_record(
+            t_applied_s=t,
+            plan=plan,
+            timing=self.timing,
+            source=source,
+            cycle_index=self.cycle,
+            extra=extra,
+        )
+        self.plan_log.append(rec)
+
+    def _clean_queues(self, queues: Dict[str, float]) -> Dict[str, float]:
+        """Clean queue readings with strict offline sensor fallback.
+        
+        Never reads an offline sensor as 0.0. Falls back to last valid reading
+        or nominal extend_threshold_m.
+        """
+        clean_q = {}
+        for a in C.APPROACHES:
+            val = queues.get(a)
+            if val is None or val < 0.0 or (isinstance(val, float) and math.isnan(val)):
+                clean_q[a] = self._last_valid_queues.get(a, float(self.cfg.extend_threshold_m))
+            else:
+                v = float(val)
+                clean_q[a] = v
+                self._last_valid_queues[a] = v
+        return clean_q
+
     @staticmethod
     def axis_queue(axis: str, queues: Dict[str, float]) -> float:
         """Maximum longitudinal approach queue across approaches on this axis."""
         return max(queues.get(a, 0.0) for a in C.AXES[axis])
+
+    def _track_arrivals(self, t: float):
+        """Record arrival times of newly appearing vehicles on approach legs for R4."""
+        try:
+            for a, edge_id in self.edges.items():
+                cur_vehs = set(traci.edge.getLastStepVehicleIDs(edge_id))
+                new_vehs = cur_vehs - self._active_on_edge[a]
+                for vid in new_vehs:
+                    self.arrivals[a].append((vid, t))
+                self._active_on_edge[a] = cur_vehs
+        except Exception:
+            pass
+
+    def _solve_measured_plan(self, t: float):
+        """Solve canonical Webster plan from measured warm-up arrival flows for R4."""
+        self.plan_solved = True
+        counts = {a: len(self.arrivals[a]) for a in C.APPROACHES}
+        q_vph = {a: (counts[a] * 3600.0) / max(1.0, self.warmup_s) for a in C.APPROACHES}
+        self.measured_flows = q_vph
+        new_plan = compute_webster_plan(
+            flows_vph=q_vph,
+            timing=self.timing,
+            cfg=C.WEBSTER,
+            lanes=C.NET.lanes,
+            min_green_s=float(self.cfg.min_green_s),
+        )
+        self.pending_plan = new_plan
+
+    def step(self, t: float, queues: Dict[str, float]) -> ControllerAction:
+        """Advance controller step, handling R4 arrival estimation if enabled."""
+        if "R4" in self.cfg.rungs and not self.plan_applied:
+            self._track_arrivals(t)
+            if not self.plan_solved and t >= self.warmup_s:
+                self._solve_measured_plan(t)
+        return super().step(t, queues)
 
     def decide_green(self, axis: str, queues: Dict[str, float], t: float) -> float:
         """Establish baseline green duration upon entering GREEN."""
@@ -76,12 +181,23 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         other_axis = C.OTHER_AXIS[axis]
         self.red_start_times[other_axis] = t
 
+        # R4: Apply staged Webster measured plan at cycle boundary (NS entry)
+        if "R4" in self.cfg.rungs and self.pending_plan is not None and axis == "NS":
+            self.baseline_plan = self.pending_plan
+            self.baseline_green_s["NS"] = max(self.cfg.min_green_s, min(self.cfg.max_green_s, self.baseline_plan.green_ns_s))
+            self.baseline_green_s["EW"] = max(self.cfg.min_green_s, min(self.cfg.max_green_s, self.baseline_plan.green_ew_s))
+            self.pending_plan = None
+            self.plan_applied = True
+            self._log_plan(t, self.baseline_plan, "webster_measured", extra={"measured_flows": self.measured_flows})
+
+        cleaned_q = self._clean_queues(queues)
+
         # Set baseline green G_base
         g_base = self.baseline_green_s.get(axis, c.min_green_s)
         self.target_green_s = g_base
 
-        own_q = self.axis_queue(axis, queues)
-        comp_q = self.axis_queue(other_axis, queues)
+        own_q = self.axis_queue(axis, cleaned_q)
+        comp_q = self.axis_queue(other_axis, cleaned_q)
         self._prev_queues[axis] = own_q
         self._prev_queues[other_axis] = comp_q
 
@@ -102,31 +218,111 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             "g_extra_s": 0.0,
             "target_green_s": round(self.target_green_s, 1),
             "elapsed_s": 0.0,
+            "actual_green_s": round(self.target_green_s, 1),
             "q_active_m": round(own_q, 1),
             "q_competing_m": round(comp_q, 1),
             "score_active": round(own_q, 1),
             "score_competing": round(comp_q, 1),
             "is_max_green": False,
             "green_s": round(self.target_green_s, 1),
-            "actual_green_s": round(self.target_green_s, 1),
-            **{f"q_{a}_m": round(queues.get(a, 0.0), 1) for a in C.APPROACHES},
+            **{f"q_{a}_m": round(cleaned_q.get(a, 0.0), 1) for a in C.APPROACHES},
         }
         self.last_decision_record = rec
         return g_base
 
-    def green_should_end(self, axis: str, elapsed: float, queues: Dict[str, float], t: float) -> bool:
-        """Evaluate hold, extension, gap-out, or switch at each step during GREEN."""
+    def _update_projection(self, t: float, axis: str, queues: Dict[str, float]) -> Dict[str, float]:
+        """Update sliding window arrival/discharge estimates and compute projected queues."""
+        c = self.cfg
+        w = self.proj_window_s
+        h = self.proj_horizon_s
+        alpha = self.proj_alpha
+        fallback_mu = self.proj_sat_mu
+
+        q_pred = {}
+        q_eff = {}
+
+        # 1. Append queue reading to history
+        for a in C.APPROACHES:
+            # Determine if approach a is currently in GREEN
+            is_green = (a in C.AXES[axis] and self.phase == "GREEN")
+            q_val = queues.get(a, 0.0)
+            self._queue_history[a].append((t, q_val, is_green))
+
+            # Prune entries older than t - w
+            cutoff = t - w
+            self._queue_history[a] = [
+                (t_h, q_h, g_h) for t_h, q_h, g_h in self._queue_history[a] if t_h >= cutoff
+            ]
+
+            hist = self._queue_history[a]
+            if len(hist) >= 2:
+                t_old, q_old, _ = hist[0]
+                dt = max(1.0, t - t_old)
+                dq = q_val - q_old
+                if is_green:
+                    mu = fallback_mu if q_val > 0.0 else 0.0
+                    lambda_raw = max(0.0, (dq / dt) + mu)
+                else:
+                    mu = 0.0
+                    lambda_raw = max(0.0, dq / dt)
+            else:
+                mu = fallback_mu if is_green and q_val > 0.0 else 0.0
+                lambda_raw = 0.0
+
+            # Smooth with EMA
+            beta = 1.0 / max(1.0, min(10.0, w))
+            self.lambda_rates[a] = (1.0 - beta) * self.lambda_rates[a] + beta * lambda_raw
+            self.mu_rates[a] = mu
+
+            # Remaining green g_a over horizon h
+            if is_green:
+                remaining_headroom = max(0.0, c.max_green_s - self.target_green_s)
+                g_a = min(h, remaining_headroom)
+            else:
+                g_a = 0.0
+
+            # Projection: max(0, q + lambda * h - mu * g)
+            pred = max(0.0, q_val + self.lambda_rates[a] * h - mu * g_a)
+
+            # Saturation handling: clamp extrapolation if measured queue is at detector saturation (24.4m)
+            if q_val >= 24.0:
+                pred = min(pred, 24.4 + self.lambda_rates[a] * h)
+
+            q_pred[a] = pred
+            q_eff[a] = (1.0 - alpha) * q_val + alpha * pred
+
+        self.q_pred = q_pred
+        self.q_eff = q_eff
+        self.mu_rates[axis] = fallback_mu if any(queues.get(a, 0.0) > 0 for a in C.AXES[axis]) else 0.0
+        return q_eff
+
+    def _evaluate_rules(
+        self,
+        axis: str,
+        elapsed: float,
+        cleaned_q: Dict[str, float],
+        t: float,
+        record_decisions: bool = True,
+        raw_queues: Optional[Dict[str, float]] = None,
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """Evaluate signal state machine decision rules against a candidate queue state.
+
+        When record_decisions=False (counterfactual evaluation), internal state is NOT mutated.
+        """
         c = self.cfg
         other_axis = C.OTHER_AXIS[axis]
-        own_q = self.axis_queue(axis, queues)
-        comp_q = self.axis_queue(other_axis, queues)
+        logged_q = raw_queues or cleaned_q
+
+        own_q = self.axis_queue(axis, cleaned_q)
+        comp_q = self.axis_queue(other_axis, cleaned_q)
         competing_red_elapsed = max(0.0, t - self.red_start_times.get(other_axis, 0.0))
 
-        # Dynamic arrival detection: check queue growth indicating incoming arrivals
+        # Dynamic arrival detection
         prev_own = self._prev_queues.get(axis, own_q)
         delta_q = max(0.0, own_q - prev_own)
-        self._prev_queues[axis] = own_q
-        self._prev_queues[other_axis] = comp_q
+        if record_decisions:
+            self._prev_queues[axis] = own_q
+            self._prev_queues[other_axis] = comp_q
 
         # Demand scores
         score_active = own_q + 0.5 * delta_q
@@ -136,78 +332,79 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         axis_label = "North–South" if axis == "NS" else "East–West"
         comp_label = "East–West" if axis == "NS" else "North–South"
 
-        # -------------------------------------------------------------
         # 1. Hard Minimum Green Floor Enforcement
-        # -------------------------------------------------------------
         if elapsed < c.min_green_s:
             rec = self._make_record(
                 t, axis, "HOLD",
                 f"{axis_label} elapsed green ({elapsed:.1f}s) < minimum green floor ({c.min_green_s:.1f}s); switch prohibited by safety invariant.",
-                "HOLD_MIN_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                "HOLD_MIN_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="HOLD", applied_action="HOLD", decision_outcome="HOLD_MIN_GREEN"
             )
-            self.last_decision_record = rec
-            return False
+            if record_decisions:
+                self.last_decision_record = rec
+            return False, rec
 
-        # -------------------------------------------------------------
         # 2. Hard Maximum Green Ceiling Enforcement
-        # -------------------------------------------------------------
         if elapsed >= c.max_green_s:
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"{axis_label} elapsed green ({elapsed:.1f}s) >= maximum green ceiling ({c.max_green_s:.1f}s); switch forced to prevent approach starvation.",
-                "SWITCH_MAX_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, True,
+                "SWITCH_MAX_GREEN", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, True,
                 proposed_action="REQUEST_SWITCH", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_MAX_GREEN"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return True, rec
 
-        # -------------------------------------------------------------
         # 3. Gap-Out Evaluation: Active approach fully cleared
-        # -------------------------------------------------------------
         if own_q <= 0.0 and comp_q >= c.min_competing_queue_m:
-            if self._empty_since is None:
-                self._empty_since = t
-            empty_duration = t - self._empty_since
+            if record_decisions:
+                if self._empty_since is None:
+                    self._empty_since = t
+                empty_duration = t - self._empty_since
+            else:
+                empty_since = self._empty_since or t
+                empty_duration = t - empty_since
+
             if empty_duration >= c.gap_out_s:
                 rec = self._make_record(
                     t, axis, "GAP_OUT",
                     f"{axis_label} queue cleared (0.0m for {empty_duration:.1f}s >= gap-out threshold {c.gap_out_s:.1f}s) while {comp_label} is waiting ({comp_q:.1f}m); gapping out early.",
-                    "SWITCH_GAP_OUT", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                    "SWITCH_GAP_OUT", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="GAP_OUT", applied_action="GAP_OUT", decision_outcome="SWITCH_GAP_OUT"
                 )
-                self.last_decision_record = rec
-                self.decisions.append(rec)
-                return True
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
             else:
                 rec = self._make_record(
                     t, axis, "HOLD",
                     f"{axis_label} queue empty for {empty_duration:.1f}s (< gap-out persistence {c.gap_out_s:.1f}s); holding green for clearance.",
-                    "HOLD_CLEARING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                    "HOLD_CLEARING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                     proposed_action="GAP_OUT", applied_action="HOLD", decision_outcome="HOLD_CLEARING"
                 )
-                self.last_decision_record = rec
-                return False
+                if record_decisions:
+                    self.last_decision_record = rec
+                return False, rec
         else:
-            self._empty_since = None
+            if record_decisions:
+                self._empty_since = None
 
-        # -------------------------------------------------------------
         # 4. Within Approved Target Green Duration
-        # -------------------------------------------------------------
         if elapsed < self.target_green_s:
             rec = self._make_record(
                 t, axis, "HOLD",
                 f"{axis_label} green servicing within approved target ({self.target_green_s:.1f}s = baseline {self.baseline_green_s[axis]:.1f}s + extra {self.accumulated_extra_s:.1f}s); elapsed: {elapsed:.1f}s.",
-                "HOLD_SERVICING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                "HOLD_SERVICING", 0.0, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="HOLD", applied_action="HOLD", decision_outcome="HOLD_SERVICING"
             )
-            self.last_decision_record = rec
-            return False
+            if record_decisions:
+                self.last_decision_record = rec
+            return False, rec
 
-        # -------------------------------------------------------------
         # 5. Target Reached: Evaluate Bounded Extension Increment
-        # -------------------------------------------------------------
         req_increment = c.extend_step_s
         headroom = max(0.0, c.max_green_s - self.target_green_s)
 
@@ -216,73 +413,188 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: {axis_label} target green ({self.target_green_s:.1f}s) has reached maximum ceiling ({c.max_green_s:.1f}s). Enforcing mandatory switch.",
-                "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, True,
+                "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, True,
                 proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_CEILING_REACHED"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return True, rec
 
-        # 5b. Anti-Monopoly Check: Competing red wait limit
-        if comp_q >= c.min_competing_queue_m and competing_red_elapsed >= c.max_competing_wait_s:
-            rec = self._make_record(
-                t, axis, "REQUEST_SWITCH",
-                f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= maximum allowed wait ({c.max_competing_wait_s:.1f}s) with waiting queue ({comp_q:.1f}m). Triggering fair phase switch.",
-                "SWITCH_FAIRNESS_WAIT_LIMIT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
-                proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_WAIT_LIMIT"
-            )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+        # 5b. Anti-Monopoly / Fairness Wait Check
+        if "R3" in c.rungs:
+            if competing_red_elapsed >= c.r3_hard_wait_cap_s:
+                rec = self._make_record(
+                    t, axis, "REQUEST_SWITCH",
+                    f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= hard anti-starvation cap ({c.r3_hard_wait_cap_s:.1f}s). Forcing fair switch.",
+                    "SWITCH_FAIRNESS_HARD", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                    proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_HARD"
+                )
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
 
-        # 5c. Demand Imbalance Check: Competing score exceeds fairness ratio
+            if comp_q > 0.0:
+                q_ratio = min(1.0, comp_q / max(1.0, c.r3_queue_ref_m))
+                soft_wait_limit = c.r3_hard_wait_cap_s - (c.r3_hard_wait_cap_s - c.r3_soft_min_wait_s) * q_ratio
+                if competing_red_elapsed >= soft_wait_limit:
+                    rec = self._make_record(
+                        t, axis, "REQUEST_SWITCH",
+                        f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= queue-scaled soft wait limit ({soft_wait_limit:.1f}s for queue {comp_q:.1f}m). Forcing fair switch.",
+                        "SWITCH_FAIRNESS_SOFT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                        proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_SOFT"
+                    )
+                    if record_decisions:
+                        self.last_decision_record = rec
+                        self.decisions.append(rec)
+                    return True, rec
+        else:
+            if comp_q >= c.min_competing_queue_m and competing_red_elapsed >= c.max_competing_wait_s:
+                rec = self._make_record(
+                    t, axis, "REQUEST_SWITCH",
+                    f"Extension rejected: Competing {comp_label} red wait ({competing_red_elapsed:.1f}s) >= maximum allowed wait ({c.max_competing_wait_s:.1f}s) with waiting queue ({comp_q:.1f}m). Triggering fair phase switch.",
+                    "SWITCH_FAIRNESS_WAIT_LIMIT", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                    proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_FAIRNESS_WAIT_LIMIT"
+                )
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
+
+        # 5c. Demand Imbalance Check
         if comp_q >= c.min_competing_queue_m and score_competing > (score_active * c.fairness_ratio):
             rec = self._make_record(
                 t, axis, "REQUEST_SWITCH",
                 f"Extension rejected: Competing {comp_label} demand score ({score_competing:.1f}) exceeds active {axis_label} score ({score_active:.1f}) by fairness ratio ({c.fairness_ratio}). Switching to relieve opposing corridor.",
-                "SWITCH_DEMAND_FAIRNESS", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
+                "SWITCH_DEMAND_FAIRNESS", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
                 proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_FAIRNESS"
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return True, rec
 
-        # 5d. Active Demand Justification: Queue must exceed threshold or have arrivals
-        if own_q < c.extend_threshold_m and delta_q < c.arrival_detection_threshold:
-            rec = self._make_record(
-                t, axis, "REQUEST_SWITCH",
-                f"Extension rejected: Active {axis_label} queue ({own_q:.1f}m < threshold {c.extend_threshold_m:.1f}m) and no new arrivals detected (delta Q = {delta_q:.1f}m). Terminating green phase.",
-                "SWITCH_DEMAND_EXHAUSTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
-                proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_EXHAUSTED"
+        # 5d. Extension Justification Check
+        if "R2" in c.rungs:
+            comp_thresh = c.r2_margin * score_competing + c.r2_switch_cost_m
+            max_extra = c.max_green_s - self.baseline_green_s[axis]
+            extra_headroom = max(0.0, max_extra - self.accumulated_extra_s)
+
+            if extra_headroom <= 0.0:
+                rec = self._make_record(
+                    t, axis, "REQUEST_SWITCH",
+                    f"Comparative extension rejected: Cumulative extra green ({self.accumulated_extra_s:.1f}s) reached G_MAX limit ({max_extra:.1f}s).",
+                    "SWITCH_CEILING_REACHED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, True,
+                    proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_CEILING_REACHED"
+                )
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
+
+            if score_active > comp_thresh:
+                app_increment = min(req_increment, headroom, extra_headroom)
+                if record_decisions:
+                    self.accumulated_extra_s += app_increment
+                    self.target_green_s += app_increment
+                    self.extensions_granted += 1
+                explanation = (
+                    f"Comparative extension approved: Active {axis_label} score ({score_active:.1f}) exceeds "
+                    f"threshold ({comp_thresh:.1f} = {c.r2_margin:.1f} * {score_competing:.1f} + {c.r2_switch_cost_m:.1f}m switch cost); "
+                    f"extending by {app_increment:.0f}s."
+                )
+                rec = self._make_record(
+                    t, axis, "EXTEND", explanation,
+                    "EXTEND_COMPARATIVE", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                    proposed_action="EXTEND", applied_action="EXTEND", decision_outcome="EXTEND_COMPARATIVE"
+                )
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return False, rec
+            else:
+                explanation = (
+                    f"Comparative extension rejected: Active {axis_label} score ({score_active:.1f}) does not exceed "
+                    f"threshold ({comp_thresh:.1f} = {c.r2_margin:.1f} * {score_competing:.1f} + {c.r2_switch_cost_m:.1f}m switch cost). "
+                    f"Switching phase."
+                )
+                rec = self._make_record(
+                    t, axis, "REQUEST_SWITCH", explanation,
+                    "SWITCH_COMPARATIVE_REJECTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                    proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_COMPARATIVE_REJECTED"
+                )
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
+        else:
+            if own_q < c.extend_threshold_m and delta_q < c.arrival_detection_threshold:
+                rec = self._make_record(
+                    t, axis, "REQUEST_SWITCH",
+                    f"Extension rejected: Active {axis_label} queue ({own_q:.1f}m < threshold {c.extend_threshold_m:.1f}m) and no new arrivals detected (delta Q = {delta_q:.1f}m). Terminating green phase.",
+                    "SWITCH_DEMAND_EXHAUSTED", req_increment, 0.0, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                    proposed_action="EXTEND", applied_action="REQUEST_SWITCH", decision_outcome="SWITCH_DEMAND_EXHAUSTED"
+                )
+                if record_decisions:
+                    self.last_decision_record = rec
+                    self.decisions.append(rec)
+                return True, rec
+
+            app_increment = min(req_increment, headroom)
+            if record_decisions:
+                self.accumulated_extra_s += app_increment
+                self.target_green_s += app_increment
+                self.extensions_granted += 1
+
+            explanation = (
+                f"{axis_label} green extended by {app_increment:.0f} seconds: "
+                f"its queue/demand condition ({own_q:.1f}m >= {c.extend_threshold_m:.1f}m) satisfied the configured extension rule, "
+                f"the competing-direction wait ({competing_red_elapsed:.1f}s) remained within its permitted limit ({c.max_competing_wait_s:.0f}s), "
+                f"and maximum green was not reached."
             )
-            self.last_decision_record = rec
-            self.decisions.append(rec)
-            return True
 
-        # -------------------------------------------------------------
-        # 6. Approved Extension
-        # -------------------------------------------------------------
-        app_increment = min(req_increment, headroom)
-        self.accumulated_extra_s += app_increment
-        self.target_green_s += app_increment
-        self.extensions_granted += 1
+            rec = self._make_record(
+                t, axis, "EXTEND",
+                explanation,
+                "EXTEND_APPROVED", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, logged_q, False,
+                proposed_action="EXTEND", applied_action="EXTEND", decision_outcome="EXTEND_APPROVED"
+            )
+            if record_decisions:
+                self.last_decision_record = rec
+                self.decisions.append(rec)
+            return False, rec
 
-        explanation = (
-            f"{axis_label} green extended by {app_increment:.0f} seconds: "
-            f"its queue/demand condition ({own_q:.1f}m >= {c.extend_threshold_m:.1f}m) satisfied the configured extension rule, "
-            f"the competing-direction wait ({competing_red_elapsed:.1f}s) remained within its permitted limit ({c.max_competing_wait_s:.0f}s), "
-            f"and maximum green was not reached."
-        )
+    def green_should_end(self, axis: str, elapsed: float, queues: Dict[str, float], t: float) -> bool:
+        """Evaluate hold, extension, gap-out, or switch at each step during GREEN."""
+        cleaned_q = self._clean_queues(queues)
 
-        rec = self._make_record(
-            t, axis, "EXTEND",
-            explanation,
-            "EXTEND_APPROVED", req_increment, app_increment, elapsed, own_q, comp_q, score_active, score_competing, queues, False,
-            proposed_action="EXTEND", applied_action="EXTEND", decision_outcome="EXTEND_APPROVED"
-        )
-        self.last_decision_record = rec
-        self.decisions.append(rec)
-        return False
+        if not self.proj_enabled:
+            should_end, _ = self._evaluate_rules(axis, elapsed, cleaned_q, t, record_decisions=True, raw_queues=cleaned_q)
+            return should_end
+
+        # With projection enabled:
+        q_eff = self._update_projection(t, axis, cleaned_q)
+
+        # 1. Counterfactual decision with unprojected cleaned_q
+        cf_should_end, cf_rec = self._evaluate_rules(axis, elapsed, cleaned_q, t, record_decisions=False, raw_queues=cleaned_q)
+
+        # 2. Actual decision with projected q_eff
+        act_should_end, act_rec = self._evaluate_rules(axis, elapsed, q_eff, t, record_decisions=True, raw_queues=cleaned_q)
+
+        # 3. Detect divergence between predictive intervention and baseline
+        divergence = (act_should_end != cf_should_end or act_rec.get("decision_outcome") != cf_rec.get("decision_outcome"))
+        act_rec["projection_divergence"] = divergence
+        act_rec["counterfactual_action"] = cf_rec.get("applied_action", "UNKNOWN")
+        act_rec["counterfactual_outcome"] = cf_rec.get("decision_outcome", "UNKNOWN")
+
+        if divergence:
+            act_rec["reason"] = (
+                f"[PREDICTIVE INTERVENTION (cf: {cf_rec.get('applied_action')}/{cf_rec.get('decision_outcome')})] "
+                + act_rec["reason"]
+            )
+
+        return act_should_end
 
     def _make_record(
         self,
@@ -309,7 +621,7 @@ class HybridQueueAdaptiveController(PhaseMachineController):
         app = applied_action or action
         outcome = decision_outcome or reason_code
 
-        return {
+        rec = {
             "t": round(t, 1),
             "cycle": self.cycle,
             "axis": axis,
@@ -334,3 +646,16 @@ class HybridQueueAdaptiveController(PhaseMachineController):
             "green_s": round(self.target_green_s, 1),
             **{f"q_{a}_m": round(queues.get(a, 0.0), 1) for a in C.APPROACHES},
         }
+
+        if self.proj_enabled:
+            rec.update({
+                **{f"lambda_{a}": round(self.lambda_rates.get(a, 0.0), 3) for a in C.APPROACHES},
+                "mu_active": round(self.mu_rates.get(axis, 0.0), 2),
+                **{f"q_pred_{a}": round(self.q_pred.get(a, 0.0), 1) for a in C.APPROACHES},
+                **{f"q_eff_{a}": round(self.q_eff.get(a, 0.0), 1) for a in C.APPROACHES},
+                "projection_divergence": False,
+                "counterfactual_action": app,
+                "counterfactual_outcome": outcome,
+            })
+
+        return rec

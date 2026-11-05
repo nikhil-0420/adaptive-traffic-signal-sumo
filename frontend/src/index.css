@@ -1,4 +1,4 @@
-/* DP1 Traffic Intelligence — Design Tokens & Core Stylesheet */
+/* DP1 Traffic Intelligence — Design Tokens & Core Stylesheet (Warm-Neutral Light Theme) */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
@@ -6,29 +6,96 @@
 @tailwind utilities;
 
 :root {
-  --bg-base: #0b0f17;
-  --bg-surface: #111827;
-  --bg-surface-subtle: #161f30;
-  --bg-surface-elevated: #1e293b;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(59, 130, 246, 0.5);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent-primary: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-secondary: #60a5fa;
-  --signal-green: #10b981;
-  --signal-green-bg: rgba(16, 185, 129, 0.15);
-  --signal-yellow: #f59e0b;
-  --signal-yellow-bg: rgba(245, 158, 11, 0.15);
-  --signal-red: #ef4444;
-  --signal-red-bg: rgba(239, 68, 68, 0.15);
-  --emergency-siren: #dc2626;
+  /* Light-theme app tokens (Brief Section 5): ground #F1EBDD, panel #FBF8F0, raised #FFFFFF, line #D8D0BD, ink #0C1316, ink-2 #4A5458 */
+  --color-ground: #F1EBDD;
+  --color-panel: #FBF8F0;
+  --color-raised: #FFFFFF;
+  --color-inset: #F1EBDD;
+  --color-hairline: #D8D0BD;
+  --color-line: #D8D0BD;
+  --color-ink: #0C1316;
+  --color-ink-2: #4A5458;
+  --color-ink-secondary: #4A5458;
+  --color-ink-muted: #6E797E;
+  --color-panel-glass: rgba(251, 248, 240, 0.94);
+
+  /* Phasora Amber #FFB020 for action and leader */
+  --color-accent: #FFB020;
+  --color-accent-hover: #E59B12;
+
+  /* Petrol palette: deep #093F4A, petrol #0F6B7A, bright #4FB3C2 */
+  --color-petrol: #0F6B7A;
+  --color-petrol-deep: #093F4A;
+  --color-petrol-bright: #4FB3C2;
+  --color-petrol-hover: #093F4A;
+  --color-petrol-subtle: #E2F1F5;
+  --color-petrol-tint: #C5E3EB;
+
+  /* Semantic Signal States: green #2FA866, yellow #F2C230, red #D6453D */
+  --color-signal-green: #2FA866;
+  --color-signal-green-tint: #E8F5EE;
+  --color-signal-green-text: #19683D;
+
+  --color-signal-yellow: #F2C230;
+  --color-signal-yellow-tint: #FDF8E8;
+  --color-signal-yellow-text: #825E03;
+
+  --color-signal-red: #D6453D;
+  --color-signal-red-tint: #FBECEB;
+  --color-signal-red-text: #871F19;
+
+  --color-emergency: #D6453D;
+  --color-emergency-tint: #FBECEB;
+
+  --font-display: 'Barlow Condensed', 'Plus Jakarta Sans', sans-serif;
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html.dark,
+html[data-theme="dark"],
+.dark {
+  /* Dark-theme app tokens (Brief Section 5): ground #0A0F11, panel #12191C, raised #1A2327, line #2B373C, ink #F2EEE4, ink-2 #AEB8BA, amber #FFB938, petrol bright #4FB3C2 */
+  --color-ground: #0A0F11;
+  --color-panel: #12191C;
+  --color-raised: #1A2327;
+  --color-inset: #1A2327;
+  --color-hairline: #2B373C;
+  --color-line: #2B373C;
+  --color-ink: #F2EEE4;
+  --color-ink-2: #AEB8BA;
+  --color-ink-secondary: #AEB8BA;
+  --color-ink-muted: #788588;
+  --color-panel-glass: rgba(18, 25, 28, 0.94);
+
+  /* Amber for dark theme */
+  --color-accent: #FFB938;
+  --color-accent-hover: #EAA01C;
+
+  /* Petrol bright for dark theme data */
+  --color-petrol: #4FB3C2;
+  --color-petrol-deep: #093F4A;
+  --color-petrol-bright: #4FB3C2;
+  --color-petrol-hover: #3AA0AF;
+  --color-petrol-subtle: #0B242A;
+  --color-petrol-tint: #11363F;
+
+  /* Semantic Signal States */
+  --color-signal-green: #2FA866;
+  --color-signal-green-tint: #103420;
+  --color-signal-green-text: #53D38E;
+
+  --color-signal-yellow: #F2C230;
+  --color-signal-yellow-tint: #3B2E07;
+  --color-signal-yellow-text: #F8D36B;
+
+  --color-signal-red: #D6453D;
+  --color-signal-red-tint: #3B1412;
+  --color-signal-red-text: #F37D76;
+
+  --color-emergency: #D6453D;
+  --color-emergency-tint: #3B1412;
 }
 
 * {
@@ -38,238 +105,270 @@
 }
 
 body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
+  background-color: var(--color-ground);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
-/* Custom Typography & Tabular Figures */
-.font-mono {
-  font-family: var(--font-mono);
+/* Tabular figures for data integrity and align-right numeric columns */
+.font-mono, .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Card / Surface Containers */
-.dp1-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: border-color var(--transition-fast);
+/* Concentric Double-Bezel Architecture (Restricted to max 3 key viewports) */
+.double-bezel-outer {
+  background-color: var(--color-inset);
+  border: 1px solid var(--color-hairline);
+  padding: 0.375rem;
+  border-radius: 0.75rem;
 }
 
-.dp1-card:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+.double-bezel-inner {
+  background-color: var(--color-panel);
+  border: 1px solid var(--color-hairline);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 
-/* Button & Tactile Push Micro-Interaction */
-.dp1-btn {
+/* Standard Panels & Cards (Opaque surfaces, hairline borders, no shadows) */
+.dp1-panel {
+  background-color: var(--color-panel);
+  border: 1px solid var(--color-hairline);
+  border-radius: 0.5rem;
+}
+
+.dp1-inset {
+  background-color: var(--color-inset);
+  border: 1px solid var(--color-hairline);
+  border-radius: 0.375rem;
+}
+
+/* High-End Primary Button-in-Button Architecture */
+.dp1-btn-primary {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
+  background-color: var(--color-petrol);
+  color: #ffffff;
+  padding: 0.4375rem 0.5rem 0.4375rem 1rem;
+  border-radius: 9999px;
   font-size: 0.8125rem;
   font-weight: 500;
-  padding: 0.5rem 0.875rem;
-  border-radius: 6px;
-  cursor: pointer;
   border: 1px solid transparent;
-  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+  cursor: pointer;
   user-select: none;
-}
-
-.dp1-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.dp1-btn-primary {
-  background-color: var(--accent-primary);
-  color: #ffffff;
+  transition: transform 180ms var(--ease-spring), background-color 180ms ease;
 }
 
 .dp1-btn-primary:hover:not(:disabled) {
-  background-color: var(--accent-hover);
+  background-color: var(--color-petrol-hover);
 }
 
+.dp1-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.dp1-btn-primary .btn-icon-nest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.16);
+  transition: transform 180ms var(--ease-spring);
+}
+
+.dp1-btn-primary:hover:not(:disabled) .btn-icon-nest {
+  transform: translate(1px, -1px);
+}
+
+/* Secondary & Ghost Buttons */
 .dp1-btn-secondary {
-  background-color: var(--bg-surface-elevated);
-  border-color: var(--border-subtle);
-  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-panel);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  padding: 0.4375rem 0.875rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 180ms var(--ease-spring), background-color 180ms ease, border-color 180ms ease;
 }
 
 .dp1-btn-secondary:hover:not(:disabled) {
-  background-color: #27354a;
-  border-color: rgba(255, 255, 255, 0.16);
+  background-color: var(--color-inset);
+  border-color: var(--color-ink-muted);
 }
 
-.dp1-btn-danger {
-  background-color: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+.dp1-btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
-.dp1-btn-danger:hover:not(:disabled) {
-  background-color: rgba(239, 68, 68, 0.25);
-  border-color: #ef4444;
-}
-
-.dp1-btn:disabled {
-  opacity: 0.5;
+.dp1-btn-secondary:disabled, .dp1-btn-primary:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Data Tables */
-.dp1-table-wrapper {
-  overflow-x: auto;
-  border-radius: 6px;
-  border: 1px solid var(--border-subtle);
-}
-
-.dp1-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+/* Form inputs & select dropdowns */
+.dp1-select, .dp1-input {
+  background-color: var(--color-panel);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  padding: 0.4375rem 0.75rem;
+  border-radius: 0.375rem;
   font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  transition: border-color 180ms ease, background-color 180ms ease;
 }
 
-.dp1-table th {
-  background: var(--bg-surface-subtle);
-  color: var(--text-secondary);
-  font-weight: 600;
-  padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid var(--border-subtle);
-  white-space: nowrap;
-}
-
-.dp1-table td {
-  padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-}
-
-.dp1-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-/* Form Inputs */
-.dp1-input, .dp1-select {
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
-  font-family: var(--font-sans);
+.dp1-select:focus, .dp1-input:focus {
   outline: none;
-  transition: border-color var(--transition-fast);
+  border-color: var(--color-petrol);
 }
 
-.dp1-input:focus, .dp1-select:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+/* Semantic Signal State Badges (pale tints with dark text, strictly non-decorative) */
+.signal-badge-green {
+  background-color: var(--color-signal-green-tint);
+  color: var(--color-signal-green-text);
+  border: 1px solid rgba(47, 125, 79, 0.25);
 }
 
-/* Status Badges */
-.dp1-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.signal-badge-yellow {
+  background-color: var(--color-signal-yellow-tint);
+  color: var(--color-signal-yellow-text);
+  border: 1px solid rgba(201, 150, 26, 0.25);
 }
 
-.dp1-badge-green {
-  background: var(--signal-green-bg);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+.signal-badge-red {
+  background-color: var(--color-signal-red-tint);
+  color: var(--color-signal-red-text);
+  border: 1px solid rgba(168, 50, 45, 0.25);
 }
 
-.dp1-badge-yellow {
-  background: var(--signal-yellow-bg);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+.signal-badge-neutral {
+  background-color: var(--color-inset);
+  color: var(--color-ink-secondary);
+  border: 1px solid var(--color-hairline);
 }
 
-.dp1-badge-red {
-  background: var(--signal-red-bg);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+.dark .signal-badge-green {
+  border-color: rgba(34, 197, 94, 0.35);
 }
 
-.dp1-badge-blue {
-  background: rgba(59, 130, 246, 0.15);
-  color: #93c5fd;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+.dark .signal-badge-yellow {
+  border-color: rgba(234, 179, 8, 0.35);
 }
 
-.dp1-badge-neutral {
-  background: rgba(148, 163, 184, 0.1);
-  color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+.dark .signal-badge-red {
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
-/* Pulsing Signal Dot */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.9); }
-}
-
-.dp1-pulse {
-  animation: pulse-dot 1.8s ease-in-out infinite;
-}
-
-/* Modal & Drawer Smooth Appearance (Emil Kowalski curve) */
-@keyframes modal-enter {
+/* First-Load Staggered Entry Animation (Transform and Opacity only) */
+@keyframes fade-up {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
-.animate-fade-in {
-  animation: modal-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-fade-up {
+  animation: fade-up 650ms var(--ease-spring) both;
 }
 
-/* Custom dark scrollbar for data tables & drawers */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+
+/* Subtle Control-Room Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(11, 15, 23, 0.5);
+  background: var(--color-inset);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: #C4C0B5;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: #AFA99E;
 }
 
-/* Respect Reduced Motion */
+.dark ::-webkit-scrollbar-thumb {
+  background: #47433D;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5A544C;
+}
+
+/* Dynamic CSS Variable utility bindings (ensures runtime dark/light theme switching without static rgb bake-in) */
+.bg-ground { background-color: var(--color-ground) !important; }
+.bg-panel { background-color: var(--color-panel) !important; }
+.bg-inset { background-color: var(--color-inset) !important; }
+.border-hairline { border-color: var(--color-hairline) !important; }
+
+.text-ink { color: var(--color-ink) !important; }
+.text-ink-secondary { color: var(--color-ink-secondary) !important; }
+.text-ink-muted { color: var(--color-ink-muted) !important; }
+
+.bg-petrol { background-color: var(--color-petrol) !important; }
+.bg-petrol-hover:hover { background-color: var(--color-petrol-hover) !important; }
+.bg-petrol-subtle { background-color: var(--color-petrol-subtle) !important; }
+.bg-petrol-tint { background-color: var(--color-petrol-tint) !important; }
+.text-petrol { color: var(--color-petrol) !important; }
+.border-petrol { border-color: var(--color-petrol) !important; }
+
+.bg-signal-green-tint { background-color: var(--color-signal-green-tint) !important; }
+.text-signal-green-text { color: var(--color-signal-green-text) !important; }
+.text-signal-green { color: var(--color-signal-green) !important; }
+
+.bg-signal-yellow-tint { background-color: var(--color-signal-yellow-tint) !important; }
+.text-signal-yellow-text { color: var(--color-signal-yellow-text) !important; }
+.text-signal-yellow { color: var(--color-signal-yellow) !important; }
+
+.bg-signal-red-tint { background-color: var(--color-signal-red-tint) !important; }
+.text-signal-red-text { color: var(--color-signal-red-text) !important; }
+.text-signal-red { color: var(--color-signal-red) !important; }
+
+.bg-emergency-tint { background-color: var(--color-emergency-tint) !important; }
+.text-emergency { color: var(--color-emergency) !important; }
+
+.hover\:bg-ground:hover { background-color: var(--color-ground) !important; }
+.hover\:bg-panel:hover { background-color: var(--color-panel) !important; }
+.hover\:bg-inset:hover { background-color: var(--color-inset) !important; }
+.hover\:border-hairline:hover { border-color: var(--color-hairline) !important; }
+.hover\:text-ink:hover { color: var(--color-ink) !important; }
+.hover\:text-ink-secondary:hover { color: var(--color-ink-secondary) !important; }
+.hover\:text-ink-muted:hover { color: var(--color-ink-muted) !important; }
+
+/* Strict prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .dp1-pulse, .animate-fade-in {
+  .animate-fade-up {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

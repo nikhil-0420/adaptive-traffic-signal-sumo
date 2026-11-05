@@ -1,0 +1,78 @@
+experiment_id: exp_marathahalli_improve_final
+description: "Final evaluation matrix for DP1 adaptive traffic-signal optimization on Marathahalli junction under Amendment 3."
+created_at: "2026-11-04"
+network: "marathahalli"
+
+proposed_policy: "hybrid_queue_adaptive"
+proposed_policy_provenance: "MEASURED (R4 measured base green, no projection, default parameters in configs/final_hybrid_queue_adaptive.yaml)"
+reference_policy: "webster_measured"
+
+main_matrix:
+  policies:
+    - name: "fixed"
+      type: "baseline_time_of_day"
+      description: "Field BTP fixed-time plan (Phase 1 Varthur 105s, Phase 2 ORR 95s, net of clearance)."
+      config_source: "dp1/config.py:FIXED_MARATHAHALLI"
+      provenance: "MEASURED"
+    - name: "webster_measured"
+      type: "baseline_model_empirical"
+      description: "Webster equisaturation timing computed from online measured 300s warmup flows."
+      config_source: "dp1/config.py:WEBSTER_MEASURED"
+      provenance: "MEASURED"
+    - name: "webster_recalc"
+      type: "baseline_model_dynamic"
+      description: "Webster equisaturation timing recalculated every 300s online window."
+      config_source: "dp1/config.py:WEBSTER_RECALC"
+      provenance: "MEASURED"
+    - name: "sumo_actuated"
+      type: "baseline_industry_standard"
+      description: "SUMO native gap-out actuated controller with detector gaps."
+      config_source: "dp1/config.py:SUMO_ACTUATED"
+      provenance: "MEASURED"
+    - name: "adaptive"
+      type: "baseline_queue_proportional"
+      description: "Classical queue-proportional controller (green duration proportional to detector queue length)."
+      config_source: "configs/final_adaptive.yaml"
+      provenance: "MEASURED"
+    - name: "queue_extension"
+      type: "baseline_actuated_extension"
+      description: "Queue extension controller with gap-out and competing wait cap."
+      config_source: "configs/final_queue_extension.yaml"
+      provenance: "MEASURED"
+    - name: "hybrid_queue_adaptive"
+      type: "proposed_hybrid"
+      description: "Proposed Policy: De-oracled empirical base green + state-aware queue extension."
+      config_source: "configs/final_hybrid_queue_adaptive.yaml"
+      provenance: "MEASURED"
+  conditions:
+    - { scenario: "balanced", demand_level: "low", key: "balanced-low" }
+    - { scenario: "balanced", demand_level: "heavy", key: "balanced-heavy" }
+    - { scenario: "imbalanced_orr", demand_level: "heavy", key: "imbalanced_orr-heavy" }
+    - { scenario: "ramp_peak", demand_level: "medium", key: "ramp_peak-medium" }
+    - { scenario: "surge_shift", demand_level: "medium", key: "surge_shift-medium" }
+    - { scenario: "lane_closure", demand_level: "medium", key: "lane_closure-medium" }
+  seeds: [131, 132, 133, 134, 135, 136, 137, 138]
+
+ablation_submatrix:
+  description: "Ablation evaluating removal of scenario demand oracle (R4 measured base green vs R0 oracle-seeded)."
+  variants:
+    - name: "hybrid_oracle_seeded"
+      rung: "R0"
+      description: "Legacy reference hybrid controller seeded from true scenario demand tables (oracle leak benchmark)."
+      config_source: "dp1/config.py:HYBRID_ORACLE_SEEDED"
+      provenance: "ORACLE-SEEDED"
+  conditions:
+    - { scenario: "balanced", demand_level: "low", key: "balanced-low" }
+    - { scenario: "balanced", demand_level: "heavy", key: "balanced-heavy" }
+    - { scenario: "imbalanced_orr", demand_level: "heavy", key: "imbalanced_orr-heavy" }
+    - { scenario: "ramp_peak", demand_level: "medium", key: "ramp_peak-medium" }
+    - { scenario: "surge_shift", demand_level: "medium", key: "surge_shift-medium" }
+    - { scenario: "lane_closure", demand_level: "medium", key: "lane_closure-medium" }
+  seeds: [131, 132, 133, 134, 135, 136, 137, 138]
+
+execution_summary:
+  total_main_runs: 336
+  total_ablation_runs: 48
+  total_runs: 384
+  ordering: "seed_major"
+  runs_per_seed_block: 48

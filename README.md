@@ -1,4 +1,4 @@
-# DP1 - Sensor-Based Adaptive Traffic-Signal Optimisation (SUMO + TraCI)
+# Phasora: Adaptive Signal Intelligence (SUMO + TraCI)
 
 Simulated lane-area queue sensors (in metres) dynamically allocate green splits to competing junction approaches; every phase transition strictly enforces clearance intervals (`GREEN -> YELLOW (3s) -> ALL-RED (2s) -> GREEN`). 
 

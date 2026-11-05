@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700"><rect width="1200" height="700" fill="#141E22" />
+<polyline points="653.6,448.7 693.8,471.0 707.2,493.2 693.8,515.5 653.6,537.8" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="653.6,448.7 1051.8,614.2" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="714.9,423.2 1113.1,588.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="714.9,423.2 823.4,457.0" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="823.4,457.0 829.7,459.0 944.6,471.0 1059.4,459.0 1174.3,423.2" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1051.8,372.3 998.2,389.0 944.6,394.6 891.0,389.0 837.4,372.3" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1051.8,372.3 653.6,537.8" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1113.1,397.7 714.9,563.3" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1113.1,397.7 1031.7,442.9" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1031.7,442.9 1026.9,445.5 998.2,493.2 1026.9,541.0 1113.1,588.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1235.6,537.8 1195.4,515.5 1182.0,493.2 1195.4,471.0 1235.6,448.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1235.6,537.8 837.4,372.3" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1174.3,563.3 776.1,397.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1174.3,563.3 1065.8,529.5" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1065.8,529.5 1059.4,527.5 944.6,515.5 829.7,527.5 714.9,563.3" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="837.4,614.2 891.0,597.5 944.6,591.9 998.2,597.5 1051.8,614.2" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="837.4,614.2 1235.6,448.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="776.1,588.7 1174.3,423.2" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="776.1,588.7 857.5,543.6" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="857.5,543.6 862.3,541.0 891.0,493.2 862.3,445.5 776.1,397.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="1943.9,-285.0 1943.9,-285.0" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="2005.1,-259.6 2005.1,-259.6" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="2127.7,-208.6 2127.7,-208.6" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="2066.4,-234.1 2066.4,-234.1" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="508.1,311.8 508.1,311.8" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="569.4,337.3 569.4,337.3" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="691.9,388.2 691.9,388.2" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="630.6,362.7 630.6,362.7" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="-927.7,908.6 -927.7,908.6" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<polyline points="-866.4,934.1 -866.4,934.1" stroke="#323E45" stroke-width="72" stroke-linecap="round" fill="none" opacity="0.8" />
+<text x="24" y="36" fill="#F3EDE0" font-family="monospace" font-size="14" font-weight="bold">PHASORA QA HARNESS · t=0s_z=1200%_light · 0 vehs · Lane Alignment: 100.0%</text></svg>

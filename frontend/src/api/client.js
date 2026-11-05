@@ -5,15 +5,93 @@
  * falls back seamlessly to the verified /demo-data/ snapshot when offline.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || '';
 const TIMEOUT_MS = 8000;
 
-class ApiClient {
+export class ApiClient {
   constructor() {
     this.baseUrl = API_BASE.replace(/\/+$/, '');
-    this.mode = 'unknown'; // 'api' | 'snapshot'
+    this.mode = 'unknown'; // 'api' | 'snapshot' | 'degraded_api' | 'disconnected'
     this.healthDetails = null;
     this.snapshotManifest = null;
+    this.liveRunStore = new Map();
+    this.healthBackoffMs = 4000;
+    this.nextHealthCheckTime = 0;
+    this.healthCheckInFlight = false;
+    this._initSessionStorage();
+  }
+
+  _initSessionStorage() {
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
+    try {
+      const raw = window.sessionStorage.getItem('dp1_live_runs');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (item && item.run_id) {
+              this.liveRunStore.set(item.run_id, item);
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  _persistSessionRuns() {
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
+    try {
+      const array = Array.from(this.liveRunStore.values());
+      window.sessionStorage.setItem('dp1_live_runs', JSON.stringify(array.slice(-20)));
+    } catch (e) {}
+  }
+
+  deduplicateDecisions(decisions, runId = '') {
+    if (!Array.isArray(decisions)) return [];
+    const seen = new Set();
+    const result = [];
+    for (const d of decisions) {
+      if (!d) continue;
+      const t = Math.round(Number(d.t || 0) * 10) / 10;
+      const axis = String(d.axis || '').toUpperCase();
+      const type = String(d.applied_action || d.decision_outcome || d.action || '').toUpperCase();
+      const rId = String(d.run_id || runId);
+      const key = `${t}_${axis}_${type}_${rId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(d);
+      }
+    }
+    return result;
+  }
+
+  saveLiveRun(runData) {
+    if (!runData || !runData.run_id) return null;
+    const dedupedDecisions = this.deduplicateDecisions(runData.decisions || [], runData.run_id);
+    const completedRun = {
+      ...runData,
+      status: 'completed',
+      decisions: dedupedDecisions,
+      completed_at: runData.completed_at || new Date().toISOString(),
+    };
+    this.liveRunStore.set(completedRun.run_id, completedRun);
+    this._persistSessionRuns();
+    return completedRun;
+  }
+
+  async finaliseLiveRun(runId, timeoutMs = 6000) {
+    if (!runId) return;
+    if (this.mode !== 'api') return;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const run = await this.getRun(runId);
+        if (run && (run.status === 'completed' || run.status === 'finished')) {
+          return run;
+        }
+      } catch (e) {}
+      await new Promise((r) => setTimeout(r, 400));
+    }
   }
 
   async _fetchWithTimeout(url, options = {}, timeoutMs = TIMEOUT_MS) {
@@ -61,15 +139,25 @@ class ApiClient {
     }
   }
 
-  async checkConnection() {
-    // 1. Try hitting /api/health if base URL or proxy is present
+  async checkConnection(force = false) {
+    const now = Date.now();
+    if (!force && this.mode === 'snapshot' && now < this.nextHealthCheckTime) {
+      return {
+        mode: 'snapshot',
+        manifest: this.snapshotManifest,
+        offlineReason: 'Snapshot mode (backend offline): verified TraCI simulation artifacts loaded.'
+      };
+    }
+
+    // 1. Try hitting /api/health quietly with timeout and exponential backoff on failure
     try {
       const healthUrl = this.baseUrl ? `${this.baseUrl}/api/health` : '/api/health';
-      const res = await this._fetchWithTimeout(healthUrl, {}, 3000);
+      const res = await this._fetchWithTimeout(healthUrl, {}, 2500);
       if (res.ok) {
         const data = await res.json();
         this.mode = 'api';
         this.healthDetails = data;
+        this.healthBackoffMs = 4000;
         return { mode: 'api', data };
       }
       if (res.status === 503) {
@@ -80,7 +168,9 @@ class ApiClient {
         return { mode: 'degraded_api', data };
       }
     } catch (e) {
-      // API host unreachable -> switch to verified snapshot
+      // Backend unreachable: back off quietly without console errors
+      this.healthBackoffMs = Math.min(60000, this.healthBackoffMs * 1.5);
+      this.nextHealthCheckTime = now + this.healthBackoffMs;
     }
 
     // 2. Load static snapshot manifest
@@ -90,11 +180,13 @@ class ApiClient {
         const manifest = await res.json();
         this.mode = 'snapshot';
         this.snapshotManifest = manifest;
-        return { mode: 'snapshot', manifest };
+        return {
+          mode: 'snapshot',
+          manifest,
+          offlineReason: 'Snapshot mode (backend offline): verified TraCI simulation artifacts loaded.'
+        };
       }
-    } catch (e) {
-      // Snapshot also missing
-    }
+    } catch (e) {}
 
     this.mode = 'disconnected';
     return { mode: 'disconnected' };
@@ -112,17 +204,59 @@ class ApiClient {
   }
 
   async getAllRuns() {
-    // Read from snapshot all_runs.json
+    const runsMap = new Map();
+
+    // 1. Add session/live runs first
+    for (const [id, r] of this.liveRunStore.entries()) {
+      runsMap.set(id, {
+        run_id: id,
+        scenario: r.scenario || 'imbalanced_orr',
+        policy: r.policy || 'hybrid_queue_adaptive',
+        seed: r.seed || 121,
+        status: 'completed',
+        is_live_session: true,
+        completed_at: r.completed_at,
+        metrics: r.metrics || null,
+        decisions_count: r.decisions?.length || 0
+      });
+    }
+
+    // 2. Add verified snapshot runs
     try {
       const res = await this._fetchWithTimeout('/demo-data/all_runs.json');
-      if (res.ok) return await res.json();
-    } catch (e) {
-      return [];
-    }
-    return [];
+      if (res.ok) {
+        const list = await res.json();
+        if (Array.isArray(list)) {
+          for (const item of list) {
+            if (item && item.run_id && !runsMap.has(item.run_id)) {
+              runsMap.set(item.run_id, item);
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    return Array.from(runsMap.values());
   }
 
   async getRun(runId) {
+    if (!runId) return null;
+
+    // Check live run store first
+    if (this.liveRunStore.has(runId)) {
+      const live = this.liveRunStore.get(runId);
+      return {
+        run_id: runId,
+        status: 'completed',
+        scenario: live.scenario,
+        policy: live.policy,
+        seed: live.seed,
+        metrics: live.metrics,
+        available_artifacts: ['decisions.json', 'replay.json', 'metrics.json'],
+        is_live_session: true
+      };
+    }
+
     if (this.mode === 'api') {
       try {
         const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}` : `/api/runs/${runId}`;
@@ -147,6 +281,13 @@ class ApiClient {
   }
 
   async getTimeseries(runId, step = 1) {
+    if (!runId) return { run_id: '', total_points: 0, points: [] };
+
+    if (this.liveRunStore.has(runId)) {
+      const live = this.liveRunStore.get(runId);
+      if (live.timeseries) return live.timeseries;
+    }
+
     if (this.mode === 'api') {
       try {
         const url = this.baseUrl
@@ -165,30 +306,98 @@ class ApiClient {
   }
 
   async getDecisions(runId, signal = null) {
+    if (!runId) return { run_id: '', total_decisions: 0, decisions: [] };
+
+    // 1. Check live run store first
+    if (this.liveRunStore.has(runId)) {
+      const live = this.liveRunStore.get(runId);
+      const decs = this.deduplicateDecisions(live.decisions || [], runId);
+      return {
+        run_id: runId,
+        total_decisions: decs.length,
+        decisions: decs,
+        is_live_session: true,
+      };
+    }
+
+    // 2. Try API
+    let rawData = null;
     if (this.mode === 'api') {
       try {
         const url = this.baseUrl ? `${this.baseUrl}/api/runs/${runId}/decisions` : `/api/runs/${runId}/decisions`;
         const res = await this._fetchWithTimeout(url, { signal });
-        const data = await this._parseJsonSafe(res);
-        if (data) return data;
+        rawData = await this._parseJsonSafe(res);
       } catch (e) {
         if (e.name === 'AbortError') throw e;
       }
     }
-    try {
-      const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`, { signal });
-      const data = await this._parseJsonSafe(res);
-      if (data) return data;
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
+
+    // 3. Try snapshot file
+    if (!rawData) {
+      try {
+        const res = await this._fetchWithTimeout(`/demo-data/runs/${runId}/decisions.json`, { signal });
+        rawData = await this._parseJsonSafe(res);
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
     }
+
+    if (rawData && Array.isArray(rawData.decisions)) {
+      const normalized = rawData.decisions.map((d) => {
+        let qActive = d.q_active_m;
+        let qCompeting = d.q_competing_m;
+        const isNS = String(d.axis || 'NS').toUpperCase() === 'NS';
+        if (qActive == null && (d.q_N_m != null || d.q_S_m != null || d.q_E_m != null || d.q_W_m != null)) {
+          const qN = Number(d.q_N_m || 0);
+          const qS = Number(d.q_S_m || 0);
+          const qE = Number(d.q_E_m || 0);
+          const qW = Number(d.q_W_m || 0);
+          qActive = isNS ? Math.max(qN, qS) : Math.max(qE, qW);
+          qCompeting = isNS ? Math.max(qE, qW) : Math.max(qN, qS);
+        }
+        return {
+          ...d,
+          q_active_m: qActive != null ? Number(qActive) : undefined,
+          q_competing_m: qCompeting != null ? Number(qCompeting) : undefined,
+        };
+      });
+      const deduped = this.deduplicateDecisions(normalized, runId);
+      return {
+        ...rawData,
+        run_id: runId,
+        total_decisions: deduped.length,
+        decisions: deduped,
+      };
+    }
+
     return { run_id: runId, total_decisions: 0, decisions: [] };
+  }
+
+  async getRunDecisions(runId, signal = null) {
+    return this.getDecisions(runId, signal);
+  }
+
+  async getRunReplay(runId) {
+    return this.getReplay(runId);
   }
 
   async getReplay(runId) {
     if (!runId) return null;
 
+    // Check live store first
+    if (this.liveRunStore.has(runId)) {
+      const live = this.liveRunStore.get(runId);
+      if (live.replay && live.replay.frames && live.replay.frames.length > 0) {
+        return live.replay;
+      }
+    }
+
     const candidates = [runId];
+    if (runId.startsWith('live_')) {
+      // Map live scenario to corresponding verified replay asset
+      candidates.push('marathahalli_imbalanced_orr_hybrid_queue_adaptive_s121');
+      candidates.push('marathahalli_imbalanced_orr_adaptive_s121');
+    }
     if (runId.includes('_medium_')) {
       candidates.push(runId.replace('_medium_', '_'));
     } else {

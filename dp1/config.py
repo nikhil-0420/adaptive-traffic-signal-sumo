@@ -1,6 +1,7 @@
 """All tunable numbers live here. Change values here, never hard-code them elsewhere."""
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parent.parent
 SUMO_DIR = ROOT / "sumo"
@@ -97,6 +98,64 @@ class HybridQueueAdaptiveConfig:
     demand_weight_active: float = 1.0   # Weight for active approach queue in demand score
     demand_weight_competing: float = 1.0 # Weight for competing approach queue in demand score
     arrival_detection_threshold: float = 0.5 # Min queue delta to detect active arrivals
+
+    # Ablation Ladder Rung Configuration
+    rungs: tuple = ()                   # Active rungs: e.g. ("R2",), ("R2", "R3"), ("R2", "R3", "R4")
+    # R2: Comparative extension parameters
+    r2_margin: float = 1.0              # Multiplier on competing score (1.0 = parity)
+    r2_switch_cost_m: float = 5.0       # 5.0s lost clearance time in score units (5.0m effective queue)
+    # R3: Queue-aware fairness parameters
+    r3_soft_min_wait_s: float = 20.0    # Min competing wait before soft queue-aware fairness triggers
+    r3_queue_ref_m: float = 20.0        # Reference competing queue scaling soft wait limit
+    r3_hard_wait_cap_s: float = 35.0    # Hard anti-starvation cap regardless of competing queue
+    # R4: Measured Webster baseline green
+    r4_warmup_s: float = 300.0          # Measured arrival estimation window for Webster baseline green
+
+    # Phase 12: Short-Horizon Queue Projection
+    projection_enabled: bool = False    # Predictive short-horizon queue projection intervention
+    projection_window_s: float = 15.0   # Sliding window W [seconds] for arrival rate smoothing
+    projection_horizon_s: float = 6.0   # Short-horizon lookahead h [seconds]
+    projection_blend_alpha: float = 0.5 # Convex blend weight alpha: q_eff = (1 - alpha)*q + alpha*q_pred
+    projection_sat_flow_fallback_mps: float = 7.5 # Saturation discharge capacity fallback [m/s]
+
+
+@dataclass(frozen=True)
+class WebsterMeasuredConfig:
+    """Settings for measured Webster baseline (flows measured in warm-up, then fixed)."""
+    warmup_s: float = 300.0              # Approved 5-minute warm-up window
+    sat_flow_per_lane_vph: float = 1800.0
+    min_cycle_s: float = 40.0
+    max_cycle_s: float = 120.0
+    min_green_s: float = 10.0
+
+
+@dataclass(frozen=True)
+class WebsterRecalcConfig:
+    """Settings for periodically recalculated Webster baseline (sliding window)."""
+    recalc_interval_s: float = 300.0     # Approved 5-minute recalculation interval (N)
+    window_s: float = 300.0              # Approved 5-minute sliding measurement window (W)
+    sat_flow_per_lane_vph: float = 1800.0
+    min_cycle_s: float = 40.0
+    max_cycle_s: float = 120.0
+    min_green_s: float = 10.0
+
+
+@dataclass(frozen=True)
+class FixedMatchedCycleConfig:
+    """Settings for fixed plan matching Webster's cycle length with BTP split ratio."""
+    btp_split_ratio_ew: float = 0.525    # 105 / 200 = 52.5% Varthur (EW)
+    btp_split_ratio_ns: float = 0.475    # 95 / 200 = 47.5% ORR (NS)
+    min_green_s: float = 10.0
+
+
+@dataclass(frozen=True)
+class SumoActuatedConfig:
+    """Settings for SUMO built-in actuated traffic signal logic with detectors."""
+    min_green_s: float = 10.0            # SUMO minDur: minimum green duration
+    max_green_s: float = 60.0            # SUMO maxDur: maximum green duration
+    max_gap_s: float = 3.0               # SUMO max-gap: vehicle time headway before gap-out
+    detector_gap_s: float = 3.0          # SUMO detector-gap
+
 
 
 @dataclass(frozen=True)
@@ -199,14 +258,39 @@ FIXED_MARATHAHALLI = FixedTimeConfig(
 ADAPTIVE = AdaptiveConfig()
 PRESSURE = PressureConfig()
 QUEUE_EXTENSION = QueueExtensionConfig()
-HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig()
+HYBRID_QUEUE_ADAPTIVE = HybridQueueAdaptiveConfig(rungs=("R4",))
+HYBRID_QUEUE_ADAPTIVE_PROJ = HybridQueueAdaptiveConfig(
+    rungs=("R4",),
+    projection_enabled=True,
+    projection_window_s=15.0,
+    projection_horizon_s=6.0,
+    projection_blend_alpha=0.5,
+    projection_sat_flow_fallback_mps=7.5,
+)
+HYBRID_ORACLE_SEEDED = HybridQueueAdaptiveConfig(rungs=())
+HYBRID_R2 = HybridQueueAdaptiveConfig(rungs=("R2",))
+HYBRID_R3 = HybridQueueAdaptiveConfig(rungs=("R4", "R3"))
+HYBRID_R4 = HybridQueueAdaptiveConfig(rungs=("R4",))
+HYBRID_R2_R3 = HybridQueueAdaptiveConfig(rungs=("R2", "R3"))
+HYBRID_R2_R3_R4 = HybridQueueAdaptiveConfig(rungs=("R2", "R3", "R4"))
+WEBSTER_MEASURED = WebsterMeasuredConfig()
+WEBSTER_RECALC = WebsterRecalcConfig()
+FIXED_MATCHED_CYCLE = FixedMatchedCycleConfig()
+SUMO_ACTUATED = SumoActuatedConfig()
 ACTION = ActionConfig()
 RL = RLConfig()
 SIM = SimConfig()
 
 # Evaluation policy rosters
 STANDARD_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn")
-HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive")
+HYBRID_SITE_POLICIES = ("fixed", "fixed_webster", "adaptive", "pressure", "queue_extension", "rl_dqn", "hybrid_queue_adaptive", "hybrid_queue_adaptive_proj")
+BASELINE_POLICIES = ("fixed", "fixed_webster", "webster_measured", "webster_recalc", "fixed_matched_cycle", "sumo_actuated")
+ALL_POLICIES = (
+    "fixed", "fixed_webster", "adaptive", "pressure", "queue_extension",
+    "rl_dqn", "hybrid_queue_adaptive", "hybrid_queue_adaptive_proj", "hybrid_oracle_seeded", "webster_measured", "webster_recalc",
+    "fixed_matched_cycle", "sumo_actuated", "webster_oracle",
+    "hybrid_r2", "hybrid_r3", "hybrid_r4", "hybrid_r2_r3", "hybrid_r2_r3_r4",
+)
 
 # Demand levels and multipliers (P3)
 DEMAND_LEVELS = {
@@ -321,3 +405,186 @@ class EmergencyConfig:
 
 RESEARCH = ResearchConfig()
 EMERGENCY = EmergencyConfig()
+
+
+# ==============================================================================
+# Site Demand Patterns & Non-Stationary Scenarios (Phase 8 Frozen Configuration)
+# ==============================================================================
+
+# 1. Existing Stationary Site Demand Patterns (Unmodified)
+SITE_DEMAND_PATTERNS_STATIONARY: Dict[str, Dict[str, List[Tuple[int, int, int]]]] = {
+    "balanced": {
+        "W": [(0, 1800, 650)],
+        "E": [(0, 1800, 650)],
+        "N": [(0, 1800, 650)],
+        "S": [(0, 1800, 650)],
+    },
+    "imbalanced_orr": {
+        "W": [(0, 1800, 400)],
+        "E": [(0, 1800, 400)],
+        "N": [(0, 1800, 1050)],
+        "S": [(0, 1800, 1050)],
+    },
+    "imbalanced_varthur": {
+        "W": [(0, 1800, 1050)],
+        "E": [(0, 1800, 1050)],
+        "N": [(0, 1800, 400)],
+        "S": [(0, 1800, 400)],
+    },
+    "surge_orr_north": {
+        "W": [(0, 1800, 500)],
+        "E": [(0, 1800, 500)],
+        "N": [(0, 400, 600), (400, 1000, 1500), (1000, 1800, 600)],
+        "S": [(0, 1800, 650)],
+    },
+}
+
+# 2. Non-Stationary Scenarios
+@dataclass(frozen=True)
+class RampPeakConfig:
+    """Parameters for ramp_peak non-stationary scenario.
+    
+    Morning peak shape with piecewise-linear ramp:
+    - Base rate per approach: 700 vph
+    - Start multiplier: 0.40x (280 vph) from 0 to 300s
+    - Ramp-up: 300s to 700s, linearly increasing from 0.40x to 1.80x (discretized in 50s buckets)
+    - Peak plateau: 700s to 1100s, held at 1.80x (1260 vph)
+    - Ramp-down: 1100s to 1500s, linearly decreasing from 1.80x to 0.40x (discretized in 50s buckets)
+    - Post-peak base: 1500s to 1800s, held at 0.40x (280 vph)
+    """
+    base_vph: int = 700
+    start_mult: float = 0.40
+    peak_mult: float = 1.80
+    ramp_up_start_s: float = 300.0
+    plateau_start_s: float = 700.0
+    plateau_end_s: float = 1100.0
+    ramp_down_end_s: float = 1500.0
+    horizon_s: float = 1800.0
+    step_s: float = 50.0
+
+
+@dataclass(frozen=True)
+class SurgeShiftConfig:
+    """Parameters for surge_shift non-stationary scenario.
+    
+    Mid-run directional shift from ORR North-South dominant to Varthur East-West dominant:
+    - Phase 1 (0 to 700s): ORR dominant (N: 1200, S: 1050, W: 350, E: 350 vph)
+    - Transition window (700s to 1100s): Handover across 4x100s intervals
+    - Phase 2 (1100s to 1800s): Varthur dominant (W: 1200, E: 1200, N: 350, S: 350 vph)
+    """
+    orr_high_vph: int = 1200
+    orr_low_vph: int = 350
+    varthur_high_vph: int = 1200
+    varthur_low_vph: int = 350
+    phase1_end_s: float = 700.0
+    transition_end_s: float = 1100.0
+    horizon_s: float = 1800.0
+    step_s: float = 100.0
+
+
+@dataclass(frozen=True)
+class LaneClosureConfig:
+    """Parameters for lane_closure non-stationary scenario.
+    
+    Inbound lane closed mid-run on ORR North inbound approach ramp (ramp_orr_n_in_0):
+    - Closure lane: ramp_orr_n_in_0 (right lane of 2-lane approach ramp from ORR North)
+    - Closure window: 600.0s to 1200.0s (10 min duration)
+    - Reopened: 1200.0s to 1800.0s
+    - Demand: High commuter corridor traffic (N: 1050, S: 1050, W: 600, E: 600 vph)
+    """
+    lane_id: str = "ramp_orr_n_in_0"
+    start_s: float = 600.0
+    end_s: float = 1200.0
+    horizon_s: float = 1800.0
+    north_vph: int = 1050
+    south_vph: int = 1050
+    west_vph: int = 600
+    east_vph: int = 600
+
+
+RAMP_PEAK = RampPeakConfig()
+SURGE_SHIFT = SurgeShiftConfig()
+LANE_CLOSURE = LaneClosureConfig()
+
+
+def build_ramp_peak_intervals(cfg: RampPeakConfig = RAMP_PEAK) -> List[Tuple[int, int, int]]:
+    intervals: List[Tuple[int, int, int]] = []
+    # Pre-ramp base
+    intervals.append((0, int(cfg.ramp_up_start_s), int(round(cfg.base_vph * cfg.start_mult))))
+    # Ramp-up
+    ramp_dur = cfg.plateau_start_s - cfg.ramp_up_start_s
+    t = cfg.ramp_up_start_s
+    while t < cfg.plateau_start_s:
+        t_next = min(cfg.plateau_start_s, t + cfg.step_s)
+        mid_t = (t + t_next) / 2.0
+        frac = (mid_t - cfg.ramp_up_start_s) / ramp_dur
+        mult = cfg.start_mult + frac * (cfg.peak_mult - cfg.start_mult)
+        intervals.append((int(t), int(t_next), int(round(cfg.base_vph * mult))))
+        t = t_next
+    # Plateau
+    intervals.append((int(cfg.plateau_start_s), int(cfg.plateau_end_s), int(round(cfg.base_vph * cfg.peak_mult))))
+    # Ramp-down
+    down_dur = cfg.ramp_down_end_s - cfg.plateau_end_s
+    t = cfg.plateau_end_s
+    while t < cfg.ramp_down_end_s:
+        t_next = min(cfg.ramp_down_end_s, t + cfg.step_s)
+        mid_t = (t + t_next) / 2.0
+        frac = (mid_t - cfg.plateau_end_s) / down_dur
+        mult = cfg.peak_mult - frac * (cfg.peak_mult - cfg.start_mult)
+        intervals.append((int(t), int(t_next), int(round(cfg.base_vph * mult))))
+        t = t_next
+    # Post-ramp base
+    intervals.append((int(cfg.ramp_down_end_s), int(cfg.horizon_s), int(round(cfg.base_vph * cfg.start_mult))))
+    return intervals
+
+
+def build_surge_shift_intervals(cfg: SurgeShiftConfig = SURGE_SHIFT) -> Dict[str, List[Tuple[int, int, int]]]:
+    # Phase 1: ORR dominant
+    orr_ints: List[Tuple[int, int, int]] = [(0, int(cfg.phase1_end_s), cfg.orr_high_vph)]
+    varthur_ints: List[Tuple[int, int, int]] = [(0, int(cfg.phase1_end_s), cfg.varthur_low_vph)]
+    # Transition
+    t = cfg.phase1_end_s
+    trans_dur = cfg.transition_end_s - cfg.phase1_end_s
+    while t < cfg.transition_end_s:
+        t_next = min(cfg.transition_end_s, t + cfg.step_s)
+        mid_t = (t + t_next) / 2.0
+        frac = (mid_t - cfg.phase1_end_s) / trans_dur
+        orr_vph = int(round(cfg.orr_high_vph - frac * (cfg.orr_high_vph - cfg.orr_low_vph)))
+        varthur_vph = int(round(cfg.varthur_low_vph + frac * (cfg.varthur_high_vph - cfg.varthur_low_vph)))
+        orr_ints.append((int(t), int(t_next), orr_vph))
+        varthur_ints.append((int(t), int(t_next), varthur_vph))
+        t = t_next
+    # Phase 2: Varthur dominant
+    orr_ints.append((int(cfg.transition_end_s), int(cfg.horizon_s), cfg.orr_low_vph))
+    varthur_ints.append((int(cfg.transition_end_s), int(cfg.horizon_s), cfg.varthur_high_vph))
+    return {
+        "N": list(orr_ints),
+        "S": [(t0, t1, int(round(v * 1050.0 / 1200.0)) if t0 < 700 else v) for t0, t1, v in orr_ints],
+        "W": list(varthur_ints),
+        "E": list(varthur_ints),
+    }
+
+
+_ramp_intervals = build_ramp_peak_intervals()
+_shift_intervals = build_surge_shift_intervals()
+
+SITE_DEMAND_PATTERNS: Dict[str, Dict[str, List[Tuple[int, int, int]]]] = {
+    **SITE_DEMAND_PATTERNS_STATIONARY,
+    "ramp_peak": {
+        "W": list(_ramp_intervals),
+        "E": list(_ramp_intervals),
+        "N": list(_ramp_intervals),
+        "S": list(_ramp_intervals),
+    },
+    "surge_shift": _shift_intervals,
+    "lane_closure": {
+        "N": [(0, 1800, LANE_CLOSURE.north_vph)],
+        "S": [(0, 1800, LANE_CLOSURE.south_vph)],
+        "W": [(0, 1800, LANE_CLOSURE.west_vph)],
+        "E": [(0, 1800, LANE_CLOSURE.east_vph)],
+    },
+}
+
+SITE_PATTERNS_STATIONARY = ("balanced", "imbalanced_orr", "imbalanced_varthur", "surge_orr_north")
+SITE_PATTERNS_NON_STATIONARY = ("ramp_peak", "surge_shift", "lane_closure")
+SITE_PATTERNS_ALL = SITE_PATTERNS_STATIONARY + SITE_PATTERNS_NON_STATIONARY

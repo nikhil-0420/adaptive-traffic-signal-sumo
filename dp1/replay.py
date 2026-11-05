@@ -141,7 +141,7 @@ def generate_run_replay(
             v_ids = traci.vehicle.getIDList()
             vehs = []
             for vid in v_ids:
-                pos = traci.vehicle.getPosition(vid)
+                pos = traci.vehicle.getPosition3D(vid)
                 angle = traci.vehicle.getAngle(vid)
                 speed = traci.vehicle.getSpeed(vid)
                 wait = traci.vehicle.getWaitingTime(vid)
@@ -151,6 +151,7 @@ def generate_run_replay(
                     "id": vid,
                     "x": round(pos[0], 1),
                     "y": round(pos[1], 1),
+                    "z": round(pos[2], 2),
                     "a": round(angle, 1),
                     "s": round(speed, 1),
                     "w": round(wait, 1),

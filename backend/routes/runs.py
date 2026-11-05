@@ -448,6 +448,18 @@ def get_timeseries(
     )
 
 
+def _resolve_policy_provenance(run_id: str) -> str:
+    """Determine policy provenance string: MEASURED, ORACLE, ORACLE-SEEDED, or LEARNED."""
+    rid = run_id.lower()
+    if "hybrid_oracle_seeded" in rid:
+        return "ORACLE-SEEDED"
+    if "fixed_matched_cycle" in rid or "webster_oracle" in rid or "fixed_webster" in rid:
+        return "ORACLE"
+    if "rl_dqn" in rid or "dqn" in rid:
+        return "LEARNED"
+    return "MEASURED"
+
+
 @router.get("/{run_id}/decisions", response_model=DecisionsResponse)
 def get_decisions(
     run_id: str,
@@ -462,6 +474,7 @@ def get_decisions(
         else:
             raise HTTPException(status_code=404, detail=f"decisions.csv not found for run '{run_id}'.")
 
+    pol_prov = _resolve_policy_provenance(run_id)
     decisions = []
     with open(csv_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -475,6 +488,7 @@ def get_decisions(
                         rec[k] = float(v) if "." in v else int(v)
                     except ValueError:
                         rec[k] = v
+            rec.setdefault("policy_provenance", pol_prov)
             decisions.append(rec)
             if limit and len(decisions) >= limit:
                 break
@@ -482,6 +496,7 @@ def get_decisions(
     return DecisionsResponse(
         run_id=run_id,
         total_decisions=len(decisions),
+        policy_provenance=pol_prov,
         decisions=decisions,
     )
 
@@ -495,6 +510,8 @@ def get_telemetry(run_id: str):
         run_dir = resolve_safe_run_dir(run_id)
         if run_dir.exists() and (run_dir / "telemetry.json").exists():
             telem_file = run_dir / "telemetry.json"
+
+    pol_prov = _resolve_policy_provenance(run_id)
 
     if not telem_file or not telem_file.exists():
         if info and info.poll_status() == "running":
@@ -513,6 +530,7 @@ def get_telemetry(run_id: str):
                 vehicles=[],
                 approach_queues=None,
                 adaptive_decision=None,
+                policy_provenance=pol_prov,
                 error=None,
             )
         # Check if completed run exists (e.g. timeseries.csv or metrics.json)
@@ -542,6 +560,7 @@ def get_telemetry(run_id: str):
                 vehicles=[],
                 approach_queues=None,
                 adaptive_decision=None,
+                policy_provenance=pol_prov,
                 error=None,
             )
         raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
@@ -575,6 +594,7 @@ def get_telemetry(run_id: str):
                 vehicles=[],
                 approach_queues=None,
                 adaptive_decision=None,
+                policy_provenance=pol_prov,
                 error=None,
             )
         data = {"status": "completed", "sim_time_s": 2000.0, "phase": "GREEN", "axis": "NS", "queues_m": {}}
@@ -589,6 +609,23 @@ def get_telemetry(run_id: str):
     tl_state = data.get("traffic_light_state", "")
     if not tl_state:
         tl_state = "GGggrrrrGGggrrrr" if data.get("phase") == "GREEN" else "yyyyrrrryyyyrrrr"
+
+    app_q = data.get("approach_queues") or {}
+    ad = data.get("adaptive_decision") or {}
+
+    gt_ext_q_N = data.get("gt_ext_q_N") or (app_q.get("N", {}).get("extended_ground_truth_queue_m") if isinstance(app_q.get("N"), dict) else None)
+    gt_ext_q_S = data.get("gt_ext_q_S") or (app_q.get("S", {}).get("extended_ground_truth_queue_m") if isinstance(app_q.get("S"), dict) else None)
+    gt_ext_q_E = data.get("gt_ext_q_E") or (app_q.get("E", {}).get("extended_ground_truth_queue_m") if isinstance(app_q.get("E"), dict) else None)
+    gt_ext_q_W = data.get("gt_ext_q_W") or (app_q.get("W", {}).get("extended_ground_truth_queue_m") if isinstance(app_q.get("W"), dict) else None)
+
+    det_full_N = data.get("det_full_N") if data.get("det_full_N") is not None else (app_q.get("N", {}).get("det_full") if isinstance(app_q.get("N"), dict) else None)
+    det_full_S = data.get("det_full_S") if data.get("det_full_S") is not None else (app_q.get("S", {}).get("det_full") if isinstance(app_q.get("S"), dict) else None)
+    det_full_E = data.get("det_full_E") if data.get("det_full_E") is not None else (app_q.get("E", {}).get("det_full") if isinstance(app_q.get("E"), dict) else None)
+    det_full_W = data.get("det_full_W") if data.get("det_full_W") is not None else (app_q.get("W", {}).get("det_full") if isinstance(app_q.get("W"), dict) else None)
+
+    reason_code = data.get("reason_code") or (ad.get("reason_code") if isinstance(ad, dict) else None)
+    delta_g_req_s = data.get("delta_g_req_s") if data.get("delta_g_req_s") is not None else (ad.get("delta_g_req_s") if isinstance(ad, dict) else None)
+    delta_g_app_s = data.get("delta_g_app_s") if data.get("delta_g_app_s") is not None else (ad.get("delta_g_app_s") if isinstance(ad, dict) else None)
 
     return TelemetryResponse(
         run_id=data.get("run_id", run_id),
@@ -605,6 +642,18 @@ def get_telemetry(run_id: str):
         vehicles=data.get("vehicles") or [],
         approach_queues=data.get("approach_queues"),
         adaptive_decision=data.get("adaptive_decision"),
+        gt_ext_q_N=gt_ext_q_N,
+        gt_ext_q_S=gt_ext_q_S,
+        gt_ext_q_E=gt_ext_q_E,
+        gt_ext_q_W=gt_ext_q_W,
+        det_full_N=det_full_N,
+        det_full_S=det_full_S,
+        det_full_E=det_full_E,
+        det_full_W=det_full_W,
+        reason_code=reason_code,
+        delta_g_req_s=delta_g_req_s,
+        delta_g_app_s=delta_g_app_s,
+        policy_provenance=pol_prov,
         error=data.get("error"),
     )
 

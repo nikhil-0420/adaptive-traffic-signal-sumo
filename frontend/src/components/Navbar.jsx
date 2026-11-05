@@ -35,14 +35,16 @@ export function Navbar() {
           onClick={() => setCurrentView('landing')}
           className="flex items-center gap-3 text-left group transition-transform active:scale-[0.98]"
         >
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 border border-blue-400/30 flex items-center justify-center text-white font-extrabold font-mono text-sm shadow-[0_0_16px_rgba(37,99,235,0.35)] group-hover:border-blue-400">
-            DP1
+          <div className="h-9 w-9 rounded-xl bg-ink border border-hairline flex items-center justify-between p-1 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-signal-red" />
+            <span className="w-2 h-2 rounded-full bg-signal-yellow" />
+            <span className="w-2 h-2 rounded-full bg-signal-green" />
           </div>
           <div>
             <div className="font-bold tracking-tight text-white flex items-center gap-2">
-              <span className="text-sm sm:text-base">Traffic Intelligence</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 font-medium">
-                v1.0
+              <span className="text-sm sm:text-base font-display">Phasora</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-accent/20 text-accent font-medium">
+                Adaptive
               </span>
             </div>
             <div className="text-[11px] text-slate-400 flex items-center gap-1.5">

@@ -26,6 +26,8 @@ class LaneQueueInfo:
     is_saturated: bool
     ground_truth_queue_m: float
     ground_truth_veh_count: int
+    extended_ground_truth_queue_m: float = 0.0
+    extended_ground_truth_veh_count: int = 0
 
 
 @dataclass
@@ -41,10 +43,15 @@ class ApproachQueueInfo:
     total_queued_vehicles: int     # sum of queued vehicles across lanes
     is_saturated: bool             # true if any lane queue reaches detector length
     sensor_status: str = "MEASURING" # "SATURATED", "CONFIRMED_ZERO", "MEASURING", "OFFLINE"
+    det_full: bool = False         # evaluation-only: detector queue >= span minus setback
     
     # Ground-truth microscopic metrics (for validation, distinct from sensor)
-    ground_truth_queue_m: float = 0.0   # contiguous stopped cluster from stop line
+    ground_truth_queue_m: float = 0.0   # contiguous stopped cluster from stop line on approach leg
     ground_truth_veh_count: int = 0
+    
+    # Extended ground-truth microscopic metrics (spanning approach leg + upstream ramp)
+    extended_ground_truth_queue_m: float = 0.0
+    extended_ground_truth_veh_count: int = 0
     
     # Dynamics and waiting
     total_waiting_time_s: float = 0.0
@@ -68,6 +75,11 @@ APPROACH_DEFINITIONS = {
             "lanes": ["leg_orr_n_in_0", "leg_orr_n_in_1"],
             "detectors": ["det_orr_n_0", "det_orr_n_1"],
             "det_length_m": 24.9,
+            "ramp_edge": "ramp_orr_n_in",
+            "lane_chains": [
+                ["leg_orr_n_in_0", ":node_junc_n_0_0", "ramp_orr_n_in_0"],
+                ["leg_orr_n_in_1", ":node_junc_n_0_1", "ramp_orr_n_in_1"],
+            ],
         },
         "S": {
             "name": "ORR South (Kadubeesanahalli)",
@@ -76,6 +88,11 @@ APPROACH_DEFINITIONS = {
             "lanes": ["leg_orr_s_in_0", "leg_orr_s_in_1"],
             "detectors": ["det_orr_s_0", "det_orr_s_1"],
             "det_length_m": 24.9,
+            "ramp_edge": "ramp_orr_s_in",
+            "lane_chains": [
+                ["leg_orr_s_in_0", ":node_junc_s_2_0", "ramp_orr_s_in_0"],
+                ["leg_orr_s_in_1", ":node_junc_s_2_1", "ramp_orr_s_in_1"],
+            ],
         },
         "E": {
             "name": "Varthur East (Whitefield)",
@@ -84,6 +101,11 @@ APPROACH_DEFINITIONS = {
             "lanes": ["leg_wf_in_0", "leg_wf_in_1"],
             "detectors": ["det_wf_0", "det_wf_1"],
             "det_length_m": 24.9,
+            "ramp_edge": "ramp_wf_in",
+            "lane_chains": [
+                ["leg_wf_in_0", ":node_junc_e_0_0", "ramp_wf_in_0"],
+                ["leg_wf_in_1", ":node_junc_e_0_1", "ramp_wf_in_1"],
+            ],
         },
         "W": {
             "name": "Varthur West (HAL Airport Rd)",
@@ -92,6 +114,11 @@ APPROACH_DEFINITIONS = {
             "lanes": ["leg_hal_in_0", "leg_hal_in_1"],
             "detectors": ["det_hal_0", "det_hal_1"],
             "det_length_m": 24.9,
+            "ramp_edge": "ramp_hal_in",
+            "lane_chains": [
+                ["leg_hal_in_0", ":node_junc_w_2_0", "ramp_hal_in_0"],
+                ["leg_hal_in_1", ":node_junc_w_2_1", "ramp_hal_in_1"],
+            ],
         },
     },
     "synthetic": {
@@ -102,6 +129,7 @@ APPROACH_DEFINITIONS = {
             "lanes": ["N_in_0", "N_in_1"],
             "detectors": ["det_N_0", "det_N_1"],
             "det_length_m": 150.0,
+            "lane_chains": [["N_in_0"], ["N_in_1"]],
         },
         "S": {
             "name": "South Approach",
@@ -110,6 +138,7 @@ APPROACH_DEFINITIONS = {
             "lanes": ["S_in_0", "S_in_1"],
             "detectors": ["det_S_0", "det_S_1"],
             "det_length_m": 150.0,
+            "lane_chains": [["S_in_0"], ["S_in_1"]],
         },
         "E": {
             "name": "East Approach",
@@ -118,6 +147,7 @@ APPROACH_DEFINITIONS = {
             "lanes": ["E_in_0", "E_in_1"],
             "detectors": ["det_E_0", "det_E_1"],
             "det_length_m": 150.0,
+            "lane_chains": [["E_in_0"], ["E_in_1"]],
         },
         "W": {
             "name": "West Approach",
@@ -126,6 +156,7 @@ APPROACH_DEFINITIONS = {
             "lanes": ["W_in_0", "W_in_1"],
             "detectors": ["det_W_0", "det_W_1"],
             "det_length_m": 150.0,
+            "lane_chains": [["W_in_0"], ["W_in_1"]],
         },
     },
 }
@@ -152,6 +183,7 @@ class QueueMeasurementEngine:
             sat_threshold = det_len - 0.5  # within 0.5m of physical detector limit
 
             approach_data_valid = True
+            chains = spec.get("lane_chains", [[l] for l in spec["lanes"]])
             for idx, lane_id in enumerate(spec["lanes"]):
                 det_id = spec["detectors"][idx] if idx < len(spec["detectors"]) else None
                 det_q = 0.0
@@ -172,8 +204,12 @@ class QueueMeasurementEngine:
                         is_sat = False
                         approach_data_valid = False
 
-                # Ground truth microscopic computation on this lane
+                # Ground truth microscopic computation on this approach leg lane only
                 gt_q, gt_vehs = self._compute_lane_ground_truth(lane_id)
+
+                # Extended ground truth spanning approach leg + connector + upstream ramp
+                lane_chain = chains[idx] if idx < len(chains) else [lane_id]
+                gt_ext_q, gt_ext_vehs = self._compute_chain_ground_truth(lane_chain)
 
                 lane_infos.append(LaneQueueInfo(
                     lane_id=lane_id,
@@ -185,6 +221,8 @@ class QueueMeasurementEngine:
                     is_saturated=is_sat,
                     ground_truth_queue_m=round(gt_q, 2),
                     ground_truth_veh_count=gt_vehs,
+                    extended_ground_truth_queue_m=round(gt_ext_q, 2),
+                    extended_ground_truth_veh_count=gt_ext_vehs,
                 ))
 
             # Longitudinal approach queue is the MAXIMUM across lanes (not the sum!)
@@ -194,6 +232,9 @@ class QueueMeasurementEngine:
             
             gt_approach_q = max((l.ground_truth_queue_m for l in lane_infos), default=0.0)
             gt_approach_vehs = sum(l.ground_truth_veh_count for l in lane_infos)
+
+            gt_ext_approach_q = max((l.extended_ground_truth_queue_m for l in lane_infos), default=0.0)
+            gt_ext_approach_vehs = sum(l.extended_ground_truth_veh_count for l in lane_infos)
 
             # Determine explicit semantic status (never silence missing as healthy zero)
             if not approach_data_valid:
@@ -229,8 +270,11 @@ class QueueMeasurementEngine:
                 total_queued_vehicles=total_vehs,
                 is_saturated=approach_sat,
                 sensor_status=status_label,
+                det_full=bool(longitudinal_q >= (24.0 if det_len < 30.0 else (det_len - 2.0))),
                 ground_truth_queue_m=round(gt_approach_q, 2),
                 ground_truth_veh_count=gt_approach_vehs,
+                extended_ground_truth_queue_m=round(gt_ext_approach_q, 2),
+                extended_ground_truth_veh_count=gt_ext_approach_vehs,
                 total_waiting_time_s=round(total_wait, 1),
                 recent_arrival_rate_vpm=arrival_vpm,
                 lanes=lane_infos,
@@ -242,33 +286,48 @@ class QueueMeasurementEngine:
         return results
 
     def _compute_lane_ground_truth(self, lane_id: str) -> tuple[float, int]:
-        """Compute ground-truth contiguous stopped queue from stop line upstream.
+        """Compute ground-truth contiguous stopped queue from stop line upstream on a single lane."""
+        return self._compute_chain_ground_truth([lane_id])
+
+    def _compute_chain_ground_truth(self, lane_chain: List[str]) -> tuple[float, int]:
+        """Compute ground-truth contiguous stopped queue from stop line upstream across a chain of lanes.
+        
+        lane_chain is ordered from downstream to upstream:
+        e.g. [leg_lane, internal_connector_lane, ramp_lane]
         
         Rules:
-        - Stopped threshold: speed < 0.1 m/s (or halting < 1.4 m/s).
-        - Contiguous queue gap rule: gap between consecutive stopped vehicles <= 7.5m.
-        - Queue extent: distance from lane stop line to back of furthest vehicle in cluster.
+        - Stopped threshold: speed < 1.4 m/s.
+        - Lead vehicle: distance from stop line <= 15.0 m.
+        - Contiguous queue gap rule: gap between consecutive stopped vehicles <= 7.5 m.
+        - Queue extent: distance from stop line to back of furthest vehicle in cluster.
         """
-        try:
-            lane_len = traci.lane.getLength(lane_id)
-            veh_ids = traci.lane.getLastStepVehicleIDs(lane_id)
-        except Exception:
-            return 0.0, 0
-
-        if not veh_ids:
-            return 0.0, 0
-
-        # Collect vehicles on lane with their distance to stop line (lane_len - pos)
         veh_data = []
-        for vid in veh_ids:
+        seen_vids = set()
+        cumulative_offset = 0.0
+        total_chain_len = 0.0
+
+        for lane_id in lane_chain:
             try:
-                pos = traci.vehicle.getLanePosition(vid)
-                spd = traci.vehicle.getSpeed(vid)
-                v_len = traci.vehicle.getLength(vid)
-                dist_to_stop = max(0.0, lane_len - pos)
-                veh_data.append((dist_to_stop, spd, v_len))
+                lane_len = traci.lane.getLength(lane_id)
+                total_chain_len += lane_len
+                veh_ids = traci.lane.getLastStepVehicleIDs(lane_id)
             except Exception:
                 continue
+
+            for vid in veh_ids:
+                if vid in seen_vids:
+                    continue
+                seen_vids.add(vid)
+                try:
+                    pos = traci.vehicle.getLanePosition(vid)
+                    spd = traci.vehicle.getSpeed(vid)
+                    v_len = traci.vehicle.getLength(vid)
+                    dist_to_front = cumulative_offset + max(0.0, lane_len - pos)
+                    veh_data.append((dist_to_front, spd, v_len))
+                except Exception:
+                    continue
+
+            cumulative_offset += lane_len
 
         if not veh_data:
             return 0.0, 0
@@ -282,9 +341,8 @@ class QueueMeasurementEngine:
 
         for dist_to_front, spd, v_len in veh_data:
             dist_to_back = dist_to_front + v_len
-            # Stopped vehicle threshold
+            # Stopped vehicle threshold (speed < 1.4 m/s)
             if spd < 1.4:
-                # If first vehicle, must be near stop line (<= 15m)
                 if cluster_count == 0:
                     if dist_to_front <= 15.0:
                         cluster_count += 1
@@ -304,7 +362,7 @@ class QueueMeasurementEngine:
                 if cluster_count > 0:
                     break  # moving vehicle breaks the stopped queue
 
-        return min(lane_len, furthest_extent), cluster_count
+        return min(total_chain_len, furthest_extent), cluster_count
 
 
 def queues_to_legacy_dict(measurements: Dict[str, ApproachQueueInfo]) -> Dict[str, float]:

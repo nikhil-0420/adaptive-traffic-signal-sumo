@@ -28,7 +28,16 @@ export function LiveMonitorView() {
   const { allRuns, selectedRunId, setSelectedRunId, connectionStatus, connectionInfo, refreshConnection } = useApp();
 
   const [telemetry, setTelemetry] = useState(null);
+  const [telemetryAgeMs, setTelemetryAgeMs] = useState(0);
+  const lastTelemetryTimeRef = useRef(Date.now());
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTelemetryAgeMs(Math.max(0, Date.now() - lastTelemetryTimeRef.current));
+    }, 200);
+    return () => clearInterval(timer);
+  }, []);
   const [decisionsHistory, setDecisionsHistory] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [launchParams, setLaunchParams] = useState({
@@ -92,6 +101,8 @@ export function LiveMonitorView() {
       }
       setPollError(null);
       setTelemetry(data);
+      lastTelemetryTimeRef.current = Date.now();
+      setTelemetryAgeMs(0);
 
       if (data?.adaptive_decision && data.adaptive_decision.t !== undefined) {
         setDecisionsHistory((prev) => {
@@ -387,75 +398,103 @@ export function LiveMonitorView() {
       )}
 
       {/* Telemetry Status Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="dp1-card p-3">
-          <span className="text-[11px] font-mono uppercase text-slate-400">Simulation Clock</span>
-          <div className="flex items-baseline gap-1 mt-1 font-mono">
-            <span className="text-xl font-bold text-white">
-              {telemetry ? Number(telemetry.sim_time_s || 0).toFixed(1) : '—'}
-            </span>
-            <span className="text-xs text-slate-400">s</span>
-          </div>
-        </div>
+      {(() => {
+        const totalNetworkVehicles = telemetry?.vehicles?.length ?? 0;
+        const queuedNetworkVehicles = (telemetry?.vehicles || []).filter(
+          (v) => (v.s !== undefined ? v.s < 0.1 : (v.speed !== undefined ? v.speed < 0.1 : false)) || (v.w > 0)
+        ).length;
 
-        <div className="dp1-card p-3">
-          <span className="text-[11px] font-mono uppercase text-slate-400">Run Status</span>
-          <div className="mt-1 flex items-center gap-1.5">
-            {isStale ? (
-              <span className="dp1-badge dp1-badge-yellow text-xs">
-                <AlertTriangle size={11} className="text-amber-400" />
-                <span>STALE</span>
-              </span>
-            ) : telemetry?.status === 'starting' ? (
-              <span className="dp1-badge dp1-badge-blue text-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                <span>STARTING</span>
-              </span>
-            ) : telemetry?.status === 'running' ? (
-              <span className="dp1-badge dp1-badge-green text-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 dp1-pulse" />
-                <span>RUNNING</span>
-              </span>
-            ) : telemetry?.status === 'stopped' ? (
-              <span className="dp1-badge dp1-badge-yellow text-xs">
-                <span>STOPPED</span>
-              </span>
-            ) : telemetry?.status === 'failed' ? (
-              <span className="dp1-badge dp1-badge-red text-xs">
-                <AlertCircle size={11} className="text-red-400" />
-                <span>FAILED</span>
-              </span>
-            ) : (
-              <span className="dp1-badge dp1-badge-blue text-xs">
-                <CheckCircle2 size={11} className="text-blue-400" />
-                <span>COMPLETED</span>
-              </span>
-            )}
-          </div>
-        </div>
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="dp1-card p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono uppercase text-slate-400">Simulation Clock</span>
+                {telemetry && (
+                  <span className="text-[10px] font-mono text-cyan-400">
+                    Age: {(telemetryAgeMs / 1000).toFixed(1)}s
+                  </span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-1 mt-1 font-mono">
+                <span className="text-xl font-bold text-white">
+                  {telemetry ? Number(telemetry.sim_time_s || 0).toFixed(1) : '—'}
+                </span>
+                <span className="text-xs text-slate-400">s</span>
+              </div>
+            </div>
 
-        <div className="dp1-card p-3">
-          <span className="text-[11px] font-mono uppercase text-slate-400">Active Phase / Axis</span>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-lg font-bold font-mono text-emerald-400">
-              {telemetry?.phase || 'GREEN'}
-            </span>
-            <span className="text-xs font-mono text-slate-300">
-              ({telemetry?.axis || 'NS'})
-            </span>
-          </div>
-        </div>
+            <div className="dp1-card p-3">
+              <span className="text-[11px] font-mono uppercase text-slate-400">Vehicles in Network</span>
+              <div className="flex items-baseline gap-1.5 mt-1 font-mono">
+                <span className="text-xl font-bold text-white">
+                  {totalNetworkVehicles}
+                </span>
+                <span className="text-xs text-amber-400 font-semibold">
+                  ({queuedNetworkVehicles} queued)
+                </span>
+              </div>
+            </div>
 
-        <div className="dp1-card p-3">
-          <span className="text-[11px] font-mono uppercase text-slate-400">Max Queue Observed</span>
-          <div className="flex items-baseline gap-1 mt-1 font-mono">
-            <span className="text-xl font-bold text-white">
-              {selectedRunData?.max_queue_m ? Number(selectedRunData.max_queue_m).toFixed(1) : '—'}
-            </span>
-            <span className="text-xs text-slate-400">m</span>
+            <div className="dp1-card p-3">
+              <span className="text-[11px] font-mono uppercase text-slate-400">Run Status</span>
+              <div className="mt-1 flex items-center gap-1.5">
+                {isStale ? (
+                  <span className="dp1-badge dp1-badge-yellow text-xs">
+                    <AlertTriangle size={11} className="text-amber-400" />
+                    <span>STALE</span>
+                  </span>
+                ) : telemetry?.status === 'starting' ? (
+                  <span className="dp1-badge dp1-badge-blue text-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    <span>STARTING</span>
+                  </span>
+                ) : telemetry?.status === 'running' ? (
+                  <span className="dp1-badge dp1-badge-green text-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 dp1-pulse" />
+                    <span>RUNNING</span>
+                  </span>
+                ) : telemetry?.status === 'stopped' ? (
+                  <span className="dp1-badge dp1-badge-yellow text-xs">
+                    <span>STOPPED</span>
+                  </span>
+                ) : telemetry?.status === 'failed' ? (
+                  <span className="dp1-badge dp1-badge-red text-xs">
+                    <AlertCircle size={11} className="text-red-400" />
+                    <span>FAILED</span>
+                  </span>
+                ) : (
+                  <span className="dp1-badge dp1-badge-blue text-xs">
+                    <CheckCircle2 size={11} className="text-blue-400" />
+                    <span>COMPLETED</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="dp1-card p-3">
+              <span className="text-[11px] font-mono uppercase text-slate-400">Active Phase / Axis</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-lg font-bold font-mono text-emerald-400">
+                  {telemetry?.phase || 'GREEN'}
+                </span>
+                <span className="text-xs font-mono text-slate-300">
+                  ({telemetry?.axis || 'NS'})
+                </span>
+              </div>
+            </div>
+
+            <div className="dp1-card p-3">
+              <span className="text-[11px] font-mono uppercase text-slate-400">Max Queue Observed</span>
+              <div className="flex items-baseline gap-1 mt-1 font-mono">
+                <span className="text-xl font-bold text-white">
+                  {selectedRunData?.max_queue_m ? Number(selectedRunData.max_queue_m).toFixed(1) : '—'}
+                </span>
+                <span className="text-xs text-slate-400">m</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Main Grid: Schematic + Detailed Telemetry */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -469,7 +508,7 @@ export function LiveMonitorView() {
             modeLabel={
               isLiveApi && (telemetry?.status === 'running' || telemetry?.status === 'starting')
                 ? 'REAL-TIME TRACI LIVE TWIN'
-                : 'COMPLETED / RECORDED RUN'
+                : 'VERIFIED TRACI REPLAY'
             }
             availableRuns={allRuns.map((r) => ({
               id: r.run_id,

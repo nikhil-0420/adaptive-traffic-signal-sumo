@@ -22,7 +22,7 @@ export function IntersectionSchematic({
   const ewYellow = isEW && phase === 'YELLOW';
   const ewRed = !isEW || phase === 'ALL_RED';
 
-  const maxQueueLimit = 150.0; // 150m detector length
+  const maxQueueLimit = 24.9; // 24.9m E2 lane-area detector (clipped near 24m)
   const getQueuePercent = (q) => Math.min(100, Math.max(0, ((q || 0) / maxQueueLimit) * 100));
 
   return (

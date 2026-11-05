@@ -67,6 +67,8 @@ def run_simulation(
     emergency_cfg: C.EmergencyConfig = None,
     record_vehicles: bool = False,
     network: str = "synthetic",
+    max_sim_time_s: int = None,
+    port: int = None,
 ):
     """Run one simulation. Retries on TraCI connection failures (parallel runs can race for ports).
 
@@ -82,6 +84,8 @@ def run_simulation(
                 emergency_cfg=emergency_cfg,
                 record_vehicles=record_vehicles,
                 network=network,
+                max_sim_time_s=max_sim_time_s,
+                port=port,
             )
         except Exception as e:
             last = e
@@ -96,7 +100,8 @@ def run_simulation(
 def _run_once(
     scenario, policy, seed, gui, out_dir, policy_kwargs, demand_level,
     emergency_event=False, emergency_priority=False, emergency_cfg=None,
-    record_vehicles=False, network="synthetic",
+    record_vehicles=False, network="synthetic", max_sim_time_s=None,
+    port=None,
 ):
     if network == "marathahalli":
         from .site_network import get_network_paths, build_network as build_site_net
@@ -145,9 +150,16 @@ def _run_once(
 
     tripinfo = out_dir / "tripinfo.xml"
 
+    add_files = [str(det_file)]
+    if policy == "sumo_actuated":
+        from .controllers.sumo_actuated import get_actuated_additional_file
+        temp_states = SignalStates(net_file, tls_id=tls_id)
+        act_file = get_actuated_additional_file(network, tls_id, temp_states, out_dir=out_dir)
+        add_files.append(str(act_file))
+
     cmd = [
         binary("sumo-gui" if gui else "sumo"),
-        "-n", str(net_file), "-r", str(routes), "-a", str(det_file),
+        "-n", str(net_file), "-r", str(routes), "-a", ",".join(add_files),
         "--tripinfo-output", str(tripinfo),
         "--seed", str(seed), "--step-length", str(C.SIM.step_s),
         "--time-to-teleport", "-1",          # no teleporting: jams must show up in the metrics
@@ -157,9 +169,12 @@ def _run_once(
     if gui:
         cmd += ["--start", "true", "--delay", "100"]
     conn_label = f"{net_tag}{scenario}_{demand_level}_{policy}_{seed}_{os.getpid()}_{random.randint(1000, 9999)}"
+    traci_kwargs = {"label": conn_label}
+    if port is not None:
+        traci_kwargs["port"] = int(port)
     for attempt in range(4):
         try:
-            traci.start(cmd, label=conn_label)
+            traci.start(cmd, **traci_kwargs)
             break
         except Exception:
             if attempt == 3:
@@ -170,7 +185,7 @@ def _run_once(
     kwargs = dict(policy_kwargs or {})
     kwargs["network"] = network
     kwargs["tls_id"] = tls_id
-    if policy == "fixed_webster":
+    if policy in ("fixed_webster", "hybrid_queue_adaptive", "fixed_matched_cycle", "webster_oracle") or policy.startswith("hybrid_"):
         if "scenario" not in kwargs:
             kwargs["scenario"] = scenario
         if "demand_level" not in kwargs:
@@ -200,13 +215,26 @@ def _run_once(
         "approach_queues": None,
         "adaptive_decision": None,
     })
+    closure_cfg = getattr(C, "LANE_CLOSURE", None)
+    is_closure_scenario = (scenario == "lane_closure" and network == "marathahalli")
+    lane_closed = False
+    lane_reopened = False
     try:
         t = 0.0
         init_queues = q_engine.measure_all(t)
         q = queues_to_legacy_dict(init_queues)
         ctl.start(t, q)
         ctl.apply()
-        while t < C.SIM.max_sim_time_s:
+        sim_time_cap = max_sim_time_s or C.SIM.max_sim_time_s
+        while t < sim_time_cap:
+            if is_closure_scenario and closure_cfg:
+                if closure_cfg.start_s <= t < closure_cfg.end_s and not lane_closed:
+                    traci.lane.setDisallowed(closure_cfg.lane_id, ["all"])
+                    lane_closed = True
+                elif t >= closure_cfg.end_s and lane_closed and not lane_reopened:
+                    traci.lane.setDisallowed(closure_cfg.lane_id, [])
+                    lane_reopened = True
+                    lane_closed = False
             traci.simulationStep()
             t = traci.simulation.getTime()
             app_queues = q_engine.measure_all(t)
@@ -226,6 +254,11 @@ def _run_once(
                 "t": t, "phase": ctl.phase, "axis": ctl.axis,
                 **{f"q_{a}": round(q[a], 2) for a in C.APPROACHES},
                 "state": traci.trafficlight.getRedYellowGreenState(tls_id),
+                **{f"gt_q_{a}": round(app_queues[a].ground_truth_queue_m, 2) for a in C.APPROACHES},
+                **{f"gt_n_{a}": app_queues[a].ground_truth_veh_count for a in C.APPROACHES},
+                **{f"gt_ext_q_{a}": round(app_queues[a].extended_ground_truth_queue_m, 2) for a in C.APPROACHES},
+                **{f"gt_ext_n_{a}": app_queues[a].extended_ground_truth_veh_count for a in C.APPROACHES},
+                **{f"det_full_{a}": app_queues[a].det_full for a in C.APPROACHES},
             }
             if emergency_event:
                 series_rec["emergency_approaching"] = em_detected
@@ -237,7 +270,7 @@ def _run_once(
             if record_vehicles:
                 v_ids = traci.vehicle.getIDList()
                 for vid in v_ids:
-                    pos = traci.vehicle.getPosition(vid)
+                    pos = traci.vehicle.getPosition3D(vid)
                     angle = traci.vehicle.getAngle(vid)
                     speed = traci.vehicle.getSpeed(vid)
                     is_em = bool(emergency_event and (vid == em_cfg.vehicle_id or "ambulance" in vid))
@@ -245,6 +278,7 @@ def _run_once(
                         "id": vid,
                         "x": round(pos[0], 1),
                         "y": round(pos[1], 1),
+                        "z": round(pos[2], 2),
                         "a": round(angle, 1),
                         "s": round(speed, 1),
                         "em": is_em,
@@ -268,6 +302,8 @@ def _run_once(
                 "approach_queues": app_queues_data,
                 "adaptive_decision": adaptive_decision,
             })
+            if max_sim_time_s is not None and t >= max_sim_time_s:
+                break
             if t >= C.SIM.demand_duration_s and traci.simulation.getMinExpectedNumber() == 0:
                 break
         unfinished = traci.simulation.getMinExpectedNumber()
@@ -314,6 +350,12 @@ def _run_once(
 
     _write_csv(out_dir / "timeseries.csv", series)
     _write_csv(out_dir / "decisions.csv", ctl.decisions)
+    if hasattr(ctl, "plan_log") and ctl.plan_log:
+        try:
+            with open(out_dir / "plan_log.json", "w", encoding="utf-8") as f:
+                json.dump(ctl.plan_log, f, indent=2)
+        except Exception:
+            pass
 
     metrics = summarise_run(
         tripinfo,
@@ -349,7 +391,8 @@ def _run_once(
 def _write_csv(path, rows):
     if not rows:
         return
+    fieldnames = list({k: None for row in rows for k in row.keys()}.keys())
     with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)

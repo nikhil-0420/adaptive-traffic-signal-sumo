@@ -1,427 +1,277 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { useApp } from '../context/AppContext';
-import { KpiCard } from '../components/KpiCard';
-import { IsometricIntersection } from '../components/IsometricIntersection';
-import {
-  Clock,
-  TrendingUp,
-  AlertTriangle,
-  Scale,
-  ArrowRight,
-  Play,
-  Eye,
-  ShieldCheck,
-  Zap,
-  Activity,
-  ChevronRight,
-  Gauge,
-  Sliders,
-  CheckCircle2
-} from 'lucide-react';
+import { useResults } from '../context/useResults';
+import { ResultsStrip } from '../components/ResultsStrip';
+import { IconArrowRight, IconArrowUpRight, IconLiveSim, IconJunction, IconOperations, IconCompare } from '../components/icons';
 
 export function OverviewView() {
-  const { allRuns, connectionStatus, setCurrentView, selectedRunId, setSelectedRunId } = useApp();
-  const [activeSimulationRun, setActiveSimulationRun] = useState(
-    selectedRunId || 'marathahalli_imbalanced_orr_adaptive_s121'
-  );
+  const { setCurrentView } = useApp();
+  const { siteHeadline, syntheticHeadline, getComparisonTable } = useResults();
 
-  // Aggregate verified comparison statistics across train seeds 1..5
-  const stats = useMemo(() => {
-    if (!allRuns || allRuns.length === 0) {
-      return {
-        fixedAvgWait: null,
-        adaptiveAvgWait: null,
-        improvementPercent: null,
-        avgThroughput: null,
-        maxQueue: null,
-        disparity: null,
-      };
+  const comparisonRows = getComparisonTable('imbalanced_orr', 'medium');
+
+  const headlineKpis = [
+    {
+      label: 'Delay Reduction (Hybrid vs Fixed)',
+      value: siteHeadline.deltaPercent,
+      unit: '% change',
+      isDelta: true,
+      deltaPercent: siteHeadline.deltaPercent,
+      subtext: 'vs 47.6 s fixed baseline'
+    },
+    {
+      label: 'Average Vehicle Delay',
+      value: siteHeadline.hybridWaitS,
+      unit: 's/veh',
+      subtext: 'Fixed: 47.6 s · Hybrid: 42.9 s'
+    },
+    {
+      label: 'Directional Wait Disparity',
+      value: siteHeadline.directionalDisparityS,
+      unit: 's',
+      subtext: 'ORR vs Varthur corridor'
+    },
+    {
+      label: 'Maximum Approach Queue',
+      value: siteHeadline.maxQueueCapped ? '24.9' : `${siteHeadline.maxQueueM}`,
+      unit: 'm',
+      subtext: 'Detector clipped at ~24m (ground truth extends higher)'
     }
-
-    let imbalancedNsRuns = allRuns.filter((r) => r.scenario === 'imbalanced_ns' && [1, 2, 3, 4, 5].includes(r.seed));
-    if (imbalancedNsRuns.length === 0) {
-      imbalancedNsRuns = allRuns.filter((r) => r.scenario === 'imbalanced_ns');
-    }
-    const fixedRuns = imbalancedNsRuns.filter((r) => r.policy === 'fixed');
-    const adaptiveRuns = imbalancedNsRuns.filter((r) => r.policy === 'adaptive');
-
-    const fixedAvgWait = fixedRuns.length ? fixedRuns.reduce((acc, r) => acc + (r.avg_wait_s || 0), 0) / fixedRuns.length : null;
-    const adaptiveAvgWait = adaptiveRuns.length ? adaptiveRuns.reduce((acc, r) => acc + (r.avg_wait_s || 0), 0) / adaptiveRuns.length : null;
-    const improvementPercent = fixedAvgWait != null && adaptiveAvgWait != null && fixedAvgWait > 0 ? ((fixedAvgWait - adaptiveAvgWait) / fixedAvgWait) * 100 : null;
-
-    const avgThroughput = adaptiveRuns.length ? adaptiveRuns.reduce((acc, r) => acc + (r.throughput_veh_per_h || 0), 0) / adaptiveRuns.length : null;
-    const maxQueue = adaptiveRuns.length ? Math.max(...adaptiveRuns.map((r) => r.max_queue_m || 0)) : null;
-    const disparity = adaptiveRuns.length ? adaptiveRuns.reduce((acc, r) => acc + (r.directional_wait_disparity_s || 0), 0) / adaptiveRuns.length : null;
-
-    return {
-      fixedAvgWait,
-      adaptiveAvgWait,
-      improvementPercent,
-      avgThroughput,
-      maxQueue,
-      disparity,
-    };
-  }, [allRuns]);
-
-  // Comparison matrix dynamically computed from verified repository data
-  const scenarioMatrix = useMemo(() => {
-    const scenariosDef = [
-      {
-        name: 'balanced',
-        label: 'Balanced 4-Way',
-        desc: 'Uniform traffic distribution across all 4 approaches (1350 veh/h)',
-      },
-      {
-        name: 'imbalanced_ns',
-        label: 'Imbalanced NS (Heavy Corridor)',
-        desc: 'Dominant North-South corridor (1540 veh/h) vs East-West cross-streets',
-      },
-      {
-        name: 'imbalanced_ew',
-        label: 'Imbalanced EW (Heavy Cross)',
-        desc: 'Dominant East-West corridor (1520 veh/h)',
-      },
-      {
-        name: 'surge_north',
-        label: 'Surge North (Asymmetric Burst)',
-        desc: 'Sudden high-volume surge on North approach; test of tuning bounds',
-      },
-    ];
-
-    if (!allRuns || allRuns.length === 0) {
-      return scenariosDef.map((s) => ({
-        ...s,
-        fixed: '—',
-        webster: '—',
-        adaptive: '—',
-        delta: '—',
-        favorable: true,
-        runId: `${s.name}_adaptive_s1`,
-      }));
-    }
-
-    return scenariosDef.map((sc) => {
-      const getAvg = (pol) => {
-        let matching = allRuns.filter(
-          (r) => r.scenario === sc.name && r.policy === pol && [1, 2, 3, 4, 5].includes(r.seed)
-        );
-        if (matching.length === 0) {
-          matching = allRuns.filter((r) => r.scenario === sc.name && r.policy === pol);
-        }
-        if (matching.length === 0) return null;
-        return matching.reduce((sum, r) => sum + (r.avg_wait_s || 0), 0) / matching.length;
-      };
-
-      const fixed = getAvg('fixed');
-      const webster = getAvg('fixed_webster');
-      const adaptive = getAvg('adaptive');
-
-      const delta =
-        fixed != null && adaptive != null && fixed > 0
-          ? (((fixed - adaptive) / fixed) * 100).toFixed(1)
-          : null;
-
-      const favorable = delta != null && parseFloat(delta) >= 0;
-
-      return {
-        ...sc,
-        fixed: fixed != null ? `${fixed.toFixed(1)}s` : '—',
-        webster: webster != null ? `${webster.toFixed(1)}s` : '—',
-        adaptive: adaptive != null ? `${adaptive.toFixed(1)}s` : '—',
-        delta: delta != null ? `${favorable ? '-' : '+'}${Math.abs(parseFloat(delta))}%` : '—',
-        favorable,
-        runId: `${sc.name}_adaptive_s1`,
-      };
-    });
-  }, [allRuns]);
-
-  const overviewDemoRuns = [
-    { id: 'marathahalli_imbalanced_orr_adaptive_s121', label: 'Marathahalli • Adaptive Queue (s121)' },
-    { id: 'marathahalli_imbalanced_orr_fixed_webster_s121', label: 'Marathahalli • Webster Optimal (s121)' },
-    { id: 'marathahalli_imbalanced_orr_queue_extension_s121', label: 'Marathahalli • Queue Extension (s121)' },
-    { id: 'marathahalli_imbalanced_orr_fixed_s121', label: 'Marathahalli • BTP Fixed-Time (s121)' },
-    { id: 'imbalanced_ns_adaptive_s1', label: 'Synthetic 4-Way • Adaptive Queue (s1)' },
-    { id: 'imbalanced_ns_adaptive_s1_em_pri', label: 'Synthetic 4-Way • EVSP Ambulance Priority' },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Quick Route */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/90 border border-white/10 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-            <h2 className="text-base font-bold text-white tracking-tight">
-              Traffic Operations Command
+    <div className="space-y-8 animate-fade-up">
+      {/* Page Header: Noun Title (24px) + One-sentence question */}
+      <div className="border-b border-hairline pb-4">
+        <h1 className="text-2xl font-bold text-ink tracking-tight">
+          Overview
+        </h1>
+        <p className="text-sm text-ink-secondary mt-1 max-w-3xl">
+          How effectively does queue-adaptive signal control reduce vehicle delay and queue accumulation at the Marathahalli Bridge junction compared to fixed-time operations?
+        </p>
+      </div>
+
+      {/* Headline Results Strip (Double-Bezel #1) */}
+      <ResultsStrip
+        title="Headline Outcome: Marathahalli Real-Road Corridor"
+        basis={siteHeadline.basis}
+        items={headlineKpis}
+      />
+
+      {/* Primary Hero Section: Split Layout (Plain copy on left, Interactive Poster on right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {/* Left: Plain, specific copy & CTA buttons */}
+        <div className="lg:col-span-7 flex flex-col justify-between dp1-panel p-6 bg-panel">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-inset border border-hairline text-xs font-mono text-ink-secondary">
+              <span>B.Tech AI & Data Science</span>
+              <span>•</span>
+              <span>Alliance University</span>
+            </div>
+
+            <h2 className="text-xl font-bold text-ink tracking-tight">
+              Sensor-guided adaptive control for complex grade-separated junctions
             </h2>
-            <span className="text-[11px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
-              TraCI Microscopic Simulation
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Dynamic green allocation via induction loop queue sensing. Enforcing safety clearance invariants (GREEN &rarr; YELLOW &rarr; ALL-RED).
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCurrentView('controller-lab')}
-            className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-1.5 transition-colors shadow"
-          >
-            <span>Controller Lab</span>
-            <ArrowRight size={13} />
-          </button>
-        </div>
-      </div>
 
-      {/* 4 High-Density KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          title="Adaptive Waiting Time"
-          value={stats.adaptiveAvgWait}
-          unit="s"
-          sub={stats.fixedAvgWait != null ? `Baseline Fixed: ${stats.fixedAvgWait.toFixed(1)}s` : 'Baseline Fixed: —'}
-          delta={
-            stats.improvementPercent != null
-              ? {
-                  value: parseFloat(stats.improvementPercent.toFixed(1)),
-                  label: `${stats.improvementPercent >= 0 ? '-' : '+'}${Math.abs(stats.improvementPercent).toFixed(1)}% vs Fixed`,
-                }
-              : null
-          }
-          higherIsBetter={false}
-          icon={Clock}
-          provenance="imbalanced_ns Corridor"
-        />
+            <p className="text-sm text-ink-secondary leading-relaxed">
+              This system evaluates real-time queue-length adaptive control at Bengaluru’s Marathahalli Bridge junction using microscopic SUMO simulation with TraCI. By dynamically extending green phases when queue demand is present and terminating phases early on gap-out, the hybrid controller reduces stopping delay while preserving strict clearance safety invariants and cross-street fairness.
+            </p>
 
-        <KpiCard
-          title="Junction Throughput"
-          value={stats.avgThroughput}
-          unit="veh/h"
-          sub="Capacity clearance efficiency"
-          delta={{ value: 9.8, label: '+9.8% vs Fixed' }}
-          higherIsBetter={true}
-          icon={TrendingUp}
-          provenance="Average arrived vehicles/h"
-        />
-
-        <KpiCard
-          title="Max Jam Queue Length"
-          value={stats.maxQueue}
-          unit="m"
-          sub="Max detector jam length (150m capacity)"
-          icon={AlertTriangle}
-          provenance="Detector Jam Length"
-        />
-
-        <KpiCard
-          title="Directional Disparity"
-          value={stats.disparity}
-          unit="s"
-          sub="NS vs EW wait time variance (|W_NS - W_EW|)"
-          icon={Scale}
-          provenance="Corridor Fairness Metric"
-        />
-      </div>
-
-      {/* Split Main Section: Simulation Twin + Operational Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (7 cols): Isometric Simulation Twin */}
-        <div className="lg:col-span-7 space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">
-                Microscopic Junction Twin
-              </span>
-              <span className="text-[11px] font-mono text-slate-400">
-                (2.5D Isometric Replay)
-              </span>
-            </div>
-            <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
-              <CheckCircle2 size={12} />
-              <span>TraCI Telemetry</span>
-            </span>
-          </div>
-
-          <IsometricIntersection
-            runId={activeSimulationRun}
-            availableRuns={overviewDemoRuns}
-            onRunChange={(id) => {
-              setActiveSimulationRun(id);
-              setSelectedRunId(id);
-            }}
-            className="w-full"
-          />
-        </div>
-
-        {/* Right Column (5 cols): Real-Time Approach Metrics & Controller State */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Active Controller State Card */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2 text-xs">
-              <span className="font-semibold text-white uppercase tracking-wider text-[11px]">
-                Active Controller State
-              </span>
-              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-blue-950 text-blue-300 border border-blue-500/30">
-                Queue Actuated
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-                <div className="text-[11px] text-slate-400">Min / Max Green</div>
-                <div className="font-mono text-white font-bold text-sm mt-0.5">10s / 60s</div>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-                <div className="text-[11px] text-slate-400">Queue Extension (k)</div>
-                <div className="font-mono text-white font-bold text-sm mt-0.5">0.30 s/m</div>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-                <div className="text-[11px] text-slate-400">Gap-Out Threshold</div>
-                <div className="font-mono text-white font-bold text-sm mt-0.5">3.0 s idle</div>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-black/30 border border-white/5">
-                <div className="text-[11px] text-slate-400">All-Red Clearance</div>
-                <div className="font-mono text-red-400 font-bold text-sm mt-0.5">2.0 s (Strict)</div>
-              </div>
-            </div>
-
-            <div className="pt-1 flex items-center justify-between text-xs text-slate-400">
-              <span>Safety Enforcement:</span>
-              <span className="text-emerald-400 font-mono font-medium">0 Invariant Violations</span>
+            <div className="bg-inset p-3.5 rounded border border-hairline text-xs space-y-1.5 font-mono text-ink-secondary">
+              <div className="font-semibold text-ink">Authoritative Validation Summary:</div>
+              <div>• <strong>Site Model:</strong> -9.9% delay reduction on Marathahalli real-road corridor ({siteHeadline.basis}).</div>
+              <div>• <strong>Held-Out Benchmark:</strong> -64.9% delay reduction on synthetic imbalanced flow ({syntheticHeadline.basis}).</div>
             </div>
           </div>
 
-          {/* Quick Scenario Jumper */}
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2 text-xs">
-              <span className="font-semibold text-white uppercase tracking-wider text-[11px]">
-                Inspect Simulation Runs
+          {/* Reduced action buttons: One primary button-in-button, one text link */}
+          <div className="flex flex-wrap items-center gap-4 pt-6 mt-6 border-t border-hairline">
+            <button
+              type="button"
+              onClick={() => setCurrentView('live-simulation')}
+              className="dp1-btn-primary"
+            >
+              <span>Launch live simulation</span>
+              <span className="btn-icon-nest">
+                <IconArrowRight size={13} />
               </span>
-              <span className="text-[11px] text-slate-400 font-mono">Quick Switch</span>
-            </div>
+            </button>
 
-            <div className="space-y-2">
-              {overviewDemoRuns.map((r) => {
-                const isCurrent = activeSimulationRun === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => {
-                      setActiveSimulationRun(r.id);
-                      setSelectedRunId(r.id);
-                    }}
-                    className={`w-full p-2.5 rounded-lg text-left text-xs transition-all flex items-center justify-between border ${
-                      isCurrent
-                        ? 'bg-blue-950/60 border-blue-500/50 text-white font-semibold'
-                        : 'bg-black/20 border-white/5 text-slate-300 hover:bg-white/5 hover:border-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-blue-400' : 'bg-slate-600'}`} />
-                      <span>{r.label}</span>
-                    </div>
-                    <ChevronRight size={13} className={isCurrent ? 'text-blue-400' : 'text-slate-600'} />
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              onClick={() => setCurrentView('junction')}
+              className="text-xs font-medium text-ink-secondary hover:text-ink flex items-center gap-1.5 transition-colors"
+            >
+              <span>Inspect physical site model</span>
+              <IconArrowUpRight size={13} />
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Primary Scenarios Comparison Table */}
-      <div className="p-5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-3 shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+        {/* Right: Static Poster Frame of Junction Twin linking to Live Simulation */}
+        <div
+          onClick={() => setCurrentView('live-simulation')}
+          className="lg:col-span-5 dp1-panel p-5 bg-panel flex flex-col justify-between cursor-pointer group hover:border-ink-secondary transition-colors"
+        >
           <div>
-            <h3 className="text-sm font-bold text-white tracking-wide uppercase text-[12px]">
-              Scenario Benchmark Matrix (Seeds 1–5 Mean)
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Comparing fixed baseline against Webster and dynamic adaptive controllers across verified demand patterns.
+            <div className="flex items-center justify-between text-xs font-mono text-ink-secondary mb-3">
+              <span className="font-semibold text-ink">Marathahalli Bridge Digital Twin</span>
+              <span className="group-hover:text-petrol flex items-center gap-1">
+                Open in Live Mode <IconArrowRight size={12} />
+              </span>
+            </div>
+
+            {/* Poster Canvas Schematic Preview */}
+            <div className="relative w-full h-44 bg-ground rounded border border-hairline overflow-hidden flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center opacity-60">
+                <svg width="240" height="150" viewBox="0 0 240 150" fill="none" className="text-hairline">
+                  <path d="M20 75h200" stroke="#8C8F8A" strokeWidth="18" />
+                  <path d="M120 15v120" stroke="#8C8F8A" strokeWidth="24" />
+                  <rect x="100" y="55" width="40" height="40" fill="#EFEDE6" stroke="#5C5F5A" strokeWidth="1.5" />
+                  <circle cx="120" cy="75" r="5" fill="#2F7D4F" />
+                </svg>
+              </div>
+
+              <div className="relative z-10 text-center space-y-1">
+                <span className="inline-block px-2.5 py-1 rounded-full bg-panel border border-hairline text-xs font-mono text-ink shadow-xs">
+                  Click to launch interactive simulation
+                </span>
+                <div className="text-[11px] text-ink-secondary font-mono">
+                  3-Tier Grade Separation: Flyover · Surface · Underpass
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[11px] font-mono text-ink-secondary pt-3 mt-3 border-t border-hairline flex items-center justify-between">
+            <span>Outer Ring Road & Varthur Rd</span>
+            <span>Real TraCI Telemetry</span>
+          </div>
+        </div>
+      </div>
+
+      {/* How to Read This Dashboard — Mirrors the Sidebar Groups */}
+      <div className="dp1-panel p-6 bg-panel">
+        <h3 className="text-xs font-semibold text-ink uppercase tracking-wider mb-4">
+          How to Read This Operational Dashboard
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-ink-secondary leading-relaxed">
+          <div className="space-y-1.5 p-3.5 rounded bg-inset border border-hairline">
+            <div className="flex items-center gap-2 text-ink font-semibold">
+              <IconJunction size={14} className="text-petrol" />
+              <span>1. Understand (System Baseline)</span>
+            </div>
+            <p>
+              Examine the physical 3-tier grade-separation geometry of Marathahalli Bridge in <strong>Junction</strong>, including the elevated flyover, mainline underpass, and surface conflict node with its 8 induction loop detectors.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-slate-500 bg-white/5 px-2 py-0.5 rounded">
-            Verified Repository Outputs
-          </span>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/60 text-slate-400 font-mono uppercase text-[11px] border-b border-white/5">
-              <tr>
-                <th className="py-2.5 px-3">Traffic Scenario Pattern</th>
-                <th className="py-2.5 px-3">Description</th>
-                <th className="py-2.5 px-3">Fixed Baseline</th>
-                <th className="py-2.5 px-3">Webster Optimal</th>
-                <th className="py-2.5 px-3">Adaptive Queue</th>
-                <th className="py-2.5 px-3">Performance Delta</th>
-                <th className="py-2.5 px-3">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 font-mono text-slate-300">
-              {scenarioMatrix.map((sc) => (
-                <tr key={sc.name} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-2.5 px-3 font-sans font-medium text-white">{sc.label}</td>
-                  <td className="py-2.5 px-3 text-slate-400 font-sans max-w-[240px] truncate text-[11px]">{sc.desc}</td>
-                  <td className="py-2.5 px-3 text-slate-300">{sc.fixed}</td>
-                  <td className="py-2.5 px-3 text-amber-300">{sc.webster}</td>
-                  <td className="py-2.5 px-3 text-emerald-400 font-bold">{sc.adaptive}</td>
-                  <td className="py-2.5 px-3">
-                    <span
-                      className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                        sc.favorable
-                          ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-red-950/60 text-red-400 border border-red-500/30'
-                      }`}
-                    >
-                      {sc.delta}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <button
-                      onClick={() => {
-                        setSelectedRunId(sc.runId);
-                        setCurrentView('run-explorer');
-                      }}
-                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 text-xs flex items-center gap-1 transition-colors"
-                      title="Inspect second-by-second trace"
-                    >
-                      <Eye size={12} />
-                      <span>Inspect</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="space-y-1.5 p-3.5 rounded bg-inset border border-hairline">
+            <div className="flex items-center gap-2 text-ink font-semibold">
+              <IconOperations size={14} className="text-petrol" />
+              <span>2. Operate (Controller Logic & Live Runs)</span>
+            </div>
+            <p>
+              Review the decision pipeline and priority order in <strong>Operations</strong>, or run a live simulation in <strong>Live simulation</strong> with real-time decision explanations and green-time extension telemetry.
+            </p>
+          </div>
+
+          <div className="space-y-1.5 p-3.5 rounded bg-inset border border-hairline">
+            <div className="flex items-center gap-2 text-ink font-semibold">
+              <IconCompare size={14} className="text-petrol" />
+              <span>3. Evaluate (Benchmark & Evidence)</span>
+            </div>
+            <p>
+              Inspect all 7 control policies across held-out seeds in <strong>Controller comparison</strong>, and trace every simulation run, raw data file, and paired delta in the <strong>Evidence</strong> archive.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Safety Invariant Guarantee Card */}
-      <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h4 className="text-sm font-bold text-blue-300 flex items-center gap-2">
-            <ShieldCheck size={16} className="text-emerald-400" />
-            <span>Safety Invariant Enforcement</span>
-          </h4>
-          <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
-            Controllers decide green duration only. The phase state machine strictly forces:
-            <span className="font-mono font-bold text-emerald-400"> GREEN</span> &rarr;
-            <span className="font-mono font-bold text-amber-400"> YELLOW (3s)</span> &rarr;
-            <span className="font-mono font-bold text-red-400"> ALL_RED (2s)</span> &rarr;
-            <span className="font-mono font-bold text-emerald-400"> GREEN (other axis)</span>.
-            Green-to-green direct switches and dual-green conflicts are physically impossible and verified by test suite.
-          </p>
+      {/* Multi-Policy Benchmark Comparison Table (Derived from Data Layer) */}
+      <div className="dp1-panel p-6 bg-panel space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">
+              Controller Policy Benchmark Table
+            </h3>
+            <p className="text-xs text-ink-secondary mt-0.5">
+              Performance across {comparisonRows.length} evaluated signal policies on Marathahalli Bridge (Medium demand, seeds 121–130).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCurrentView('controller-comparison')}
+            className="text-xs font-mono text-petrol hover:underline inline-flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Full Controller Comparison</span>
+            <IconArrowRight size={12} />
+          </button>
         </div>
-        <div className="text-xs font-mono px-2.5 py-1 rounded-full bg-blue-900/40 text-blue-200 border border-blue-500/30 whitespace-nowrap">
-          66 Verified Backend Tests
+
+        <div className="overflow-x-auto border border-hairline rounded">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-inset border-b border-hairline text-ink-secondary font-mono text-[11px]">
+                <th className="py-2.5 px-3">Policy</th>
+                <th className="py-2.5 px-3">Type</th>
+                <th className="py-2.5 px-3 text-right">Avg Delay</th>
+                <th className="py-2.5 px-3 text-right">95% CI</th>
+                <th className="py-2.5 px-3 text-right">vs Fixed Baseline</th>
+                <th className="py-2.5 px-3 text-right">Directional Disparity</th>
+                <th className="py-2.5 px-3 text-right">Throughput</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-hairline">
+              {comparisonRows.map((row) => {
+                const isHybrid = row.meta.isHybrid;
+                const isBaseline = row.meta.isBaseline;
+                const delta = row.deltaPercent;
+
+                return (
+                  <tr
+                    key={row.policy}
+                    className={isHybrid ? 'bg-petrol-subtle/40 font-medium' : 'hover:bg-inset/50'}
+                  >
+                    <td className="py-2.5 px-3 text-ink font-semibold flex items-center gap-2">
+                      {isHybrid && <span className="w-2 h-2 rounded-full bg-petrol shrink-0" />}
+                      <span>{row.meta.label}</span>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-ink-secondary">
+                      {isBaseline ? 'Baseline' : (isHybrid ? 'Hybrid (Fused)' : 'Single-Model')}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono text-ink">
+                      {row.avgWaitS.toFixed(1)} s
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono text-ink-secondary">
+                      [{row.ciLowerS.toFixed(1)} s, {row.ciUpperS.toFixed(1)} s]
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono">
+                      {isBaseline ? (
+                        <span className="text-ink-secondary">—</span>
+                      ) : (
+                        <span
+                          className={delta < 0 ? 'text-signal-green font-bold' : 'text-signal-red font-bold'}
+                        >
+                          {delta > 0 ? `+${delta.toFixed(1)}%` : `${delta.toFixed(1)}%`}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono text-ink-secondary">
+                      {row.directionalDisparityS != null ? `${row.directionalDisparityS.toFixed(1)} s` : '—'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono text-ink-secondary">
+                      {row.throughputVph ? `${Math.round(row.throughputVph)} vph` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 }
-
 export default OverviewView;
