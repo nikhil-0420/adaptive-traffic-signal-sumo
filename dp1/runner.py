@@ -161,6 +161,7 @@ def _run_once(
         binary("sumo-gui" if gui else "sumo"),
         "-n", str(net_file), "-r", str(routes), "-a", ",".join(add_files),
         "--tripinfo-output", str(tripinfo),
+        "--summary-output", str(out_dir / "summary.xml"),
         "--seed", str(seed), "--step-length", str(C.SIM.step_s),
         "--time-to-teleport", "-1",          # no teleporting: jams must show up in the metrics
         "--no-step-log", "true", "--no-warnings", "true",
@@ -201,6 +202,12 @@ def _run_once(
     ctl = POLICIES[policy](states, **kwargs)
     q_engine = QueueMeasurementEngine(network=network)
     series = []
+    edge_series = []
+    tracked_edges = [
+        "leg_orr_n_in", "leg_orr_s_in", "leg_wf_in", "leg_hal_in",
+        "ramp_orr_n_in", "ramp_orr_s_in", "ramp_wf_in", "ramp_hal_in",
+        "orr_n_in", "orr_s_in", "wf_in", "hal_in",
+    ] if network == "marathahalli" else ["N_in", "S_in", "E_in", "W_in"]
     _write_atomic_telemetry(out_dir, {
         "run_id": run_id,
         "status": "running",
@@ -285,6 +292,18 @@ def _run_once(
                     })
 
             series.append(series_rec)
+            edge_rec = {
+                "t": t,
+                "insertion_backlog": traci.simulation.getLoadedNumber() - traci.simulation.getDepartedNumber(),
+            }
+            for e_id in tracked_edges:
+                try:
+                    edge_rec[f"halting_{e_id}"] = traci.edge.getLastStepHaltingNumber(e_id)
+                    edge_rec[f"wait_{e_id}"] = round(traci.edge.getWaitingTime(e_id), 2)
+                except Exception:
+                    edge_rec[f"halting_{e_id}"] = 0
+                    edge_rec[f"wait_{e_id}"] = 0.0
+            edge_series.append(edge_rec)
             app_queues_data = {a: dataclasses.asdict(info) for a, info in app_queues.items()}
             adaptive_decision = getattr(ctl, "last_decision_record", None)
             _write_atomic_telemetry(out_dir, {
@@ -350,6 +369,7 @@ def _run_once(
 
     _write_csv(out_dir / "timeseries.csv", series)
     _write_csv(out_dir / "decisions.csv", ctl.decisions)
+    _write_csv(out_dir / "edge_data.csv", edge_series)
     if hasattr(ctl, "plan_log") and ctl.plan_log:
         try:
             with open(out_dir / "plan_log.json", "w", encoding="utf-8") as f:
