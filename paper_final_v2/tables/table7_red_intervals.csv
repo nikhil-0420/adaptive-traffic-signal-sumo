@@ -1,0 +1,9 @@
+Policy,Policy_Label,N_red_intervals,Mean_red_s,p95_red_s,p99_red_s,Max_red_s,Analytic_Estimate_s,Max_Within_Analytic_Bound,Definition
+fixed,Fixed BTP (105s/95s),852,110.19953051643192,115.0,115.0,115.0,48.0,No,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+webster_measured,Webster-measured (Ref),3836,28.857403545359748,34.0,115.0,115.0,48.0,No,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+webster_recalc,Webster-recalc,3838,28.903595622720168,35.0,115.0,115.0,48.0,No,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+sumo_actuated,SUMO-actuated,5817,21.45435791645178,27.0,34.0,70.0,48.0,No,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+adaptive,Adaptive (pure queue),5502,22.403126135950565,25.0,28.0,70.0,48.0,No,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+queue_extension,Queue-extension only,5832,21.41495198902606,23.0,24.0,66.0,48.0,No,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+hybrid_queue_adaptive,Hybrid queue-adaptive (Proposed),5036,23.86914217633042,30.0,33.0,47.0,48.0,Yes,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)
+hybrid_oracle_seeded,Hybrid oracle-seeded,5073,23.77744924108023,28.0,32.0,43.0,48.0,Yes,Time from end of own green to start of next own green (includes both yellow and all-red clearance intervals)

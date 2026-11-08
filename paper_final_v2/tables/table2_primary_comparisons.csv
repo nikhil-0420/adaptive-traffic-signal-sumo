@@ -1,0 +1,46 @@
+Comparison,Subset,Metric,Hybrid Mean,Ref Mean,Delta %,Seed-Clustered 95% CI,Cluster Raw p,Cluster Holm p,Significant,Pair Delta %,Pair 95% CI,Pair Raw p,Pair Holm p,Abs Diff (s),Abs Diff 95% CI
+hybrid vs webster_measured,all_6_pooled,p95 wait (s),452.33,446.75,-0.9%,"[-2.8, +1.1]",0.374,0.747,No,-0.9%,"[-4.3, +2.5]",0.600,1.000,n/a,n/a
+hybrid vs webster_measured,all_6_pooled,extended max queue (m),42.25,62.21,-28.8%,"[-33.7, -23.4]",0.000,0.000,Yes,-28.8%,"[-34.8, -22.4]",0.000,0.000,n/a,n/a
+hybrid vs webster_measured,all_6_pooled,wait gap (s),58.28,59.81,+3.0%,"[-7.1, +16.6]",0.666,0.747,No,+3.0%,"[-8.4, +15.8]",0.652,1.000,-1.53 s,"[-6.71, +2.98]"
+hybrid vs webster_measured,3_stationary,p95 wait (s),417.26,420.61,-4.2%,"[-7.8, -0.6]",0.018,0.036,Yes,-4.2%,"[-8.9, +1.0]",0.109,0.218,n/a,n/a
+hybrid vs webster_measured,3_stationary,extended max queue (m),39.77,56.89,-27.9%,"[-34.0, -21.3]",0.000,0.000,Yes,-27.9%,"[-34.5, -21.0]",0.000,0.000,n/a,n/a
+hybrid vs webster_measured,3_stationary,wait gap (s),59.99,65.49,-7.3%,"[-17.2, +1.7]",0.133,0.133,No,-7.3%,"[-18.7, +4.5]",0.232,0.232,-5.50 s,"[-11.81, -0.00]"
+hybrid vs webster_measured,3_non_stationary,p95 wait (s),487.40,472.90,+2.4%,"[-1.0, +5.8]",0.172,0.344,No,+2.4%,"[-1.8, +6.5]",0.251,0.336,n/a,n/a
+hybrid vs webster_measured,3_non_stationary,extended max queue (m),44.72,67.53,-29.7%,"[-36.7, -22.6]",0.000,0.000,Yes,-29.7%,"[-39.8, -18.5]",0.000,0.000,n/a,n/a
+hybrid vs webster_measured,3_non_stationary,wait gap (s),56.57,54.13,+13.4%,"[-4.3, +38.0]",0.200,0.344,No,+13.4%,"[-4.9, +35.4]",0.168,0.336,+2.44 s,"[-2.67, +7.77]"
+hybrid vs webster_recalc,all_6_pooled,p95 wait (s),452.33,453.96,-2.5%,"[-4.6, -0.3]",0.027,0.054,No,-2.5%,"[-6.0, +0.9]",0.150,0.300,n/a,n/a
+hybrid vs webster_recalc,all_6_pooled,extended max queue (m),42.25,63.19,-28.3%,"[-33.9, -22.5]",0.000,0.000,Yes,-28.3%,"[-34.7, -21.7]",0.000,0.000,n/a,n/a
+hybrid vs webster_recalc,all_6_pooled,wait gap (s),58.28,60.22,+17.5%,"[-8.3, +57.2]",0.392,0.392,No,+17.5%,"[-8.0, +58.0]",0.385,0.385,-1.94 s,"[-5.67, +1.77]"
+hybrid vs webster_recalc,3_stationary,p95 wait (s),417.26,420.50,-4.8%,"[-7.7, -1.7]",0.002,0.004,Yes,-4.8%,"[-10.0, +0.6]",0.086,0.171,n/a,n/a
+hybrid vs webster_recalc,3_stationary,extended max queue (m),39.77,61.58,-30.5%,"[-37.8, -22.3]",0.000,0.000,Yes,-30.5%,"[-38.6, -22.2]",0.000,0.000,n/a,n/a
+hybrid vs webster_recalc,3_stationary,wait gap (s),59.99,65.80,+0.7%,"[-14.6, +16.5]",0.942,0.942,No,+0.7%,"[-15.7, +20.1]",0.998,0.998,-5.81 s,"[-11.99, -0.13]"
+hybrid vs webster_recalc,3_non_stationary,p95 wait (s),487.40,487.42,-0.1%,"[-3.8, +3.2]",0.951,0.951,No,-0.1%,"[-4.2, +3.8]",0.922,0.922,n/a,n/a
+hybrid vs webster_recalc,3_non_stationary,extended max queue (m),44.72,64.80,-26.1%,"[-33.1, -19.1]",0.000,0.000,Yes,-26.1%,"[-36.0, -16.0]",0.000,0.000,n/a,n/a
+hybrid vs webster_recalc,3_non_stationary,wait gap (s),56.57,54.64,+34.4%,"[-7.7, +108.6]",0.413,0.827,No,+34.4%,"[-9.0, +109.9]",0.389,0.778,+1.93 s,"[-2.39, +5.95]"
+hybrid vs fixed,all_6_pooled,p95 wait (s),452.33,432.22,-2.8%,"[-4.8, -0.9]",0.004,0.008,Yes,-2.8%,"[-10.0, +3.8]",0.433,0.866,n/a,n/a
+hybrid vs fixed,all_6_pooled,extended max queue (m),42.25,86.36,-48.7%,"[-52.5, -44.7]",0.000,0.000,Yes,-48.7%,"[-53.0, -43.7]",0.000,0.000,n/a,n/a
+hybrid vs fixed,all_6_pooled,wait gap (s),58.28,59.75,+1.3%,"[-6.4, +8.8]",0.724,0.724,No,+1.3%,"[-7.5, +10.6]",0.787,0.866,-1.47 s,"[-4.58, +1.40]"
+hybrid vs fixed,3_stationary,p95 wait (s),417.26,401.96,-10.6%,"[-12.5, -8.3]",0.000,0.000,Yes,-10.6%,"[-22.9, +1.3]",0.081,0.161,n/a,n/a
+hybrid vs fixed,3_stationary,extended max queue (m),39.77,83.44,-49.1%,"[-54.1, -44.0]",0.000,0.000,Yes,-49.1%,"[-54.0, -44.1]",0.000,0.000,n/a,n/a
+hybrid vs fixed,3_stationary,wait gap (s),59.99,65.09,-0.7%,"[-12.4, +11.9]",0.890,0.890,No,-0.7%,"[-14.9, +14.7]",0.901,0.901,-5.09 s,"[-10.85, -0.34]"
+hybrid vs fixed,3_non_stationary,p95 wait (s),487.40,462.47,+5.1%,"[+1.1, +8.7]",0.011,0.022,Yes,+5.1%,"[-0.3, +10.3]",0.064,0.128,n/a,n/a
+hybrid vs fixed,3_non_stationary,extended max queue (m),44.72,89.28,-48.3%,"[-53.3, -42.3]",0.000,0.000,Yes,-48.3%,"[-55.1, -39.9]",0.000,0.000,n/a,n/a
+hybrid vs fixed,3_non_stationary,wait gap (s),56.57,54.41,+3.3%,"[-2.4, +8.5]",0.256,0.256,No,+3.3%,"[-6.9, +13.2]",0.513,0.513,+2.15 s,"[-0.82, +4.61]"
+hybrid vs sumo_actuated,all_6_pooled,p95 wait (s),452.33,452.15,+1.0%,"[-2.0, +4.0]",0.544,0.544,No,+1.0%,"[-2.1, +4.1]",0.578,0.578,n/a,n/a
+hybrid vs sumo_actuated,all_6_pooled,extended max queue (m),42.25,38.20,+11.4%,"[+7.1, +15.1]",0.000,0.000,Yes,+11.4%,"[+4.6, +18.8]",0.000,0.001,n/a,n/a
+hybrid vs sumo_actuated,all_6_pooled,wait gap (s),58.28,59.44,+14.8%,"[-2.6, +34.8]",0.105,0.210,No,+14.8%,"[-2.8, +37.5]",0.122,0.244,-1.16 s,"[-4.41, +1.70]"
+hybrid vs sumo_actuated,3_stationary,p95 wait (s),417.26,408.62,+3.5%,"[-0.2, +7.4]",0.066,0.068,No,+3.5%,"[-0.9, +8.1]",0.116,0.116,n/a,n/a
+hybrid vs sumo_actuated,3_stationary,extended max queue (m),39.77,34.82,+15.3%,"[+9.2, +21.1]",0.000,0.000,Yes,+15.3%,"[+4.5, +27.1]",0.005,0.016,n/a,n/a
+hybrid vs sumo_actuated,3_stationary,wait gap (s),59.99,60.38,+33.4%,"[+1.9, +72.9]",0.034,0.068,No,+33.4%,"[+0.1, +75.3]",0.049,0.099,-0.38 s,"[-4.34, +3.24]"
+hybrid vs sumo_actuated,3_non_stationary,p95 wait (s),487.40,495.68,-1.6%,"[-5.8, +1.7]",0.423,0.846,No,-1.6%,"[-5.5, +2.5]",0.426,0.852,n/a,n/a
+hybrid vs sumo_actuated,3_non_stationary,extended max queue (m),44.72,41.59,+7.5%,"[+2.9, +12.7]",0.000,0.000,Yes,+7.5%,"[-0.2, +15.5]",0.056,0.167,n/a,n/a
+hybrid vs sumo_actuated,3_non_stationary,wait gap (s),56.57,58.50,-3.8%,"[-13.4, +7.8]",0.466,0.846,No,-3.8%,"[-13.8, +6.0]",0.448,0.852,-1.93 s,"[-6.77, +2.79]"
+hybrid vs hybrid_oracle_seeded,all_6_pooled,p95 wait (s),452.33,455.86,-0.5%,"[-2.9, +1.9]",0.700,1.000,No,-0.5%,"[-2.8, +1.7]",0.660,1.000,n/a,n/a
+hybrid vs hybrid_oracle_seeded,all_6_pooled,extended max queue (m),42.25,43.41,-1.2%,"[-5.1, +2.5]",0.551,1.000,No,-1.2%,"[-6.1, +4.0]",0.627,1.000,n/a,n/a
+hybrid vs hybrid_oracle_seeded,all_6_pooled,wait gap (s),58.28,58.33,+15.3%,"[+4.1, +28.2]",0.003,0.010,Yes,+15.3%,"[-0.3, +34.1]",0.054,0.163,-0.05 s,"[-2.14, +1.77]"
+hybrid vs hybrid_oracle_seeded,3_stationary,p95 wait (s),417.26,422.45,-0.7%,"[-5.5, +2.6]",0.796,1.000,No,-0.7%,"[-4.5, +2.8]",0.725,1.000,n/a,n/a
+hybrid vs hybrid_oracle_seeded,3_stationary,extended max queue (m),39.77,40.21,+0.8%,"[-4.5, +6.4]",0.784,1.000,No,+0.8%,"[-6.8, +8.6]",0.851,1.000,n/a,n/a
+hybrid vs hybrid_oracle_seeded,3_stationary,wait gap (s),59.99,60.86,+30.4%,"[+6.5, +56.7]",0.009,0.027,Yes,+30.4%,"[+2.4, +64.9]",0.029,0.086,-0.86 s,"[-3.62, +2.07]"
+hybrid vs hybrid_oracle_seeded,3_non_stationary,p95 wait (s),487.40,489.28,-0.3%,"[-3.4, +2.8]",0.852,1.000,No,-0.3%,"[-2.9, +2.3]",0.794,1.000,n/a,n/a
+hybrid vs hybrid_oracle_seeded,3_non_stationary,extended max queue (m),44.72,46.60,-3.3%,"[-7.6, +1.8]",0.198,0.593,No,-3.3%,"[-8.8, +3.3]",0.290,0.871,n/a,n/a
+hybrid vs hybrid_oracle_seeded,3_non_stationary,wait gap (s),56.57,55.80,+0.2%,"[-8.1, +6.9]",0.905,1.000,No,+0.2%,"[-10.9, +11.5]",0.979,1.000,+0.77 s,"[-2.20, +3.37]"

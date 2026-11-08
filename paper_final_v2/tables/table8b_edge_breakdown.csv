@@ -1,0 +1,5 @@
+Condition,Policy,Approach_Legs_vehs,Connector_Ramps_vehs,Outer_Arrival_Links_vehs,Total_Network_Halting_vehs,Outer_Link_Share_pct
+balanced-heavy,hybrid_queue_adaptive,1.69,0.01,20.46,22.16,92.3
+balanced-heavy,sumo_actuated,1.18,0.0,21.65,22.83,94.8
+imbalanced_orr-heavy,hybrid_queue_adaptive,1.9,0.02,17.76,19.67,90.3
+imbalanced_orr-heavy,sumo_actuated,1.96,0.59,18.5,21.06,87.8

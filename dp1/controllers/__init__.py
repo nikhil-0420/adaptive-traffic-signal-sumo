@@ -11,6 +11,13 @@ from .webster_measured import WebsterMeasuredController
 from .webster_recalc import WebsterRecalcController
 from .fixed_matched_cycle import FixedMatchedCycleController
 from .sumo_actuated import SumoActuatedController
+from .hybrid_queue_adaptive_v2 import (
+    HybridQueueAdaptiveV2Controller,
+    HybridV2CandAController,
+    HybridV2CandBController,
+    HybridV2CandCController,
+    HybridV2CandDController,
+)
 from .. import config as C
 
 
@@ -76,5 +83,10 @@ POLICIES = {
     "fixed_matched_cycle": FixedMatchedCycleController,
     "sumo_actuated": SumoActuatedController,
     "webster_oracle": WebsterOracleController,
+    "hybrid_queue_adaptive_v2": HybridQueueAdaptiveV2Controller,
+    "hybrid_v2_cand_a": HybridV2CandAController,
+    "hybrid_v2_cand_b": HybridV2CandBController,
+    "hybrid_v2_cand_c": HybridV2CandCController,
+    "hybrid_v2_cand_d": HybridV2CandDController,
 }
 

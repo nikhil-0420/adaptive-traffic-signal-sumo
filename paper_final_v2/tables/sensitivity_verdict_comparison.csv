@@ -1,0 +1,46 @@
+Comparison,Subset,Metric,Cluster Holm p,Cluster Sig (alpha=0.05),Pair Holm p,Pair Sig (alpha=0.05),Verdict Changed
+hybrid vs webster_measured,all_6_pooled,p95 wait (s),0.7472,False,1.0,False,False
+hybrid vs webster_measured,all_6_pooled,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs webster_measured,all_6_pooled,wait gap (s),0.7472,False,1.0,False,False
+hybrid vs webster_measured,3_stationary,p95 wait (s),0.0356,True,0.2176,False,True
+hybrid vs webster_measured,3_stationary,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs webster_measured,3_stationary,wait gap (s),0.1326,False,0.2316,False,False
+hybrid vs webster_measured,3_non_stationary,p95 wait (s),0.344,False,0.3356,False,False
+hybrid vs webster_measured,3_non_stationary,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs webster_measured,3_non_stationary,wait gap (s),0.344,False,0.3356,False,False
+hybrid vs webster_recalc,all_6_pooled,p95 wait (s),0.0544,False,0.3,False,False
+hybrid vs webster_recalc,all_6_pooled,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs webster_recalc,all_6_pooled,wait gap (s),0.392,False,0.385,False,False
+hybrid vs webster_recalc,3_stationary,p95 wait (s),0.0044,True,0.1712,False,True
+hybrid vs webster_recalc,3_stationary,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs webster_recalc,3_stationary,wait gap (s),0.942,False,0.998,False,False
+hybrid vs webster_recalc,3_non_stationary,p95 wait (s),0.951,False,0.9224,False,False
+hybrid vs webster_recalc,3_non_stationary,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs webster_recalc,3_non_stationary,wait gap (s),0.8268,False,0.7784,False,False
+hybrid vs fixed,all_6_pooled,p95 wait (s),0.008,True,0.8656,False,True
+hybrid vs fixed,all_6_pooled,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs fixed,all_6_pooled,wait gap (s),0.7242,False,0.8656,False,False
+hybrid vs fixed,3_stationary,p95 wait (s),0.0,True,0.1612,False,True
+hybrid vs fixed,3_stationary,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs fixed,3_stationary,wait gap (s),0.89,False,0.901,False,False
+hybrid vs fixed,3_non_stationary,p95 wait (s),0.0224,True,0.1276,False,True
+hybrid vs fixed,3_non_stationary,extended max queue (m),0.0,True,0.0,True,False
+hybrid vs fixed,3_non_stationary,wait gap (s),0.2564,False,0.513,False,False
+hybrid vs sumo_actuated,all_6_pooled,p95 wait (s),0.5442,False,0.578,False,False
+hybrid vs sumo_actuated,all_6_pooled,extended max queue (m),0.0,True,0.0012000000000000001,True,False
+hybrid vs sumo_actuated,all_6_pooled,wait gap (s),0.2096,False,0.2444,False,False
+hybrid vs sumo_actuated,3_stationary,p95 wait (s),0.068,False,0.116,False,False
+hybrid vs sumo_actuated,3_stationary,extended max queue (m),0.0,True,0.0156,True,False
+hybrid vs sumo_actuated,3_stationary,wait gap (s),0.068,False,0.0988,False,False
+hybrid vs sumo_actuated,3_non_stationary,p95 wait (s),0.8456,False,0.852,False,False
+hybrid vs sumo_actuated,3_non_stationary,extended max queue (m),0.0,True,0.1668,False,True
+hybrid vs sumo_actuated,3_non_stationary,wait gap (s),0.8456,False,0.852,False,False
+hybrid vs hybrid_oracle_seeded,all_6_pooled,p95 wait (s),1.0,False,1.0,False,False
+hybrid vs hybrid_oracle_seeded,all_6_pooled,extended max queue (m),1.0,False,1.0,False,False
+hybrid vs hybrid_oracle_seeded,all_6_pooled,wait gap (s),0.009600000000000001,True,0.16319999999999998,False,True
+hybrid vs hybrid_oracle_seeded,3_stationary,p95 wait (s),1.0,False,1.0,False,False
+hybrid vs hybrid_oracle_seeded,3_stationary,extended max queue (m),1.0,False,1.0,False,False
+hybrid vs hybrid_oracle_seeded,3_stationary,wait gap (s),0.026999999999999996,True,0.0858,False,True
+hybrid vs hybrid_oracle_seeded,3_non_stationary,p95 wait (s),1.0,False,1.0,False,False
+hybrid vs hybrid_oracle_seeded,3_non_stationary,extended max queue (m),0.5934,False,0.8712,False,False
+hybrid vs hybrid_oracle_seeded,3_non_stationary,wait gap (s),1.0,False,1.0,False,False

@@ -120,6 +120,22 @@ class HybridQueueAdaptiveConfig:
 
 
 @dataclass(frozen=True)
+class HybridQueueAdaptiveV2Config(HybridQueueAdaptiveConfig):
+    """Settings for improved Hybrid Queue-Adaptive Controller v2.
+
+    Candidates for Phase A2:
+    - (a) rest_in_green: Do not switch away if competing approach has zero detected demand.
+    - (b) unconditional_wait_cap: Force switch at 35s red wait regardless of competing queue.
+    - (c) pressure_extension: Extend only while active queue - competing queue > threshold.
+    - (d) rest_in_green + unconditional_wait_cap combined.
+    """
+    rest_in_green: bool = False
+    unconditional_wait_cap: bool = False
+    pressure_extension: bool = False
+    pressure_threshold_m: float = 0.0
+
+
+@dataclass(frozen=True)
 class WebsterMeasuredConfig:
     """Settings for measured Webster baseline (flows measured in warm-up, then fixed)."""
     warmup_s: float = 300.0              # Approved 5-minute warm-up window
@@ -273,6 +289,11 @@ HYBRID_R3 = HybridQueueAdaptiveConfig(rungs=("R4", "R3"))
 HYBRID_R4 = HybridQueueAdaptiveConfig(rungs=("R4",))
 HYBRID_R2_R3 = HybridQueueAdaptiveConfig(rungs=("R2", "R3"))
 HYBRID_R2_R3_R4 = HybridQueueAdaptiveConfig(rungs=("R2", "R3", "R4"))
+HYBRID_QUEUE_ADAPTIVE_V2 = HybridQueueAdaptiveV2Config(rungs=("R4",))
+HYBRID_V2_CAND_A = HybridQueueAdaptiveV2Config(rungs=("R4",), rest_in_green=True)
+HYBRID_V2_CAND_B = HybridQueueAdaptiveV2Config(rungs=("R4",), unconditional_wait_cap=True)
+HYBRID_V2_CAND_C = HybridQueueAdaptiveV2Config(rungs=("R4",), pressure_extension=True, pressure_threshold_m=0.0)
+HYBRID_V2_CAND_D = HybridQueueAdaptiveV2Config(rungs=("R4",), rest_in_green=True, unconditional_wait_cap=True)
 WEBSTER_MEASURED = WebsterMeasuredConfig()
 WEBSTER_RECALC = WebsterRecalcConfig()
 FIXED_MATCHED_CYCLE = FixedMatchedCycleConfig()

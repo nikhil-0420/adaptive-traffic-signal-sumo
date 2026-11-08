@@ -1,0 +1,231 @@
+Queue-Length-Aware Adaptive Signal Control and Predictive Intervention: Empirical Evaluation on a Microscopic Model of the Marathahalli Corridor
+Author 1 Name, Author 2 Name, Author 3 Name, Author 4 Name
+Team ID: DP1-xx-xx-AIDS-xx
+E1CSA313 Design Project-I, Department of Artificial Intelligence & Data Science, Alliance University, Bengaluru, India
+Mentor: Mentor Name
+Email: author emails
+Abstract—Urban intersections accumulate queues when pretimed signal programs mismatch stochastic directional demand. Actuated and reinforcement-learning controllers can reduce delay, but their adoption is hindered by limited auditability and unbounded behaviour. This paper evaluates an explainable, queue-length-aware adaptive controller (hybrid_queue_adaptive) on a geographically grounded microscopic SUMO model of the Marathahalli Bridge junction in Bengaluru, driven by synthetic demand. The controller combines locally measured base-green splits, bounded +3.0 s green extensions, and a competing-phase red-wait guard (35 s). In a fixed analysis plan of 384 paired simulation runs (8 policies, 6 demand conditions, held-out seeds 131–138), the hybrid reduced the extended ground-truth maximum queue by 28.8% (95% CI −35.0 to −22.4%; Holm-adjusted p < 0.001) relative to a measured-flow Webster baseline, with no detectable difference in 95th-percentile waiting time or approach wait gap. An ablation found no detectable difference between the hybrid and an oracle-seeded variant. The hybrid yielded a higher maximum queue than unconstrained SUMO gap-actuation (+11.4%), in exchange for complete decision traces and a red-wait limit enforced to within one decision step. All findings are simulation-only, use synthetic demand, and concern one isolated junction.
+Index Terms—adaptive traffic signal control, queue length, green-time extension, microscopic simulation, SUMO, TraCI, fairness, auditability.
+I. INTRODUCTION
+Signalized intersections on congested urban arterials face severe spatial constraints, particularly in rapidly urbanizing regions such as Bengaluru. Traffic is characterized by high volume, strong directional asymmetry during commute hours, heterogeneous vehicle classes, and peak surges. The Marathahalli Bridge junction on the Outer Ring Road (ORR) is a representative bottleneck where IT-corridor commutes meet cross-city arterial traffic.
+Municipal agencies commonly operate pretimed plans derived from historical counts, for example Webster-based or locally tabulated schedules. Such plans assume stationary demand. During transient bottlenecks, capacity drops, or surges, they can allocate green time to lightly loaded approaches while critical approaches build long queues that spill back upstream.
+Fully actuated controllers and black-box reinforcement learning (RL) policies respond faster but carry deployment liabilities: gap-based actuation may hold green inefficiently under dispersed platoons, and learned policies lack verifiable worst-case bounds and are difficult to audit. Agencies therefore need controllers that are explainable, auditable, and bounded by a safety supervisor.
+This study asks whether a state-aware adaptive controller that does not rely on an upstream demand oracle can reduce tail queue formation under non-stationary demand without worsening tail delay or violating a competing-phase fairness limit. We benchmark against fixed-time, Webster-based, and unconstrained actuated controllers rather than naive fixed-time plans alone. The contributions are:
+A geographically grounded microscopic model of the Marathahalli junction that separates surface conflict movements from grade-separated bypass paths.
+An auditable hybrid controller combining measured base-green splits, bounded incremental extensions, and a red-wait anti-starvation guard, with a per-decision trace.
+A 384-run paired evaluation on held-out seeds under a fixed analysis plan with Holm-corrected paired-bootstrap inference.
+An ablation showing no detectable loss from removing the origin–destination oracle.
+Terminology. “Predictive intervention” in the title denotes a proactive signal decision taken from the currently observed and recently accumulated state (queue lengths, waiting conditions, recent discharge), before queues worsen. The controller contains no traffic-forecasting model and no forecast horizon; short-horizon arrival projection was evaluated and removed (Section VIII).
+II. RELATED WORK
+A. Fixed-Time and Webster Methods
+Webster’s method [2] sets cycle length and green splits from critical flow ratios and saturation flows. It performs well under stationary demand but degrades under surges and capacity drops. In mixed-traffic Indian conditions, homogeneous saturation-flow assumptions often need empirical adjustment [1].
+B. Actuated and Adaptive Control
+SCOOT [8] and SCATS [9] adjust cycle, splits, and offsets from detector data. At isolated junctions, gap-based actuation extends green until headways exceed a threshold; under sustained flow this can reach a maximum-green limit and delay competing approaches.
+C. Max-Pressure and Reinforcement Learning
+Max-pressure control [4] schedules phases from upstream and downstream queue differences. Deep RL methods [5] map rich state representations to phase actions and achieve strong simulated delay reduction, but offer limited auditability and no analytic worst-case guarantee.
+D. Supervised and Explainable Control
+Rule-based supervisors and safety layers around learned or adaptive policies, and explainable RL for signal control, aim to retain responsiveness while constraining behaviour. TO ADD: 2–3 verified references on safety-shielded or explainable RL for traffic signal control, with DOIs. Do not cite until verified.
+E. Positioning
+hybrid_queue_adaptive sits between rule-based predictability and state-aware responsiveness. Every decision follows explicit thresholds and is logged. It relies on queue estimates from local detectors and imposes a red-wait limit on competing approaches.
+III. NETWORK MODEL AND SYSTEM ARCHITECTURE
+A. Geographic Representation
+The network models the Marathahalli Bridge / Varthur Road / ORR junction in eastern Bengaluru, bounded approximately by 12.950°–12.964°N and 77.694°–77.708°E. It was built in Eclipse SUMO [3] from road-centerline and road-width data distributed by OpenCity [7] and cross-checked against Bengaluru Traffic Police (BTP) signal timings [6]. The simulated local control area is 700 m × 700 m with 350 m approach arms. Flyovers (modelled deck elevation about +6.5 m, an engineering assumption) and ORR underpass bypasses are non-conflicting free-flow paths. Control applies only to the surface node marathahalli_tls with four inbound approaches: North (ORR North/KR Puram), South (ORR South/Kadubeesanahalli), East (Varthur/Whitefield), and West (HAL Airport Road). Lane counts, ramp radii, and elevations are inferred, not surveyed.
+[INSERT Fig. 1 — network schematic with approaches, detectors, controlled node, bypass links (Antigravity figure F1)]
+Fig. 1. Marathahalli junction model in SUMO.
+B. Signal Phasing and Safety Supervisor
+Phase 1 (EW) serves Varthur East and HAL West; Phase 2 (NS) serves ORR North and South. A shared state machine wraps every policy and cannot be overridden:
+GREEN → YELLOW (3 s) → ALL-RED (2 s) → NEXT GREEN	(1)
+The fixed BTP-adapted plan uses 105 s (EW) and 95 s (NS) green, obtained by removing 5 s clearance from the 110 s and 100 s field phases. The field pedestrian-exclusive stage is omitted from this vehicle-only model.
+C. Queue Observation and Sensing Limits
+Eight lane-area (E2) detectors cover 24.9 m of each approach (pos −25.0 m, endPos −0.1 m). The detector-visible queue of approach i with lane set Li is
+Qdet,i(t) = max*l*∈*L*_{i} Ql(t)	(2)
+A sensor status of SATURATED is raised when the queue reaches within 0.5 m of the detector boundary (≥ 24.4 m). Because E2 detectors truncate long queues, evaluation uses an extended ground-truth queue Qgt_ext computed from vehicle positions over the full 350 m arm VERIFY: stop-speed threshold, gap rule, and whether queues beyond the arm are counted. The controller uses only detector-visible measurements.
+IV. CONTROL METHODOLOGY
+A. Comparator Controllers
+The evaluation matrix contains 8 policies: VERIFY against manifest — expected: fixed, webster_measured, webster_recalc, sumo_actuated, adaptive, queue_extension, hybrid_queue_adaptive, and one further policy; confirm whether rl_dqn and hybrid_oracle_seeded are inside the 384 runs or a separate ablation. The main comparators are:
+fixed: static BTP plan (105 s EW / 95 s NS).
+webster_measured: Webster equi-saturation split computed once from a 300 s warm-up and then held static; primary reference.
+webster_recalc: Webster timing recomputed every 300 s from rolling local counts.
+sumo_actuated: SUMO gap-based extension with identical clearance intervals.
+adaptive, queue_extension: threshold- and score-based queue controllers.
+B. Hybrid Controller
+At each decision epoch Δt = 3 s after the base green, hybrid_queue_adaptive applies three rules.
+1) Base green. The base allocation is initialized from rolling local discharge rates, not true arrival rates:
+Gbase,p = max(Gmin, Cest · yp / Σk yk)	(3)
+where yp is the measured flow ratio of phase p and Gmin = 15.0 s. VERIFY from hybrid_queue_adaptive.py: define C_est, its default value, and how y_p is computed. In the saved trace g_base = 15.0 s, so confirm Eq. (3) is active rather than clamped at G_min.
+2) Queue-responsive extension. If the active queue satisfies Qact ≥ 4.0 m, the controller requests ΔGreq = +3.0 s. Cumulative applied extension is capped:
+Gextra,p(t) = Σj=1m ΔGapp,j ≤ Gmax − Gbase,p	(4)
+with Gmax = 60.0 s.
+3) Anti-starvation guard. An extension is rejected (ΔGapp = 0) and a phase switch is requested if the competing red wait reaches the limit while a competing queue exists:
+Wcomp(t) ≥ Wlimit = 35.0 s, Qcomp > 0	(5)
+Because decisions occur every 3 s and clearance takes 5 s, the observed red wait can exceed 35 s by up to one decision step plus clearance; the guard therefore bounds red wait to within a quantifiable margin, not exactly at 35 s VERIFY: report the observed maximum competing red wait per policy and the analytic bound from code.
+C. Decision Traceability
+Every decision is logged with proposed action, applied action, active and competing queues, requested extension ΔGreq, applied extension ΔGapp, cumulative extra green, and a reason code. In an example run, at t = 528.0 s the active NS queue was 24.0 m against a competing EW queue of 12.5 m, and +3.0 s was granted because Wcomp = 15.0 s < 35.0 s. By t = 549.0 s, after 36.0 s of green, Wcomp reached 36.0 s and a switch was requested. REPLACE: this trace comes from cell …_s125 of the separate 840-cell study (seeds 121–130). Substitute an equivalent trace from a seed 131–138 run of exp_marathahalli_improve_final, or state clearly that it is an illustrative mechanism demonstration from another study.
+[INSERT Fig. 2 — decision-trace timeline: queues, requested vs applied extension, W_comp vs 35 s limit, phase bands (Antigravity figure F7)]
+Fig. 2. Decision trace for one run.
+V. EXPERIMENTAL DESIGN
+A. Matrix and Seed Discipline
+This paper reports one study, exp_marathahalli_improve_final: 8 policies × 6 conditions × 8 held-out seeds = 384 runs. It is separate from the 840-cell study (exp_marathahalli_hybrid_840, seeds 121–130) and from any emergency-priority study; their results are never pooled. Seeds were partitioned as 101–105 (development), 106–110 (validation and ablation gating), 121–130 (earlier exploratory runs VERIFY wording against git history), and 131–138 (final evaluation, used once). Analysis choices were fixed before the final seeds were run VERIFY: cite dated commit of the analysis plan; if none exists, keep the wording “fixed analysis plan”. All policies ran with default parameters; no tuning was performed on final seeds. All 384 runs completed with zero unfinished vehicles VERIFY from tripinfo, not manifest.
+B. Demand Scenarios
+Demand is synthetic. Stationary: balanced-low (0.70×), balanced-heavy (1.30×), and imbalanced_orr-heavy (1.30×, NS-dominant). Non-stationary: ramp_peak-medium (low→heavy→low), surge_shift-medium (dominant flow shifts from EW to NS mid-run), and lane_closure-medium (transient closure of one inbound lane).
+C. Metrics and Statistics
+Primary metrics, fixed in advance, are the 95th-percentile waiting time (p95), the extended ground-truth maximum queue (Qmax), and the approach wait gap Wgap = maxi W̄i − mini W̄i. Secondary metrics are mean wait and mean queue. For each condition–seed pair,
+Δ% = (Mhybrid − Mref) / Mref × 100	(6)
+Confidence intervals use paired-bootstrap resampling (10,000 resamples, deterministic seed). Holm–Bonferroni correction [10] is applied across the three primary metrics within each comparison; secondary metrics are unadjusted. VERIFY: bootstrap seed, handling of low-denominator cells for the wait-gap ratio.
+VI. RESULTS
+A. Hybrid versus Measured-Flow Webster
+Table I pools all 48 condition–seed pairs. The hybrid lowers maximum queue by 28.8% (Holm p < 0.001). The p95 wait and wait gap intervals include zero, so no difference is detected; this does not establish equivalence.
+TABLE I
+Hybrid vs. webster_measured, pooled paired Δ% (n = 48)
+Metric
+Hybrid
+Webster-m
+Δ% (95% CI)
+Holm p
+p95 wait (s)
+452.3
+446.8
+−0.9 (−4.2, +2.5)
+1.00
+Max queue (m)
+42.2
+62.2
+−28.8 (−35.0, −22.4)
+<0.001
+Wait gap (s)
+58.3
+59.8
++3.0 (−8.0, +16.2)
+1.00
+Mean wait (s)*
+76.7
+77.7
+−3.1 (−5.3, −1.1)
+n/a
+Mean queue (m)*
+2.5
+4.0
+−35.7 (−38.4, −33.1)
+n/a
+*Secondary metrics, no multiplicity control.
+B. Sensitivity Analysis (t ≥ 300 s)
+The webster_measured baseline runs the BTP plan during its 300 s measurement window while the hybrid adapts from t = 0. Excluding vehicles departing before 300 s: p95 wait +0.9% (−2.0, +3.7); mean wait −0.5% (−2.3, +1.5); maximum queue −27.1% (−33.1, −20.6). The small full-run mean-wait advantage (−3.1%) is consistent with a warm-up effect and is not retained, whereas the queue reduction persists.
+C. Alternative Baselines
+TABLE II
+Hybrid minus comparator, Δ% (95% CI)
+Comparator
+p95 wait
+Max queue
+Wait gap
+webster_recalc
+−2.5 (−5.9, +0.9)
+−28.3 (−34.8, −21.7)
++17.5 (−7.8, +60.2)
+fixed
+−2.8 (−10.0, +3.9)
+−48.7 (−53.0, −43.7)
++1.3 (−7.3, +10.6)
+sumo_actuated
++1.0 (−2.1, +4.2)
++11.4 (+4.6, +18.7)†
++14.8 (−2.9, +37.7)
+†Hybrid statistically worse (Holm p = 0.0006). All other cells: no detectable difference except max queue vs. fixed and webster_recalc (lower).
+The hybrid contains maximum queue relative to static BTP timing (−48.7%) and recalculated Webster (−28.3%). Against sumo_actuated it shows a 11.4% higher maximum queue, a 35.5% higher mean queue, and a higher unadjusted mean wait (+3.4%, 95% CI 0.5 to 6.5%). Unconstrained actuation therefore performs better on queue and delay in this model; the hybrid trades part of that responsiveness for bounded, logged decisions.
+D. Oracle Ablation
+TABLE III
+Hybrid vs. oracle-seeded variant (n = 48)
+Metric
+Δ% (95% CI)
+Holm p
+Verdict
+p95 wait
+−0.5 (−2.7, +1.7)
+1.00
+ND
+Max queue
+−1.2 (−6.0, +3.9)
+1.00
+ND
+Wait gap
++15.3 (+0.2, +34.1)
+0.138
+ND
+ND = no detectable difference.
+No primary metric differs detectably between the hybrid and the oracle-seeded variant; absolute mean wait gaps were 58.28 s and 58.33 s. The wait-gap interval is wide and its lower bound is near zero, so a modest oracle benefit on that metric cannot be excluded. The result supports, but does not prove, that local measurements suffice. OPTIONAL: add post-hoc margin table (±5%, ±10%) labelled descriptive.
+E. Per-Condition Behaviour
+TABLE IV
+Per-condition means (n = 8 seeds): p95 wait (s) / max queue (m)
+Scenario
+Hybrid
+Webster-m
+SUMO-act
+Fixed
+balanced-low
+43 / 25
+50 / 34
+41 / 26
+86 / 46
+balanced-heavy
+667 / 47
+687 / 59
+639 / 40
+646 / 98
+imbalanced_orr-heavy
+542 / 48
+525 / 78
+546 / 38
+474 / 107
+ramp_peak-medium
+595 / 43
+588 / 51
+593 / 44
+585 / 91
+surge_shift-medium
+280 / 43
+297 / 82
+294 / 39
+287 / 82
+lane_closure-medium
+587 / 48
+535 / 69
+600 / 41
+516 / 95
+Under the demand surge shift the hybrid holds the peak queue at 43 m versus 82 m for Webster and fixed. It has a higher p95 wait than Webster under lane closure (587 s vs. 535 s, +10%) and under imbalanced ORR demand (+4.5%). Under saturated regimes (p95 of 500–690 s) structural capacity dominates delay variance, so small p95 differences there should not be over-interpreted.
+[INSERT Fig. 3 — forest plot of paired Δ% with 95% CI vs. each comparator (Antigravity figure F3)]
+Fig. 3. Paired percentage differences for primary metrics.
+[INSERT Fig. 4 — queue time series, surge_shift and lane_closure: hybrid vs. webster_measured vs. sumo_actuated (figure F6)]
+Fig. 4. Representative queue time series.
+F. Items Pending Verification
+Throughput, completion rate, and switches per hour were omitted because of an extraction fault; insert recomputed values and paired Δ% vs. webster_measured and sumo_actuated, so that lower queues can be shown not to result from reduced service. Report a sanity table per condition (vehicle count, mean/p95/max wait, max Q_gt_ext, teleports, unfinished): p95 waits of 450–690 s alongside maximum queues of 40–50 m on 350 m arms must be reconciled (wait definition, population, teleports, queues beyond the arm).
+VII. DISCUSSION
+The defensible contribution of hybrid_queue_adaptive is bounded, auditable queue containment, not minimum delay:
+Gain over pre-timed logic. Fixed plans reach peak queues up to 107 m under surges; the hybrid lowers them by 28.8% to 48.7% with no detectable change in p95 wait.
+Trade-off against actuation. Gap actuation yields lower maximum queue (hybrid +11.4%). Its extensions are not capped by a logged red-wait guard, which may allow cycle drift or longer waits on competing approaches; this was not measured here — either report cycle-length variance and maximum red wait for `sumo_actuated` or keep it as a hypothesis.
+Oracle independence. No detectable loss from removing the demand oracle suggests that standard local E2 detectors may suffice in simulation.
+A possible confound is cycle structure: the hybrid operates with 15–60 s greens, whereas the fixed and Webster plans use roughly 100 s greens. Part of the queue reduction may therefore stem from shorter cycles rather than queue awareness. Insert green-duration and cycle-length statistics per policy.
+VIII. THREATS TO VALIDITY AND LIMITATIONS
+Synthetic demand. Geometry, elevation and phases are grounded in surveys and BTP documents, but arrivals are synthetic; results are not field performance.
+Single intersection. Offsets, upstream coordination, and green waves are not modelled.
+Default parameters. No tuning was performed, so all policies, including the hybrid, may be sub-optimal.
+Short-horizon projection removed. It showed overlapping confidence intervals during development and was dropped; the controller acts on rolling state only.
+Detector truncation and decision granularity. E2 detectors cover 24.9 m, and decisions occur every 3 s, so queue sensing and the red-wait limit are approximate.
+Phase plan. The pedestrian-exclusive stage is omitted, so pedestrian clearance effects are not assessed.
+Cycle-length confound and unmeasured metrics. See Sections VI-F and VII.
+Scope. Conclusions apply to the six evaluated conditions only.
+IX. CONCLUSION AND FUTURE WORK
+On a microscopic model of the Marathahalli junction, a queue-aware controller with bounded +3.0 s extensions and a 35 s red-wait guard reduced maximum queue by 28.8% relative to measured-flow Webster, with no detectable difference in p95 wait, and no detectable cost from removing the demand oracle. It did not outperform unconstrained gap actuation on queue length. Future work includes multi-intersection coordination, sensor-noise injection, systematic parameter optimization, and calibration against measured traffic counts.
+DATA AVAILABILITY
+A sanitized artifact bundle (manifest with commit hash hash, raw_runs.csv, aggregate tables, decision trace of the example run, configuration, and analysis scripts) is available at repository/DOI. All tables and figures regenerate with python analysis/paper_final/run_all.py.
+ACKNOWLEDGMENT
+The authors thank Mentor Name, mentor for E1CSA313 Design Project-I at Alliance University, and OpenCity and the Bengaluru Traffic Police for the public geospatial and signal-schedule references.
+REFERENCES
+[1]	R. P. Roess, E. S. Prassas, and W. R. McShane, Traffic Engineering, 4th ed. Upper Saddle River, NJ, USA: Prentice Hall, 2011 — verify.
+[2]	F. V. Webster, “Traffic signal settings,” Road Research Laboratory, London, U.K., Tech. Paper No. 39, 1958.
+[3]	D. Krajzewicz, J. Erdmann, M. Behrisch, and L. Bieker, “Recent development and applications of SUMO – Simulation of Urban MObility,” Int. J. Adv. Syst. Meas., vol. 5, no. 3–4, pp. 128–138, 2012.
+[4]	P. Varaiya, “Max pressure control of a network of signalized intersections,” Transp. Res. C, Emerg. Technol., vol. 36, pp. 177–195, 2013.
+[5]	H. Wei, G. Zheng, V. Gayah, and Z. Li, “A survey on traffic signal control methods,” arXiv:1904.08117, 2019. Prior text cited this as IEEE TKDE vol. 33 no. 9; that is unverified. Cite the arXiv version, or the published SIGKDD Explor. Newsl. 2021 article, after checking.
+[6]	Bengaluru Traffic Police, “Signal timings data: Marathalli Bridge & Yamlur junctions,” internal document, Bengaluru, India, 2023.
+[7]	OpenCity, “BBMP roads centerline map and road width dataset,” Urban Data Portal, Bengaluru, India, 2022. [Online]. Available: https://opencity.in
+[8]	P. B. Hunt, D. I. Robertson, R. D. Bretherton, and R. I. Winton, “SCOOT—A traffic responsive method of coordinating signals,” Transport and Road Research Lab., Crowthorne, U.K., Rep. LR 1014, 1981.
+[9]	P. R. Lowrie, “SCATS, Sydney Co-ordinated Adaptive Traffic System: A traffic responsive method of controlling urban traffic,” Roads and Traffic Authority NSW, Sydney, Australia, 1990. verify; the commonly cited year is 1982
+[10]	S. Holm, “A simple sequentially rejective multiple test procedure,” Scand. J. Stat., vol. 6, no. 2, pp. 65–70, 1979.

@@ -1,0 +1,7 @@
+variant,policy,role,parameters,val_mean_max_q_m,val_gap_to_sumo_m,crit_1_gap_halved,val_p95_wait_s,p95_delta_vs_v1_pct,crit_2_p95_le_1pct,val_wait_gap_s,gap_delta_vs_v1_s,crit_3_gap_not_raised,crit_4_safety_clean,lc_worst_max_q_m,crit_5_no_spike,val_switches_per_h,val_mean_wait_s,decision
+v1_baseline,hybrid_queue_adaptive,BASELINE,"rungs=('R4',), default v1",42.68,5.96,False,424.24,0.0,True,64.88,0.0,True,True,44.39,True,188.8,75.76,BASELINE
+sumo_actuated,sumo_actuated,COMPARATOR,native gap-out,36.72,0.0,True,431.18,1.64,False,61.54,-3.34,True,True,36.41,True,217.1,76.38,COMPARATOR
+cand_a,hybrid_v2_cand_a,CANDIDATE,rest_in_green=True,42.36,5.64,False,422.43,-0.43,True,63.67,-1.21,True,True,36.47,True,168.1,76.82,REJECTED
+cand_b,hybrid_v2_cand_b,CANDIDATE,unconditional_wait_cap=True,41.89,5.17,False,421.5,-0.65,True,64.28,-0.6,True,True,44.39,True,188.9,75.71,REJECTED
+cand_c,hybrid_v2_cand_c,CANDIDATE,pressure_extension=True,42.44,5.72,False,422.77,-0.35,True,64.31,-0.57,True,True,44.39,True,189.0,75.8,REJECTED
+cand_d,hybrid_v2_cand_d,CANDIDATE,"rest_in_green=True, unconditional_wait_cap=True",41.46,4.74,False,434.71,2.47,False,64.01,-0.87,True,True,36.46,True,174.9,76.9,REJECTED

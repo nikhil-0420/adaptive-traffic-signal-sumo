@@ -108,70 +108,89 @@ def plot_network_schematic():
     print(f"Saved {out_file}")
 
 def plot_decision_trace():
-    """Figure 2: Microscopic decision trace timeline for Seed 136 (Ramp Peak, t=1125-1180s)."""
+    """Figure 2: Microscopic decision trace timeline for Seed 136 (Ramp Peak, t=1125-1175s)."""
     dec_file = DATA_DIR / "marathahalli_ramp_peak_medium_hybrid_queue_adaptive_s136" / "decisions.csv"
     if not dec_file.exists():
-        print("Warning: Decision file for s136 not found")
+        print(f"Warning: Decision file for s136 not found at {dec_file}")
         return
 
     df = pd.read_csv(dec_file)
     sub = df[(df["t"] >= 1125.0) & (df["t"] <= 1175.0)].copy()
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.2, 4.6), sharex=True, gridspec_kw={"height_ratios": [1.8, 1.0]})
+    # Per-approach queue aggregation avoiding axis-swap ambiguity
+    sub["EW_queue"] = sub[["q_E_m", "q_W_m"]].max(axis=1)
+    sub["NS_queue"] = sub[["q_N_m", "q_S_m"]].max(axis=1)
 
-    # Plot queues and limits
-    ax1.plot(sub["t"], sub["q_active_m"], marker="o", color="#1f77b4", label="Active EW Queue (m)", linewidth=1.8, markersize=5)
-    ax1.plot(sub["t"], sub["q_competing_m"], marker="s", color="#ff7f0e", label="Competing NS Queue (m)", linewidth=1.6, markersize=4.5)
-    
-    # Competing wait curve
+    # Competing wait times dynamically extracted from decisions log during extension requests
+    ext_rows = sub[sub["action"].isin(["EXTEND", "REQUEST_SWITCH"]) & (sub["t"] >= 1145.0)]
+    wait_t = ext_rows["t"].tolist()
+    wait_times = ext_rows["elapsed_s"].tolist()
+
+    # Base green allocations read directly from simulation records
+    g_base_ew = float(sub.loc[sub["t"] == 1130.0, "g_base_s"].values[0]) if not sub.loc[sub["t"] == 1130.0].empty else 14.2
+    g_base_ns = float(sub.loc[sub["t"] == 1171.0, "g_base_s"].values[0]) if not sub.loc[sub["t"] == 1171.0].empty else 15.8
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7.1, 1333/300), dpi=300, sharex=True, gridspec_kw={"height_ratios": [2.7, 0.9]})
+
+    # Queue series on primary axis
+    l1 = ax1.plot(sub["t"], sub["EW_queue"], marker="o", color="#1f77b4", label="EW Queue (m)", linewidth=1.8, markersize=5)
+    l2 = ax1.plot(sub["t"], sub["NS_queue"], marker="s", color="#ff7f0e", label="NS Queue (m)", linewidth=1.6, markersize=4.5)
+    l3 = ax1.axhline(4.0, color="#1f77b4", linestyle=":", linewidth=1.1, label="Queue Threshold (4.0 m)")
+
+    # Competing wait curve on twin axis
     ax1_twin = ax1.twinx()
-    # Interpolate competing wait curve from decisions
-    wait_times = [15.0, 18.0, 21.0, 24.0, 27.0, 30.0, 33.0, 36.0]
-    wait_t = [1145.0, 1148.0, 1151.0, 1154.0, 1157.0, 1160.0, 1163.0, 1166.0]
-    ax1_twin.plot(wait_t, wait_times, color="#d62728", linestyle="--", marker="^", label="Competing NS Red Wait W_comp (s)", linewidth=1.6)
-    ax1_twin.axhline(35.0, color="#d62728", linestyle=":", linewidth=1.3, alpha=0.9, label="Red Wait Limit (35.0 s)")
+    l4 = ax1_twin.plot(wait_t, wait_times, color="#d62728", linestyle="--", marker="^", label="Competing NS Wait $W_{comp}$ (s)", linewidth=1.6, markersize=4.5)
+    l5 = ax1_twin.axhline(35.0, color="#d62728", linestyle=":", linewidth=1.3, alpha=0.9, label="Wait Limit (35.0 s)")
     ax1_twin.set_ylabel("Competing Red Wait (s)", color="#d62728")
     ax1_twin.tick_params(axis="y", labelcolor="#d62728")
     ax1_twin.set_ylim(0, 45)
 
-    ax1.axhline(4.0, color="#1f77b4", linestyle=":", linewidth=1.1, label="Queue Threshold (4.0 m)")
     ax1.set_ylabel("Approach Queue (m)")
-    ax1.set_ylim(0, 30)
+    ax1.set_ylim(0, 31)
     ax1.grid(True, linestyle=":", alpha=0.5)
 
-    # Annotate the 7 extensions and switch rejection
+    # All 7 +3s extension badges visible without obstruction
     for t_val in [1145, 1148, 1151, 1154, 1157, 1160, 1163]:
-        ax1.annotate("+3s", xy=(t_val, 24.0), xytext=(t_val-1.2, 26.5), fontsize=7, color="#1f77b4", fontweight="bold")
-    
-    ax1.annotate("Switch Rejected:\nW_comp = 36s ≥ 35s", xy=(1166, 24.0), xytext=(1155, 12),
-                 arrowprops=dict(facecolor="#d62728", shrink=0.08, width=1, headwidth=5),
-                 fontsize=7.5, fontweight="bold", color="#d62728",
-                 bbox=dict(boxstyle="round,pad=0.2", facecolor="#ffebee", edgecolor="#d62728", alpha=0.9))
+        ax1.annotate("+3s", xy=(t_val, 24.0), xytext=(t_val, 26.0), fontsize=7.5, color="#1f77b4", fontweight="bold", ha="center")
 
-    # Phase bar timeline in ax2
-    # 1125 - 1166: EW Green
-    # 1166 - 1169: Yellow (3s)
-    # 1169 - 1171: All-Red (2s)
-    # 1171 - 1175: NS Green
-    ax2.broken_barh([(1125, 41)], (1, 2), facecolors="#81c784", edgecolor="#2e7d32", label="EW Green Phase (g_base=14.2s + g_extra=21.0s)")
-    ax2.broken_barh([(1166, 3)], (1, 2), facecolors="#fff176", edgecolor="#fbc02d", label="Yellow Transition (3s)")
-    ax2.broken_barh([(1169, 2)], (1, 2), facecolors="#ef5350", edgecolor="#c62828", label="All-Red Clearance (2s)")
-    ax2.broken_barh([(1171, 4)], (1, 2), facecolors="#64b5f6", edgecolor="#1565c0", label="NS Green Phase (g_base=15.8s)")
+    # Extension rejected annotation placed cleanly in open space without covering data
+    ax1.annotate("Extension rejected at t = 1166 s:\n$W_{comp} = 36$ s $\geq$ 35 s", xy=(1166, 24.0), xytext=(1153, 10.0),
+                 arrowprops=dict(facecolor="#d62728", shrink=0.08, width=1, headwidth=4.5, edgecolor="#d62728"),
+                 fontsize=7.5, fontweight="bold", color="#b71c1c", ha="center",
+                 bbox=dict(boxstyle="round,pad=0.25", facecolor="#ffebee", edgecolor="#d62728", alpha=0.95))
+
+    # Phase transition timeline in ax2
+    # 1125 - 1128: Yellow transition (3s) after NS gap-out
+    # 1128 - 1130: All-Red clearance (2s)
+    # 1130 - 1166: EW Green phase (starts at row 118, t=1130)
+    # 1166 - 1169: Yellow transition (3s) after wait cap rejection
+    # 1169 - 1171: All-Red clearance (2s)
+    # 1171 - 1175: NS Green phase (starts at row 127, t=1171)
+    p_ew = patches.Patch(facecolor="#81c784", edgecolor="#2e7d32", label=f"EW Green ($g_{{base}}={g_base_ew:.1f}$s + $g_{{extra}}=21.0$s)")
+    p_ns = patches.Patch(facecolor="#64b5f6", edgecolor="#1565c0", label=f"NS Green ($g_{{base}}={g_base_ns:.1f}$s)")
+    p_yel = patches.Patch(facecolor="#fff176", edgecolor="#fbc02d", label="Yellow Transition (3s)")
+    p_red = patches.Patch(facecolor="#ef5350", edgecolor="#c62828", label="All-Red Clearance (2s)")
+
+    ax2.broken_barh([(1125, 3)], (1, 2), facecolors="#fff176", edgecolor="#fbc02d")
+    ax2.broken_barh([(1128, 2)], (1, 2), facecolors="#ef5350", edgecolor="#c62828")
+    ax2.broken_barh([(1130, 36)], (1, 2), facecolors="#81c784", edgecolor="#2e7d32")
+    ax2.broken_barh([(1166, 3)], (1, 2), facecolors="#fff176", edgecolor="#fbc02d")
+    ax2.broken_barh([(1169, 2)], (1, 2), facecolors="#ef5350", edgecolor="#c62828")
+    ax2.broken_barh([(1171, 4)], (1, 2), facecolors="#64b5f6", edgecolor="#1565c0")
 
     ax2.set_ylim(0, 4)
     ax2.set_yticks([])
     ax2.set_xlabel("Simulation Time t (seconds)")
     ax2.grid(True, axis="x", linestyle=":", alpha=0.5)
-    ax2.legend(loc="lower center", bbox_to_anchor=(0.5, -0.9), ncol=2, frameon=True, fontsize=7.5)
 
-    # Combine legends for ax1
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax1_twin.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left", fontsize=7.5, framealpha=0.9)
+    # Position unified legend completely outside the axes below the plot
+    all_handles = [l1[0], l2[0], l3, l4[0], l5, p_ew, p_ns, p_yel, p_red]
+    all_labels = [h.get_label() for h in all_handles]
+    ax2.legend(all_handles, all_labels, loc="upper center", bbox_to_anchor=(0.5, -0.58), ncol=3, frameon=True, fontsize=6.8)
 
-    plt.tight_layout()
+    fig.subplots_adjust(top=0.96, bottom=0.25, left=0.10, right=0.90, hspace=0.15)
     out_file = OUT_DIR / "fig2_decision_trace.png"
-    plt.savefig(out_file, dpi=300, bbox_inches="tight")
+    plt.savefig(out_file, dpi=300)
     plt.close()
     print(f"Saved {out_file}")
 

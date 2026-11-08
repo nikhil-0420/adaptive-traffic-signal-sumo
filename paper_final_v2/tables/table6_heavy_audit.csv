@@ -1,0 +1,17 @@
+Condition,Policy,Policy_Label,Vehicles_Arrived,p95_Wait_s,Max_Vehicle_Wait_s,Max_Queue_m,Stops_Median,Stops_p95,Stops_Max
+balanced-heavy,fixed,Fixed BTP (105s/95s),1698.9,646.5,1046.4,98.1,0.6,14.4,24.2
+balanced-heavy,webster_measured,Webster-measured (Ref),1698.9,686.8,1123.0,58.8,0.5,14.5,23.6
+balanced-heavy,webster_recalc,Webster-recalc,1698.9,684.2,1165.6,68.0,0.6,14.8,24.0
+balanced-heavy,sumo_actuated,SUMO-actuated,1698.9,638.7,1129.9,40.0,0.2,14.9,24.0
+balanced-heavy,adaptive,Adaptive (pure queue),1698.9,674.8,1141.1,44.7,0.4,15.1,24.8
+balanced-heavy,queue_extension,Queue-extension only,1698.9,667.3,1146.1,48.3,0.5,14.6,25.1
+balanced-heavy,hybrid_queue_adaptive,Hybrid queue-adaptive (Proposed),1698.9,666.6,1138.5,46.6,0.5,15.4,25.1
+balanced-heavy,hybrid_oracle_seeded,Hybrid oracle-seeded,1698.9,655.5,1129.2,45.9,0.5,15.0,25.4
+imbalanced_orr-heavy,fixed,Fixed BTP (105s/95s),1882.4,473.7,1462.9,106.6,0.8,11.9,21.2
+imbalanced_orr-heavy,webster_measured,Webster-measured (Ref),1882.4,525.3,1467.0,77.5,0.8,13.6,24.6
+imbalanced_orr-heavy,webster_recalc,Webster-recalc,1882.4,526.0,1433.4,82.4,0.8,13.2,24.4
+imbalanced_orr-heavy,sumo_actuated,SUMO-actuated,1882.4,546.2,1384.2,38.4,0.5,14.0,25.9
+imbalanced_orr-heavy,adaptive,Adaptive (pure queue),1882.4,554.6,1461.8,52.2,0.8,13.8,25.6
+imbalanced_orr-heavy,queue_extension,Queue-extension only,1882.4,521.1,1423.1,46.7,0.8,14.1,26.2
+imbalanced_orr-heavy,hybrid_queue_adaptive,Hybrid queue-adaptive (Proposed),1882.4,542.4,1401.8,47.6,0.9,14.6,26.6
+imbalanced_orr-heavy,hybrid_oracle_seeded,Hybrid oracle-seeded,1882.4,569.3,1436.0,49.5,0.6,14.4,27.2
