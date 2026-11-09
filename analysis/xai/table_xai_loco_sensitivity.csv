@@ -1,0 +1,15 @@
+comparison,metric,omitted_condition,delta_pct,ci_low,ci_high,raw_p,sig
+hybrid_vs_webster_measured,gt_ext_max_queue_m,None (Full Pooled),-28.84,-33.72,-23.42,0.0,True
+hybrid_vs_webster_measured,gt_ext_max_queue_m,Omit balanced-low,-29.6,-34.65,-24.57,0.0,True
+hybrid_vs_webster_measured,gt_ext_max_queue_m,Omit balanced-heavy,-30.53,-36.07,-24.75,0.0,True
+hybrid_vs_webster_measured,gt_ext_max_queue_m,Omit imbalanced_orr-heavy,-26.93,-32.28,-20.58,0.0,True
+hybrid_vs_webster_measured,gt_ext_max_queue_m,Omit ramp_peak-medium,-31.93,-37.63,-25.96,0.0,True
+hybrid_vs_webster_measured,gt_ext_max_queue_m,Omit surge_shift-medium,-25.26,-30.28,-20.0,0.0,True
+hybrid_vs_webster_measured,gt_ext_max_queue_m,Omit lane_closure-medium,-28.79,-34.81,-21.76,0.0,True
+hybrid_vs_fixed,p95_wait_s,None (Full Pooled),-2.76,-4.76,-0.9,0.004,True
+hybrid_vs_fixed,p95_wait_s,Omit balanced-low,6.7,3.94,9.23,0.0,True
+hybrid_vs_fixed,p95_wait_s,Omit balanced-heavy,-3.99,-6.07,-1.66,0.0016,True
+hybrid_vs_fixed,p95_wait_s,Omit imbalanced_orr-heavy,-6.29,-9.28,-3.77,0.0,True
+hybrid_vs_fixed,p95_wait_s,Omit ramp_peak-medium,-3.67,-6.06,-1.32,0.0024,True
+hybrid_vs_fixed,p95_wait_s,Omit surge_shift-medium,-3.26,-5.69,-0.83,0.0062,True
+hybrid_vs_fixed,p95_wait_s,Omit lane_closure-medium,-6.06,-7.92,-4.17,0.0,True

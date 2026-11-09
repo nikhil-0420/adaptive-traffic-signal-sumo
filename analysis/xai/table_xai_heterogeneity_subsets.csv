@@ -1,0 +1,37 @@
+comparator,subset,metric,metric_label,hyb_mean,ref_mean,delta_pct,ci_low,ci_high,raw_p,holm_p,sig_holm,abs_diff,abs_ci_low,abs_ci_high
+webster_measured,all_6_pooled,gt_ext_max_queue_m,extended max queue,42.25,62.21,-28.84,-33.72,-23.42,0.0,0.0,True,-19.97,-23.66,-16.27
+webster_measured,all_6_pooled,p95_wait_s,p95 wait,452.33,446.75,-0.88,-2.82,1.11,0.3736,0.7472,False,5.58,-3.84,15.41
+webster_measured,all_6_pooled,approach_wait_gap_s,wait gap,58.28,59.81,3.03,-7.13,16.57,0.666,0.7472,False,-1.53,-6.71,2.98
+webster_measured,stationary,gt_ext_max_queue_m,extended max queue,39.77,56.89,-27.95,-34.0,-21.31,0.0,0.0,True,-17.12,-20.64,-13.71
+webster_measured,stationary,p95_wait_s,p95 wait,417.26,420.61,-4.17,-7.78,-0.6,0.0178,0.0356,True,-3.34,-17.65,12.62
+webster_measured,stationary,approach_wait_gap_s,wait gap,59.99,65.49,-7.3,-17.16,1.71,0.1326,0.1326,False,-5.5,-11.81,-0.0
+webster_measured,non_stationary,gt_ext_max_queue_m,extended max queue,44.72,67.53,-29.73,-36.69,-22.62,0.0,0.0,True,-22.81,-28.48,-16.99
+webster_measured,non_stationary,p95_wait_s,p95 wait,487.4,472.9,2.41,-0.97,5.82,0.172,0.344,False,14.5,0.19,29.02
+webster_measured,non_stationary,approach_wait_gap_s,wait gap,56.57,54.13,13.37,-4.34,38.05,0.1996,0.344,False,2.44,-2.67,7.77
+fixed,all_6_pooled,gt_ext_max_queue_m,extended max queue,42.25,86.36,-48.69,-52.46,-44.67,0.0,0.0,True,-44.11,-49.66,-38.2
+fixed,all_6_pooled,p95_wait_s,p95 wait,452.33,432.22,-2.76,-4.76,-0.9,0.004,0.008,True,20.12,8.61,30.6
+fixed,all_6_pooled,approach_wait_gap_s,wait gap,58.28,59.75,1.28,-6.41,8.8,0.7242,0.7242,False,-1.47,-4.58,1.4
+fixed,stationary,gt_ext_max_queue_m,extended max queue,39.77,83.44,-49.08,-54.12,-43.97,0.0,0.0,True,-43.67,-51.66,-35.33
+fixed,stationary,p95_wait_s,p95 wait,417.26,401.96,-10.6,-12.54,-8.33,0.0,0.0,True,15.3,4.12,27.08
+fixed,stationary,approach_wait_gap_s,wait gap,59.99,65.09,-0.74,-12.4,11.92,0.89,0.89,False,-5.09,-10.85,-0.34
+fixed,non_stationary,gt_ext_max_queue_m,extended max queue,44.72,89.28,-48.31,-53.32,-42.34,0.0,0.0,True,-44.56,-50.81,-37.63
+fixed,non_stationary,p95_wait_s,p95 wait,487.4,462.47,5.08,1.11,8.72,0.0112,0.0224,True,24.93,8.73,37.89
+fixed,non_stationary,approach_wait_gap_s,wait gap,56.57,54.41,3.3,-2.42,8.49,0.2564,0.2564,False,2.15,-0.82,4.61
+sumo_actuated,all_6_pooled,gt_ext_max_queue_m,extended max queue,42.25,38.2,11.42,7.14,15.12,0.0,0.0,True,4.04,2.23,5.84
+sumo_actuated,all_6_pooled,p95_wait_s,p95 wait,452.33,452.15,0.96,-1.97,4.03,0.5442,0.5442,False,0.18,-13.49,12.07
+sumo_actuated,all_6_pooled,approach_wait_gap_s,wait gap,58.28,59.44,14.81,-2.57,34.75,0.1048,0.2096,False,-1.16,-4.41,1.7
+sumo_actuated,stationary,gt_ext_max_queue_m,extended max queue,39.77,34.82,15.3,9.2,21.08,0.0,0.0,True,4.94,2.73,7.16
+sumo_actuated,stationary,p95_wait_s,p95 wait,417.26,408.62,3.53,-0.21,7.42,0.0664,0.068,False,8.64,-6.79,24.92
+sumo_actuated,stationary,approach_wait_gap_s,wait gap,59.99,60.38,33.42,1.87,72.9,0.034,0.068,False,-0.38,-4.34,3.24
+sumo_actuated,non_stationary,gt_ext_max_queue_m,extended max queue,44.72,41.59,7.55,2.86,12.71,0.0,0.0,True,3.14,0.62,6.01
+sumo_actuated,non_stationary,p95_wait_s,p95 wait,487.4,495.68,-1.61,-5.76,1.65,0.4228,0.8456,False,-8.28,-29.55,9.1
+sumo_actuated,non_stationary,approach_wait_gap_s,wait gap,56.57,58.5,-3.79,-13.4,7.82,0.4658,0.8456,False,-1.93,-6.77,2.79
+hybrid_oracle_seeded,all_6_pooled,gt_ext_max_queue_m,extended max queue,42.25,43.41,-1.22,-5.14,2.5,0.5514,1.0,False,-1.16,-3.07,0.65
+hybrid_oracle_seeded,all_6_pooled,p95_wait_s,p95 wait,452.33,455.86,-0.49,-2.93,1.86,0.7,1.0,False,-3.53,-12.41,5.1
+hybrid_oracle_seeded,all_6_pooled,approach_wait_gap_s,wait gap,58.28,58.33,15.31,4.06,28.19,0.0032,0.0096,True,-0.05,-2.14,1.77
+hybrid_oracle_seeded,stationary,gt_ext_max_queue_m,extended max queue,39.77,40.21,0.84,-4.54,6.42,0.7844,1.0,False,-0.45,-3.12,2.4
+hybrid_oracle_seeded,stationary,p95_wait_s,p95 wait,417.26,422.45,-0.69,-5.46,2.57,0.7958,1.0,False,-5.18,-19.48,4.83
+hybrid_oracle_seeded,stationary,approach_wait_gap_s,wait gap,59.99,60.86,30.41,6.52,56.69,0.009,0.027,True,-0.86,-3.62,2.07
+hybrid_oracle_seeded,non_stationary,gt_ext_max_queue_m,extended max queue,44.72,46.6,-3.28,-7.65,1.79,0.1978,0.5934,False,-1.88,-3.56,-0.11
+hybrid_oracle_seeded,non_stationary,p95_wait_s,p95 wait,487.4,489.28,-0.3,-3.38,2.81,0.8522,1.0,False,-1.88,-15.06,10.93
+hybrid_oracle_seeded,non_stationary,approach_wait_gap_s,wait gap,56.57,55.8,0.2,-8.14,6.9,0.9052,1.0,False,0.77,-2.2,3.37
