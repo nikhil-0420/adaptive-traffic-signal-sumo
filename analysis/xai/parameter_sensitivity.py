@@ -145,7 +145,7 @@ def load_sensitivity_data():
             dem = m.get("demand_level")
             cond = f"{scen}-{dem}"
             # Extract variant name
-            prefix = run_dir.name.split("_s")[0]
+            prefix = run_dir.name.rsplit("_s", 1)[0]
             variant = None
             for v in VARIANTS:
                 if prefix.endswith(f"_{v}"):

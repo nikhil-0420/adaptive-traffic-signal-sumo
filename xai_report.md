@@ -248,7 +248,44 @@ Decomposing total variance into orthogonal main effects and interaction componen
 
 ## Item 5: Parameter Sensitivity Analysis
 
-*(Completed upon conclusion of the exploratory 540-run sensitivity batch on development/validation seeds 101–110.)*
+* **Source Script**: [`analysis/xai/parameter_sensitivity.py`](file:///e:/dp1-traffic-signal/analysis/xai/parameter_sensitivity.py)  
+* **Function**: `compute_parameter_sensitivity()`  
+* **Dataset**: Exploratory sensitivity study on development/validation seeds 101–110 ($9 \times 6 \times 10 = \mathbf{540\text{ runs}}$, comparing 8 one-at-a-time variants and the default v1 reference against fresh `webster_measured` on the identical seeds).  
+* **Status**: *Exploratory; development/validation seeds 101–110; not part of the pre-registered confirmatory study.*
+
+### 5.1 One-at-a-Time Parameter Variations
+1. **Extension Step $\Delta g_{\text{step}}$**: Evaluated at 2.0 s (`step_2s`) and 4.0 s (`step_4s`) vs default 3.0 s.
+2. **Extension Queue Threshold $Q_{\text{ext}}$**: Evaluated at 3.0 m (`thresh_3m`) and 6.0 m (`thresh_6m`) vs default 4.0 m.
+3. **Red-Wait Limit $W_{\text{limit}}$**: Evaluated at 30.0 s (`wait_30s`) and 45.0 s (`wait_45s`) vs default 35.0 s.
+4. **Competing-Queue Activation Threshold $Q_{\text{comp}}$**: Evaluated at 1.0 m (`comp_q_1m`) and 4.0 m (`comp_q_4m`) vs default 2.0 m.
+5. **Reference Baseline**: `default_v1` (all default parameters: 3.0 s, 4.0 m, 35.0 s, 2.0 m).
+
+### 5.2 Summary Table vs Fresh Webster-Measured
+Source: [`analysis/xai/table_xai_parameter_sensitivity.csv`](file:///e:/dp1-traffic-signal/analysis/xai/table_xai_parameter_sensitivity.csv)
+
+| Variant | Parameter Changed | Value Description | Extended Max Queue $\Delta\%$ [95% CI] | Max Queue Sig ($p_{\text{Holm}} < 0.05$) | p95 Wait $\Delta\%$ [95% CI] | Approach Wait Gap $\Delta\%$ [95% CI] | Observed Max Red (s) | Analytic Red Bound (s) |
+|---|---|---|---|---|---|---|---|---|
+| `default_v1` | Baseline | v1 Default (3.0s, 4.0m, 35s, 2.0m) | **-27.57%** [-30.49, -23.91] | **Yes** ($p=0.000$) | -3.99% [-6.38, -1.02] | +14.28% [-2.11, +32.48] | 42.0 s | 48.0 s |
+| `step_2s` | Extension Step | 2.0 s (vs 3.0s) | **-28.98%** [-32.40, -24.74] | **Yes** ($p=0.000$) | -4.68% [-7.14, -1.82] | +13.56% [-1.30, +30.82] | 41.0 s | 47.0 s |
+| `step_4s` | Extension Step | 4.0 s (vs 3.0s) | **-28.22%** [-30.65, -24.97] | **Yes** ($p=0.000$) | -3.98% [-6.40, -1.03] | +14.30% [-2.05, +32.50] | 43.0 s | 49.0 s |
+| `thresh_3m` | Ext Threshold | 3.0 m (vs 4.0m) | **-27.88%** [-30.64, -24.14] | **Yes** ($p=0.000$) | -3.99% [-6.38, -1.02] | +14.28% [-2.11, +32.48] | 42.0 s | 48.0 s |
+| `thresh_6m` | Ext Threshold | 6.0 m (vs 4.0m) | **-27.83%** [-30.36, -24.14] | **Yes** ($p=0.000$) | -3.99% [-6.38, -1.02] | +14.28% [-2.11, +32.48] | 42.0 s | 48.0 s |
+| `wait_30s` | Red-Wait Limit | 30 s (vs 35s) | **-28.84%** [-32.33, -24.98] | **Yes** ($p=0.000$) | -4.68% [-7.14, -1.82] | +13.56% [-1.30, +30.82] | 36.0 s | 43.0 s |
+| `wait_45s` | Red-Wait Limit | 45 s (vs 35s) | **-27.60%** [-29.74, -24.48] | **Yes** ($p=0.000$) | -4.01% [-6.42, -1.05] | +14.25% [-2.15, +32.45] | 51.0 s | 58.0 s |
+| `comp_q_1m` | Comp Threshold | 1.0 m (vs 2.0m) | **-29.12%** [-32.47, -24.98] | **Yes** ($p=0.000$) | -4.68% [-7.14, -1.82] | +13.56% [-1.30, +30.82] | 42.0 s | 48.0 s |
+| `comp_q_4m` | Comp Threshold | 4.0 m (vs 2.0m) | **-27.79%** [-30.76, -23.99] | **Yes** ($p=0.000$) | -3.99% [-6.38, -1.02] | +14.28% [-2.11, +32.48] | 42.0 s | 48.0 s |
+
+### 5.3 Key Empirical Findings on Sensitivity
+1. **Universal Statistical Significance of Max-Queue Reduction**:
+   * The extended max queue reduction vs Webster-measured remains **negative, large, and statistically significant across every single variant** ($p_{\text{Holm}} = 0.000$).
+   * The point estimate spans an exceptionally narrow range of **-27.57% to -29.12%** (a total variation of only 1.55% across all 8 variants).
+2. **Most and Least Sensitive Parameters**:
+   * **Most Sensitive Parameter**: Competing-queue threshold $Q_{\text{comp}}$ (1.33% range between 1.0 m and 4.0 m), followed by the red-wait limit $W_{\text{limit}}$ (1.24% range between 30 s and 45 s). Lower competing queue thresholds trigger fair switches earlier, slightly lowering queue peaks.
+   * **Least Sensitive Parameter**: Extension queue threshold $Q_{\text{ext}}$ (0.05% range between 3.0 m and 6.0 m), directly reflecting the fact that active extensions are extremely sparse in practice (Item 1).
+3. **Validation of Analytic Red Bounds**:
+   * The theoretical maximum red duration given by $T_{\text{red}}^{\text{max}} = W_{\text{limit}} + \Delta g_{\text{step}} + g_{\text{min}}$ holds strictly across all 540 simulations without exception.
+   * Under default timing ($W=35$, $\Delta g=3$, $g_{\text{min}}=10$), the analytic bound is **48.0 s**, and the observed empirical maximum is **42.0 s**.
+   * Under the tightest wait limit ($W=30$, bound = 43.0 s), the observed maximum red interval drops to **36.0 s**. Under the relaxed wait limit ($W=45$, bound = 58.0 s), the observed maximum red interval is **51.0 s**.
 
 ---
 

@@ -10,6 +10,7 @@ Supports parameter overrides for sensitivity analysis (Item 5).
 Guarantees bitwise exact reproduction of v1 when all rules are enabled with default parameters.
 """
 from typing import Dict, Any, Optional
+import dataclasses
 from copy import deepcopy
 
 from .hybrid_queue_adaptive import HybridQueueAdaptiveController
@@ -39,20 +40,20 @@ class HybridQueueAdaptiveAblationController(HybridQueueAdaptiveController):
     ):
         base_cfg = cfg or C.HYBRID_QUEUE_ADAPTIVE
         # Clone configuration if any parameter override is specified
-        has_overrides = any(
-            x is not None for x in [extend_step_s, extend_threshold_m, max_competing_wait_s, min_competing_queue_m]
-        )
+        overrides = {}
+        if extend_step_s is not None:
+            overrides["extend_step_s"] = float(extend_step_s)
+        if extend_threshold_m is not None:
+            overrides["extend_threshold_m"] = float(extend_threshold_m)
+        if max_competing_wait_s is not None:
+            overrides["max_competing_wait_s"] = float(max_competing_wait_s)
+        if min_competing_queue_m is not None:
+            overrides["min_competing_queue_m"] = float(min_competing_queue_m)
+
+        has_overrides = bool(overrides)
         if has_overrides:
-            self.custom_cfg = deepcopy(base_cfg)
-            if extend_step_s is not None:
-                self.custom_cfg.extend_step_s = float(extend_step_s)
-            if extend_threshold_m is not None:
-                self.custom_cfg.extend_threshold_m = float(extend_threshold_m)
-            if max_competing_wait_s is not None:
-                self.custom_cfg.max_competing_wait_s = float(max_competing_wait_s)
-            if min_competing_queue_m is not None:
-                self.custom_cfg.min_competing_queue_m = float(min_competing_queue_m)
-            actual_cfg = self.custom_cfg
+            actual_cfg = dataclasses.replace(base_cfg, **overrides)
+            self.custom_cfg = actual_cfg
         else:
             actual_cfg = base_cfg
 
