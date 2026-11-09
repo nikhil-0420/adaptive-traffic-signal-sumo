@@ -107,5 +107,64 @@
         }
       }
     }
+  },
+  "item_2_failure_case_study": {
+    "script": "analysis/xai/failure_case_study.py",
+    "function": "run_failure_case_study",
+    "seed_132_lane_closure": {
+      "run_id": "marathahalli_lane_closure_medium_hybrid_queue_adaptive_s132",
+      "t_peak_s": 2060.0,
+      "peak_queue_m": 99.37,
+      "peak_vehicles_queued": 13,
+      "seconds_south_on_red_total": 23.0,
+      "seconds_ew_green_empty": 13.0,
+      "t_switch_ns_ew": 2043.0,
+      "t_green_ew_start": 2048.0,
+      "t_switch_ew_ns": 2061.0,
+      "t_green_ns_start": 2066.0,
+      "webster_measured_peak_s": 0.0,
+      "sumo_actuated_peak_s": 6.06,
+      "webster_measured_run_max_m": 65.99,
+      "sumo_actuated_run_max_m": 66.77,
+      "preventive_rule": "Rest-in-Green / Conditional Switching: Do not switch away from active phase when competing queue is zero and no arrivals detected."
+    },
+    "comparative_cases": [
+      {
+        "run_id": "marathahalli_lane_closure_medium_hybrid_queue_adaptive_s132",
+        "condition": "lane_closure-medium",
+        "seed": 132,
+        "max_queue_m": 99.37,
+        "t_peak_s": 2060.0,
+        "triggering_decision_outcome": "SWITCH_DEMAND_EXHAUSTED",
+        "t_trigger_s": 2043.0,
+        "diff_vs_webster_m": 33.38,
+        "diff_vs_sumo_actuated": 32.6,
+        "mechanism": "Switched from cleared NS to empty EW; EW held 10s min green + 3s gap-out while 13 vehicles queued at bottleneck."
+      },
+      {
+        "run_id": "marathahalli_balanced_heavy_hybrid_queue_adaptive_s138",
+        "condition": "balanced-heavy",
+        "seed": 138,
+        "max_queue_m": 66.09,
+        "t_peak_s": 1906.0,
+        "triggering_decision_outcome": "SWITCH_GAP_OUT",
+        "t_trigger_s": 1902.0,
+        "diff_vs_webster_m": 7.57,
+        "diff_vs_sumo_actuated": 14.99,
+        "mechanism": "Premature gap-out during brief headway fluctuation on EW before platoon discharge completed."
+      },
+      {
+        "run_id": "marathahalli_ramp_peak_medium_hybrid_queue_adaptive_s137",
+        "condition": "ramp_peak-medium",
+        "seed": 137,
+        "max_queue_m": 52.69,
+        "t_peak_s": 941.0,
+        "triggering_decision_outcome": "SWITCH_GAP_OUT",
+        "t_trigger_s": 940.0,
+        "diff_vs_webster_m": 8.33,
+        "diff_vs_sumo_actuated": 1.37,
+        "mechanism": "Gap-out switch on ORR corridor during ramp peak surge as platoon tail had momentary 3s headway gap."
+      }
+    ]
   }
 }

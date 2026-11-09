@@ -1,0 +1,4 @@
+run_id,condition,seed,max_queue_m,t_peak_s,triggering_decision_outcome,t_trigger_s,diff_vs_webster_m,diff_vs_sumo_actuated,mechanism
+marathahalli_lane_closure_medium_hybrid_queue_adaptive_s132,lane_closure-medium,132,99.37,2060.0,SWITCH_DEMAND_EXHAUSTED,2043.0,33.38,32.6,Switched from cleared NS to empty EW; EW held 10s min green + 3s gap-out while 13 vehicles queued at bottleneck.
+marathahalli_balanced_heavy_hybrid_queue_adaptive_s138,balanced-heavy,138,66.09,1906.0,SWITCH_GAP_OUT,1902.0,7.57,14.99,Premature gap-out during brief headway fluctuation on EW before platoon discharge completed.
+marathahalli_ramp_peak_medium_hybrid_queue_adaptive_s137,ramp_peak-medium,137,52.69,941.0,SWITCH_GAP_OUT,940.0,8.33,1.37,Gap-out switch on ORR corridor during ramp peak surge as platoon tail had momentary 3s headway gap.
