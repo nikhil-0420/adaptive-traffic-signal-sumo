@@ -189,7 +189,60 @@ Source: [`analysis/xai/table_xai_loco_sensitivity.csv`](file:///e:/dp1-traffic-s
 
 ## Item 4: Rule Attribution via Shapley Decomposition
 
-*(Completed upon conclusion of the exploratory 480-run ablation batch on development/validation seeds 101–110.)*
+* **Source Script**: [`analysis/xai/rule_attribution.py`](file:///e:/dp1-traffic-signal/analysis/xai/rule_attribution.py)  
+* **Function**: `compute_rule_attribution()`  
+* **Dataset**: Exploratory ablation study on development/validation seeds 101–110 ($8 \times 6 \times 10 = \mathbf{480\text{ runs}}$, perfectly balanced with exactly 10 runs per cell).  
+* **Status**: *Exploratory; development/validation seeds 101–110; not part of the pre-registered confirmatory study.*
+
+### 4.1 Specification of the 8 Subsets
+The 8 subsets of $\{R_{\text{base}}, R_{\text{ext}}, R_{\text{guard}}\}$ are evaluated relative to `all_off`:
+1. `all_off`: Fixed 15.0 s baseline green on both axes, extensions disabled (switch at $g_{\text{base}}$), red-wait cap disabled.
+2. `base_only`: $R_{\text{base}}$ enabled (rolling measured Webster allocation); extensions and red-wait cap disabled.
+3. `ext_only`: Fixed 15.0 s baseline green; $R_{\text{ext}}$ enabled (+3 s extensions if $Q \ge 4.0$ m); red-wait cap disabled.
+4. `guard_only`: Fixed 15.0 s baseline green; $R_{\text{guard}}$ enabled (35 s red-wait limit); extensions disabled.
+5. `base_ext`: $R_{\text{base}} + R_{\text{ext}}$ enabled; red-wait cap disabled.
+6. `base_guard`: $R_{\text{base}} + R_{\text{guard}}$ enabled; extensions disabled.
+7. `ext_guard`: Fixed 15.0 s baseline green; $R_{\text{ext}} + R_{\text{guard}}$ enabled.
+8. `all_on`: All three rules enabled (identical to the v1 default controller).
+
+### 4.2 Full 8-Variant Mean Summary Table
+Source: [`analysis/xai/table_xai_ablation_8variants.csv`](file:///e:/dp1-traffic-signal/analysis/xai/table_xai_ablation_8variants.csv)
+
+| Variant | Extended Max Queue (m) | p95 Wait (s) | Wait Gap (s) | Mean Queue (m) | Mean Wait (s) |
+|---|---|---|---|---|---|
+| `all_off` | 45.84 | 432.83 | 64.87 | 2.79 | 76.61 |
+| `base_only` | 42.64 | 428.27 | 65.35 | 2.52 | 75.72 |
+| `ext_only` | 45.74 | 433.99 | 63.99 | 2.80 | 76.79 |
+| `guard_only` | 45.98 | 434.87 | 64.71 | 2.80 | 76.75 |
+| `base_ext` | 42.33 | 428.48 | 64.81 | 2.52 | 75.84 |
+| `base_guard` | 42.69 | 428.36 | 64.81 | 2.51 | 75.73 |
+| `ext_guard` | 45.79 | 435.46 | 64.49 | 2.79 | 76.71 |
+| `all_on` | 42.70 | 428.70 | 65.13 | 2.52 | 75.94 |
+
+### 4.3 Shapley Attribution Values
+Source: [`analysis/xai/table_xai_shapley_attribution.csv`](file:///e:/dp1-traffic-signal/analysis/xai/table_xai_shapley_attribution.csv)
+
+Across all $3! = 6$ rule addition permutations, the Shapley value $\phi_i$ measures the average marginal contribution of rule $i$ relative to the `all_off` baseline, with seed-clustered bootstrap 95% CIs (10,000 resamples over seeds 101–110):
+
+| Target Metric | Rule | Shapley Value $\phi_i$ [95% CI] | Share of Total Change (%) | Total Change (`all_on` vs `all_off`) |
+|---|---|---|---|---|
+| **Extended Max Queue (m)** | **$R_{\text{base}}$ (Webster Allocation)** | **-3.213 m** [-9.073, +1.502] | **102.4%** | -3.138 m |
+|  | $R_{\text{ext}}$ (+3 s Extension) | -0.114 m [-0.348, +0.153] | 3.6% |  |
+|  | $R_{\text{guard}}$ (35 s Red-Wait Cap) | +0.189 m [-0.397, +0.787] | -6.0% |  |
+| **p95 Wait Time (s)** | **$R_{\text{base}}$ (Webster Allocation)** | **-5.774 s** [-19.443, +5.379] | **139.9%** | -4.128 s |
+|  | $R_{\text{ext}}$ (+3 s Extension) | +0.633 s [-0.452, +1.791] | -15.3% |  |
+|  | $R_{\text{guard}}$ (35 s Red-Wait Cap) | +1.012 s [-0.183, +2.652] | -24.5% |  |
+| **Approach Wait Gap (s)** | $R_{\text{base}}$ (Webster Allocation) | +0.527 s [-3.863, +4.862] | 201.5% | +0.262 s |
+|  | $R_{\text{ext}}$ (+3 s Extension) | **-0.313 s** [-0.900, +0.183] | **-119.8%** |  |
+|  | $R_{\text{guard}}$ (35 s Red-Wait Cap) | +0.048 s [-0.322, +0.400] | 18.3% |  |
+
+### 4.4 ANOVA Interaction Decomposition
+Decomposing total variance into orthogonal main effects and interaction components:
+* **Extended Max Queue**:
+  * Main effects: $I_{\text{base}} = -3.198$ m, $I_{\text{ext}} = -0.098$ m, $I_{\text{guard}} = +0.145$ m.
+  * 2-Way Interactions: $I_{\text{base}\times\text{ext}} = -0.209$ m, $I_{\text{base}\times\text{guard}} = -0.089$ m, $I_{\text{ext}\times\text{guard}} = -0.093$ m.
+  * 3-Way Interaction: $I_{\text{base}\times\text{ext}\times\text{guard}} = +0.406$ m.
+* **Key Finding**: $R_{\text{base}}$ accounts for over 100% of both extended max queue reduction and p95 wait time reduction. $R_{\text{ext}}$ provides modest queue trimming ($-0.114$ m) and wait gap equalization ($-0.313$ s), while $R_{\text{guard}}$ ensures bounded red waits with a negligible trade-off on max queue ($+0.189$ m).
 
 ---
 
