@@ -79,7 +79,7 @@ def load_ablation_data():
             m = json.loads(m_file.read_text(encoding="utf-8"))
             d_name = run_dir.name
             # parse format: marathahalli_{scenario}_{demand}_{variant}_s{seed}
-            parts = d_name.split("_s")
+            parts = d_name.rsplit("_s", 1)
             seed = int(parts[1])
             if not (101 <= seed <= 110):
                 continue
@@ -187,15 +187,23 @@ def compute_rule_attribution():
     n_seeds = len(unique_seeds)
     boot_indices = rng.integers(0, n_seeds, size=(n_boot, n_seeds))
 
+    # Pre-compute cluster means per seed and variant to accelerate bootstrap
+    seed_variant_means = {}
+    for s_idx, s in enumerate(unique_seeds):
+        s_df = df[df["seed"] == s]
+        seed_variant_means[s_idx] = {}
+        for v in SUBSETS_8:
+            v_df = s_df[s_df["variant"] == v]
+            seed_variant_means[s_idx][v] = {m: float(v_df[m].mean()) for m in PRIMARY_METRICS}
+
     # Bootstrap distributions
     boot_shapley = {m: {r: [] for r in RULES} for m in PRIMARY_METRICS}
     for b in range(n_boot):
-        b_seeds = unique_seeds[boot_indices[b]]
-        b_df = df[df["seed"].isin(b_seeds)]
-        b_means_dict = {}
-        for v in SUBSETS_8:
-            v_df = b_df[b_df["variant"] == v]
-            b_means_dict[v] = {m: float(v_df[m].mean()) if len(v_df) > 0 else sample_means_dict[v][m] for m in PRIMARY_METRICS}
+        b_idx = boot_indices[b]
+        b_means_dict = {
+            v: {m: sum(seed_variant_means[s_i][v][m] for s_i in b_idx) / n_seeds for m in PRIMARY_METRICS}
+            for v in SUBSETS_8
+        }
         b_shap = compute_shapley_values_for_sample(b_means_dict, PRIMARY_METRICS)
         for m in PRIMARY_METRICS:
             for r in RULES:

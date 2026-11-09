@@ -930,5 +930,215 @@
       "webster_measured_max_queue_driver": "lane_closure-medium (omitting it shifts pooled delta from -13.2% to -20.8%)",
       "fixed_p95_wait_driver": "non-stationary conditions drive positive delta (+5.1% in non-stat vs -12.4% in stat)"
     }
+  },
+  "item_4_rule_attribution": {
+    "script": "analysis/xai/rule_attribution.py",
+    "function": "compute_rule_attribution",
+    "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study",
+    "cell_counts": {
+      "balanced-heavy": {
+        "all_off": 10,
+        "all_on": 10,
+        "base_ext": 10,
+        "base_guard": 10,
+        "base_only": 10,
+        "ext_guard": 10,
+        "ext_only": 10,
+        "guard_only": 10
+      },
+      "balanced-low": {
+        "all_off": 10,
+        "all_on": 10,
+        "base_ext": 10,
+        "base_guard": 10,
+        "base_only": 10,
+        "ext_guard": 10,
+        "ext_only": 10,
+        "guard_only": 10
+      },
+      "imbalanced_orr-heavy": {
+        "all_off": 10,
+        "all_on": 10,
+        "base_ext": 10,
+        "base_guard": 10,
+        "base_only": 10,
+        "ext_guard": 10,
+        "ext_only": 10,
+        "guard_only": 10
+      },
+      "lane_closure-medium": {
+        "all_off": 10,
+        "all_on": 10,
+        "base_ext": 10,
+        "base_guard": 10,
+        "base_only": 10,
+        "ext_guard": 10,
+        "ext_only": 10,
+        "guard_only": 10
+      },
+      "ramp_peak-medium": {
+        "all_off": 10,
+        "all_on": 10,
+        "base_ext": 10,
+        "base_guard": 10,
+        "base_only": 10,
+        "ext_guard": 10,
+        "ext_only": 10,
+        "guard_only": 10
+      },
+      "surge_shift-medium": {
+        "all_off": 10,
+        "all_on": 10,
+        "base_ext": 10,
+        "base_guard": 10,
+        "base_only": 10,
+        "ext_guard": 10,
+        "ext_only": 10,
+        "guard_only": 10
+      }
+    },
+    "total_records": 480,
+    "shapley_attribution": [
+      {
+        "metric": "gt_ext_max_queue_m",
+        "metric_label": "Extended Max Queue (m)",
+        "rule": "R_base",
+        "rule_label": "R-base (Webster Allocation)",
+        "shapley_value": -3.213,
+        "ci_low": -9.073,
+        "ci_high": 1.502,
+        "share_of_total_pct": 102.4,
+        "total_delta_all_on_vs_all_off": -3.138,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "gt_ext_max_queue_m",
+        "metric_label": "Extended Max Queue (m)",
+        "rule": "R_ext",
+        "rule_label": "R-ext (+3s Extension)",
+        "shapley_value": -0.114,
+        "ci_low": -0.348,
+        "ci_high": 0.153,
+        "share_of_total_pct": 3.6,
+        "total_delta_all_on_vs_all_off": -3.138,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "gt_ext_max_queue_m",
+        "metric_label": "Extended Max Queue (m)",
+        "rule": "R_guard",
+        "rule_label": "R-guard (35s Red-Wait Limit)",
+        "shapley_value": 0.189,
+        "ci_low": -0.397,
+        "ci_high": 0.787,
+        "share_of_total_pct": -6.0,
+        "total_delta_all_on_vs_all_off": -3.138,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "p95_wait_s",
+        "metric_label": "p95 Wait Time (s)",
+        "rule": "R_base",
+        "rule_label": "R-base (Webster Allocation)",
+        "shapley_value": -5.774,
+        "ci_low": -19.443,
+        "ci_high": 5.379,
+        "share_of_total_pct": 139.9,
+        "total_delta_all_on_vs_all_off": -4.128,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "p95_wait_s",
+        "metric_label": "p95 Wait Time (s)",
+        "rule": "R_ext",
+        "rule_label": "R-ext (+3s Extension)",
+        "shapley_value": 0.633,
+        "ci_low": -0.452,
+        "ci_high": 1.791,
+        "share_of_total_pct": -15.3,
+        "total_delta_all_on_vs_all_off": -4.128,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "p95_wait_s",
+        "metric_label": "p95 Wait Time (s)",
+        "rule": "R_guard",
+        "rule_label": "R-guard (35s Red-Wait Limit)",
+        "shapley_value": 1.012,
+        "ci_low": -0.183,
+        "ci_high": 2.652,
+        "share_of_total_pct": -24.5,
+        "total_delta_all_on_vs_all_off": -4.128,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "approach_wait_gap_s",
+        "metric_label": "Approach Wait Gap (s)",
+        "rule": "R_base",
+        "rule_label": "R-base (Webster Allocation)",
+        "shapley_value": 0.527,
+        "ci_low": -3.863,
+        "ci_high": 4.862,
+        "share_of_total_pct": 201.5,
+        "total_delta_all_on_vs_all_off": 0.262,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "approach_wait_gap_s",
+        "metric_label": "Approach Wait Gap (s)",
+        "rule": "R_ext",
+        "rule_label": "R-ext (+3s Extension)",
+        "shapley_value": -0.313,
+        "ci_low": -0.9,
+        "ci_high": 0.183,
+        "share_of_total_pct": -119.8,
+        "total_delta_all_on_vs_all_off": 0.262,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      },
+      {
+        "metric": "approach_wait_gap_s",
+        "metric_label": "Approach Wait Gap (s)",
+        "rule": "R_guard",
+        "rule_label": "R-guard (35s Red-Wait Limit)",
+        "shapley_value": 0.048,
+        "ci_low": -0.322,
+        "ci_high": 0.4,
+        "share_of_total_pct": 18.3,
+        "total_delta_all_on_vs_all_off": 0.262,
+        "label": "exploratory; development/validation seeds 101-110; not part of the pre-registered confirmatory study"
+      }
+    ],
+    "interaction_terms": {
+      "gt_ext_max_queue_m": {
+        "main_R_base": -3.198,
+        "main_R_ext": -0.098,
+        "main_R_guard": 0.145,
+        "interaction_base_ext": -0.209,
+        "interaction_base_guard": -0.089,
+        "interaction_ext_guard": -0.093,
+        "interaction_base_ext_guard": 0.406,
+        "total_change": -3.138
+      },
+      "p95_wait_s": {
+        "main_R_base": -4.558,
+        "main_R_ext": 1.157,
+        "main_R_guard": 2.038,
+        "interaction_base_ext": -0.947,
+        "interaction_base_guard": -1.952,
+        "interaction_ext_guard": -0.567,
+        "interaction_base_ext_guard": 0.701,
+        "total_change": -4.128
+      },
+      "approach_wait_gap_s": {
+        "main_R_base": 0.481,
+        "main_R_ext": -0.884,
+        "main_R_guard": -0.157,
+        "interaction_base_ext": 0.342,
+        "interaction_base_guard": -0.389,
+        "interaction_ext_guard": 0.66,
+        "interaction_base_ext_guard": 0.209,
+        "total_change": 0.262
+      }
+    }
   }
 }

@@ -5,3 +5,4 @@ This log tracks any non-fatal anomalies, missing columns, retried runs, or neces
 | Phase | Issue / Anomaly | Action Taken | Status |
 |---|---|---|---|
 | Item 1 | hybrid_oracle_seeded run directory prefix is ablation_... instead of marathahalli_... | Handled path pattern to support both prefixes | Resolved |
+| Item 5 | FrozenInstanceError on HybridQueueAdaptiveConfig field assignment | Patched hybrid_queue_adaptive_ablation.py to use dataclasses.replace | Resolved & Rerunning |
