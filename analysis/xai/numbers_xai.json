@@ -1,0 +1,111 @@
+{
+  "item_1_reason_code_audit": {
+    "script": "analysis/xai/reason_code_audit.py",
+    "function": "compute_reason_code_audit",
+    "distinct_codes_hqa": [
+      "BASELINE_ENTRY",
+      "EXTEND_APPROVED",
+      "SWITCH_DEMAND_EXHAUSTED",
+      "SWITCH_DEMAND_FAIRNESS",
+      "SWITCH_FAIRNESS_WAIT_LIMIT",
+      "SWITCH_GAP_OUT"
+    ],
+    "distinct_codes_hos": [
+      "BASELINE_ENTRY",
+      "EXTEND_APPROVED",
+      "SWITCH_DEMAND_EXHAUSTED",
+      "SWITCH_DEMAND_FAIRNESS",
+      "SWITCH_GAP_OUT"
+    ],
+    "total_hqa_records": 10257,
+    "total_hqa_switches": 5095,
+    "switch_trigger_counts_pooled": {
+      "SWITCH_GAP_OUT": 4139,
+      "SWITCH_DEMAND_EXHAUSTED": 941,
+      "SWITCH_DEMAND_FAIRNESS": 14,
+      "SWITCH_FAIRNESS_WAIT_LIMIT": 1
+    },
+    "switch_trigger_shares_pooled_pct": {
+      "SWITCH_GAP_OUT": 81.24,
+      "SWITCH_DEMAND_EXHAUSTED": 18.47,
+      "SWITCH_DEMAND_FAIRNESS": 0.27,
+      "SWITCH_FAIRNESS_WAIT_LIMIT": 0.02
+    },
+    "fairness_guard": {
+      "total_forced_switches": 1,
+      "share_of_runs_fired": 0.020833333333333332,
+      "share_of_runs_fired_pct": 2.08,
+      "event_details": {
+        "run_id": "marathahalli_ramp_peak_medium_hybrid_queue_adaptive_s136",
+        "t": 1166.0,
+        "cycle": 60,
+        "axis": "EW",
+        "elapsed_s": 36.0,
+        "q_active_m": 24.0,
+        "q_competing_m": 12.5,
+        "seconds_earlier_vs_max_green": 24.0,
+        "seconds_earlier_vs_next_step": 3.0
+      }
+    },
+    "extensions": {
+      "pooled": {
+        "total_greens": 5132,
+        "total_extensions": 30,
+        "mean_extensions_per_green": 0.005845674201091193,
+        "total_extra_green_s": 90.0,
+        "mean_extra_green_s_per_run": 1.875,
+        "share_greens_zero_extensions": 0.9984411535463756
+      },
+      "per_condition": {
+        "balanced-low": {
+          "total_greens": 785,
+          "total_extensions": 0,
+          "mean_extensions_per_green": 0.0,
+          "total_extra_green_s": 0.0,
+          "mean_extra_green_s_per_run": 0.0,
+          "share_greens_zero_extensions": 1.0
+        },
+        "balanced-heavy": {
+          "total_greens": 919,
+          "total_extensions": 0,
+          "mean_extensions_per_green": 0.0,
+          "total_extra_green_s": 0.0,
+          "mean_extra_green_s_per_run": 0.0,
+          "share_greens_zero_extensions": 1.0
+        },
+        "imbalanced_orr-heavy": {
+          "total_greens": 884,
+          "total_extensions": 1,
+          "mean_extensions_per_green": 0.0011312217194570137,
+          "total_extra_green_s": 3.0,
+          "mean_extra_green_s_per_run": 0.375,
+          "share_greens_zero_extensions": 0.998868778280543
+        },
+        "ramp_peak-medium": {
+          "total_greens": 810,
+          "total_extensions": 15,
+          "mean_extensions_per_green": 0.018518518518518517,
+          "total_extra_green_s": 45.0,
+          "mean_extra_green_s_per_run": 5.625,
+          "share_greens_zero_extensions": 0.9950617283950617
+        },
+        "surge_shift-medium": {
+          "total_greens": 847,
+          "total_extensions": 14,
+          "mean_extensions_per_green": 0.01652892561983471,
+          "total_extra_green_s": 42.0,
+          "mean_extra_green_s_per_run": 5.25,
+          "share_greens_zero_extensions": 0.9964580873671782
+        },
+        "lane_closure-medium": {
+          "total_greens": 887,
+          "total_extensions": 0,
+          "mean_extensions_per_green": 0.0,
+          "total_extra_green_s": 0.0,
+          "mean_extra_green_s_per_run": 0.0,
+          "share_greens_zero_extensions": 1.0
+        }
+      }
+    }
+  }
+}

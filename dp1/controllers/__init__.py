@@ -18,6 +18,7 @@ from .hybrid_queue_adaptive_v2 import (
     HybridV2CandCController,
     HybridV2CandDController,
 )
+from .hybrid_queue_adaptive_ablation import HybridQueueAdaptiveAblationController
 from .. import config as C
 
 
@@ -88,5 +89,6 @@ POLICIES = {
     "hybrid_v2_cand_b": HybridV2CandBController,
     "hybrid_v2_cand_c": HybridV2CandCController,
     "hybrid_v2_cand_d": HybridV2CandDController,
+    "hybrid_queue_adaptive_ablation": HybridQueueAdaptiveAblationController,
 }
 

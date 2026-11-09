@@ -1,0 +1,7 @@
+decision_outcome,balanced-heavy,balanced-low,imbalanced_orr-heavy,lane_closure-medium,ramp_peak-medium,surge_shift-medium,Pooled
+BASELINE_ENTRY,919,785,884,887,810,847,5132
+EXTEND_APPROVED,0,0,1,0,15,14,30
+SWITCH_DEMAND_EXHAUSTED,135,182,138,138,165,183,941
+SWITCH_DEMAND_FAIRNESS,0,0,3,0,8,3,14
+SWITCH_FAIRNESS_WAIT_LIMIT,0,0,0,0,1,0,1
+SWITCH_GAP_OUT,778,599,736,741,629,656,4139
